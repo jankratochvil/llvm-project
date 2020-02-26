@@ -783,7 +783,7 @@ size_t SymbolFileDWARF::ParseFunctions(CompileUnit &comp_unit) {
       continue;
 
     DWARFDIE die(dwarf_cu, &entry);
-    if (comp_unit.FindFunctionByUID(die.GetID()))
+    if (comp_unit.FindFunctionByUID(die.GetID(dwarf_cu)))
       continue;
     if (ParseFunction(comp_unit, die))
       ++functions_added;
@@ -1065,7 +1065,11 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(
 
         block = parent_block;
       } else {
-        BlockSP block_sp(new Block(die.GetID()));
+        DWARFUnit *dwarf_cu = dwarf->GetDWARFCompileUnit(sc.comp_unit);
+lldbassert(dwarf_cu);
+        if (!dwarf_cu)
+          break;
+        BlockSP block_sp(new Block(die.GetID(dwarf_cu)));
         parent_block->AddChild(block_sp);
         block = block_sp.get();
       }
@@ -1202,7 +1206,7 @@ user_id_t SymbolFileDWARF::GetUID(DIERef ref, DWARFUnit *main_unit) {
 
   return user_id_t(has_main_cu ? main_unit->GetID() : GetDwoNum().getValueOr(0x1fffffff)) << 32 |
          ref.die_offset() |
-         (has_main_cu && &main_unit->GetSymbolFileDWARF() != this) << 61 |
+         user_id_t(has_main_cu && &main_unit->GetSymbolFileDWARF() != this) << 61 |
          user_id_t(has_main_cu) << 62 |
          (lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes) << 63);
 }
@@ -1413,7 +1417,7 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
     if (log)
       GetObjectFile()->GetModule()->LogMessageVerboseBacktrace(
           log, "0x%8.8" PRIx64 ": %s '%s' resolving forward declaration...",
-          dwarf_die.GetID(), dwarf_die.GetTagAsCString(),
+          dwarf_die.GetID(nullptr), dwarf_die.GetTagAsCString(),
           type->GetName().AsCString());
     assert(compiler_type);
     if (DWARFASTParser *dwarf_ast = GetDWARFParser(*dwarf_die.GetCU()))
@@ -1472,7 +1476,7 @@ bool SymbolFileDWARF::GetFunction(const DWARFDIE &die, SymbolContext &sc) {
     sc.comp_unit =
         GetCompUnitForDWARFCompUnit(llvm::cast<DWARFCompileUnit>(*die.GetCU()));
 
-    sc.function = sc.comp_unit->FindFunctionByUID(die.GetID()).get();
+    sc.function = sc.comp_unit->FindFunctionByUID(die.GetID(main_unit)).get();
     if (sc.function == nullptr)
       sc.function = ParseFunction(*sc.comp_unit, die);
 
@@ -1749,7 +1753,7 @@ void SymbolFileDWARF::ResolveFunctionAndBlock(lldb::addr_t file_vm_addr,
   DWARFDIE function_die = cu.LookupAddress(file_vm_addr);
   DWARFDIE block_die;
   if (function_die) {
-    sc.function = sc.comp_unit->FindFunctionByUID(function_die.GetID()).get();
+    sc.function = sc.comp_unit->FindFunctionByUID(function_die.GetID(cu)).get();
     if (sc.function == nullptr)
       sc.function = ParseFunction(*sc.comp_unit, function_die);
 
