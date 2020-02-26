@@ -888,7 +888,7 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const SymbolContext &sc, const DWARF
 
   if (die.HasChildren()) {
     bool skip_artificial = true;
-    ParseChildParameters(containing_decl_ctx, die, skip_artificial, is_static,
+    ParseChildParameters(sc.comp_unit, containing_decl_ctx, die, skip_artificial, is_static,
                          is_variadic, has_template_params,
                          function_param_types, function_param_decls,
                          type_quals);
@@ -2368,7 +2368,7 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
 
         clang::DeclContext *containing_decl_ctx =
             GetClangDeclContextContainingDIE(die, nullptr);
-        ParseChildParameters(containing_decl_ctx, die, true, is_static,
+        ParseChildParameters(comp_unit, containing_decl_ctx, die, true, is_static,
                              is_variadic, has_template_params, param_types,
                              param_decls, type_quals);
         sstr << "(";
@@ -3025,7 +3025,7 @@ bool DWARFASTParserClang::ParseChildMembers(CompileUnit &comp_unit,
   return true;
 }
 
-size_t DWARFASTParserClang::ParseChildParameters(
+size_t DWARFASTParserClang::ParseChildParameters(CompileUnit &comp_unit,
     clang::DeclContext *containing_decl_ctx, const DWARFDIE &parent_die,
     bool skip_artificial, bool &is_static, bool &is_variadic,
     bool &has_template_params, std::vector<CompilerType> &function_param_types,
@@ -3119,7 +3119,12 @@ size_t DWARFASTParserClang::ParseChildParameters(
             assert(param_var_decl);
             function_param_decls.push_back(param_var_decl);
 
-            m_ast.SetMetadataAsUserID(param_var_decl, die.GetID());
+            DWARFUnit *dwarf_cu = dwarf->GetDWARFCompileUnit(comp_unit);
+lldbassert(dwarf_cu);
+            if (!dwarf_cu)
+              return {};
+
+            m_ast.SetMetadataAsUserID(param_var_decl, die.GetID(dwarf_cu));
           }
         }
       }

@@ -115,7 +115,7 @@ protected:
       lldb_private::ClangASTImporter::LayoutInfo &layout_info);
 
   size_t
-  ParseChildParameters(clang::DeclContext *containing_decl_ctx,
+  ParseChildParameters(lldb_private::CompileUnit &comp_unit, clang::DeclContext *containing_decl_ctx,
                        const DWARFDIE &parent_die, bool skip_artificial,
                        bool &is_static, bool &is_variadic,
                        bool &has_template_params,
