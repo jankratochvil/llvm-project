@@ -260,15 +260,15 @@ public:
 
   DWARFDIE GetDIE(lldb::user_id_t uid);
 
-  lldb::user_id_t GetUID(const DWARFBaseDIE &die) {
-    return GetUID(die.GetDIERef());
+  lldb::user_id_t GetUID(const DWARFBaseDIE &die, DWARFUnit &main_unit) {
+    return GetUID(die.GetDIERef(), main_unit);
   }
 
-  lldb::user_id_t GetUID(const llvm::Optional<DIERef> &ref) {
-    return ref ? GetUID(*ref) : LLDB_INVALID_UID;
+  lldb::user_id_t GetUID(const llvm::Optional<DIERef> &ref, DWARFUnit &main_unit) {
+    return ref ? GetUID(*ref, main_unit) : LLDB_INVALID_UID;
   }
 
-  lldb::user_id_t GetUID(DIERef ref);
+  lldb::user_id_t GetUID(DIERef ref, DWARFUnit &main_unit);
 
   std::shared_ptr<SymbolFileDWARFDwo>
   GetDwoSymbolFileForCompileUnit(DWARFUnit &dwarf_cu,
