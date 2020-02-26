@@ -61,9 +61,9 @@ uint64_t DWARFBaseDIE::GetAttributeValueAsAddress(const dw_attr_t attr,
     return fail_value;
 }
 
-lldb::user_id_t DWARFBaseDIE::GetID() const {
+lldb::user_id_t DWARFBaseDIE::GetID(DWARFUnit &main_unit) const {
   if (IsValid())
-    return GetDWARF()->GetUID(*this);
+    return GetDWARF()->GetUID(*this, main_unit);
   return LLDB_INVALID_UID;
 }
 

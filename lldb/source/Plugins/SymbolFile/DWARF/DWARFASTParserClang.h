@@ -50,7 +50,7 @@ public:
                          const DWARFDIE &die) override;
 
   bool
-  CompleteTypeFromDWARF(const DWARFDIE &die, lldb_private::Type *type,
+  CompleteTypeFromDWARF(const SymbolContext &sc, const DWARFDIE &die, lldb_private::Type *type,
                         lldb_private::CompilerType &compiler_type) override;
 
   lldb_private::CompilerDecl
@@ -207,12 +207,12 @@ private:
                                  ParsedDWARFTypeAttributes &attrs);
   lldb::TypeSP ParseEnum(const lldb_private::SymbolContext &sc,
                          const DWARFDIE &die, ParsedDWARFTypeAttributes &attrs);
-  lldb::TypeSP ParseSubroutine(const DWARFDIE &die,
+  lldb::TypeSP ParseSubroutine(const lldb_private::SymbolContext &sc, const DWARFDIE &die,
                                ParsedDWARFTypeAttributes &attrs);
   // FIXME: attrs should be passed as a const reference.
-  lldb::TypeSP ParseArrayType(const DWARFDIE &die,
+  lldb::TypeSP ParseArrayType(const lldb_private::SymbolContext &sc, const DWARFDIE &die,
                               ParsedDWARFTypeAttributes &attrs);
-  lldb::TypeSP ParsePointerToMemberType(const DWARFDIE &die,
+  lldb::TypeSP ParsePointerToMemberType(const lldb_private::SymbolContext &sc, const DWARFDIE &die,
                                         const ParsedDWARFTypeAttributes &attrs);
 };
 
