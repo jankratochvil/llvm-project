@@ -50,7 +50,7 @@ public:
                          const DWARFDIE &die) override;
 
   bool
-  CompleteTypeFromDWARF(const SymbolContext &sc, const DWARFDIE &die, lldb_private::Type *type,
+  CompleteTypeFromDWARF(const DWARFDIE &die, lldb_private::Type *type,
                         lldb_private::CompilerType &compiler_type) override;
 
   lldb_private::CompilerDecl
@@ -104,7 +104,7 @@ protected:
       lldb_private::TypeSystemClang::TemplateParameterInfos
           &template_param_infos);
 
-  bool ParseChildMembers(
+  bool ParseChildMembers(lldb_private::CompileUnit &comp_unit,
       const DWARFDIE &die, lldb_private::CompilerType &class_compiler_type,
       const lldb::LanguageType class_language,
       std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
@@ -188,7 +188,7 @@ private:
   };
 
   void
-  ParseSingleMember(const DWARFDIE &die, const DWARFDIE &parent_die,
+  ParseSingleMember(lldb_private::CompileUnit &comp_unit, const DWARFDIE &die, const DWARFDIE &parent_die,
                     lldb_private::CompilerType &class_clang_type,
                     const lldb::LanguageType class_language,
                     std::vector<int> &member_accessibilities,

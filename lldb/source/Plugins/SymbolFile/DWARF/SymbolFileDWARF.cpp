@@ -1191,18 +1191,18 @@ void SymbolFileDWARF::ParseDeclsForContext(CompilerDeclContext decl_ctx) {
         decl_ctx);
 }
 
-user_id_t SymbolFileDWARF::GetUID(DIERef ref, DWARFUnit &main_unit) {
+user_id_t SymbolFileDWARF::GetUID(DIERef ref, DWARFUnit *main_unit) {
   if (GetDebugMapSymfile())
     return GetID() | ref.die_offset();
 
-  bool has_main_cu = !main_unit.ContainsDIEOffset(ref.die_offset());
+  bool has_main_cu = main_unit && !main_unit->ContainsDIEOffset(ref.die_offset());
   lldbassert(!(has_main_cu && GetDwoNum().hasValue()));
-  lldbassert(!has_main_cu || main_unit.GetID() < 0x1fffffff);
-  lldbassert(has_main_cu || &main_unit.GetSymbolFileDWARF() == this);
+  lldbassert(!has_main_cu || main_unit->GetID() < 0x1fffffff);
+  lldbassert(has_main_cu || !main_unit || &main_unit->GetSymbolFileDWARF() == this);
 
-  return user_id_t(has_main_cu ? main_unit.GetID() : GetDwoNum().getValueOr(0x1fffffff)) << 32 |
+  return user_id_t(has_main_cu ? main_unit->GetID() : GetDwoNum().getValueOr(0x1fffffff)) << 32 |
          ref.die_offset() |
-         (&main_unit.GetSymbolFileDWARF() == this) << 61 |
+         (has_main_cu && &main_unit->GetSymbolFileDWARF() != this) << 61 |
          user_id_t(has_main_cu) << 62 |
          (lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes) << 63);
 }
