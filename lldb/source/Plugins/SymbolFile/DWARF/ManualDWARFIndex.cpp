@@ -416,7 +416,7 @@ void ManualDWARFIndex::GetNamespaces(ConstString name, DIEArray &offsets) {
 void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
                                     const CompilerDeclContext &parent_decl_ctx,
                                     uint32_t name_type_mask,
-                                    std::vector<std::pair<DWARFUnit *main_unit, DWARFDIE>> &dies) {
+                                    std::vector<std::pair<DWARFUnit *, DWARFDIE>> &dies) {
   Index();
 
   if (name_type_mask & eFunctionNameTypeFull) {
@@ -427,7 +427,8 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
       if (!die)
         continue;
       if (SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
-        dies.push_back(die);
+        // FIXME: DWZ: DIEArray
+        dies.push_back(std::make_pair(die.GetCU(), die));
     }
   }
   if (name_type_mask & eFunctionNameTypeBase) {
@@ -438,7 +439,8 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
       if (!die)
         continue;
       if (SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
-        dies.push_back(die);
+        // FIXME: DWZ: DIEArray
+        dies.push_back(std::make_pair(die.GetCU(), die));
     }
     offsets.clear();
   }
@@ -448,7 +450,8 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
     m_set.function_methods.Find(name, offsets);
     for (const DIERef &die_ref: offsets) {
       if (DWARFDIE die = dwarf.GetDIE(die_ref))
-        dies.push_back(die);
+        // FIXME: DWZ: DIEArray
+        dies.push_back(std::make_pair(die.GetCU(), die));
     }
   }
 
@@ -458,7 +461,8 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
     m_set.function_selectors.Find(name, offsets);
     for (const DIERef &die_ref: offsets) {
       if (DWARFDIE die = dwarf.GetDIE(die_ref))
-        dies.push_back(die);
+        // FIXME: DWZ: DIEArray
+        dies.push_back(std::make_pair(die.GetCU(), die));
     }
   }
 }

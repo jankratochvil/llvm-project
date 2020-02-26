@@ -45,7 +45,7 @@ public:
   void GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
                     const CompilerDeclContext &parent_decl_ctx,
                     uint32_t name_type_mask,
-                    std::vector<DWARFDIE> &dies) override;
+                    std::vector<std::pair<DWARFUnit *, DWARFDIE>> &dies) override;
   void GetFunctions(const RegularExpression &regex, DIEArray &offsets) override;
 
   void ReportInvalidDIERef(const DIERef &ref, llvm::StringRef name) override;
