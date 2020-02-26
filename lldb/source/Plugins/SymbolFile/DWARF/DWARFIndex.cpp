@@ -16,16 +16,18 @@ using namespace lldb;
 
 DWARFIndex::~DWARFIndex() = default;
 
-void DWARFIndex::ProcessFunctionDIE(llvm::StringRef name, DIERef ref,
+void DWARFIndex::ProcessFunctionDIE(llvm::StringRef name, DWARFUnit *main_unit, DIERef ref,
                                     SymbolFileDWARF &dwarf,
                                     const CompilerDeclContext &parent_decl_ctx,
                                     uint32_t name_type_mask,
-                                    std::vector<DWARFDIE> &dies) {
+                                    std::vector<std::pair<DWARFUnit *main_unit, DWARFDIE>> &dies) {
   DWARFDIE die = dwarf.GetDIE(ref);
   if (!die) {
     ReportInvalidDIERef(ref, name);
     return;
   }
+  if (main_unit == nullptr)
+    main_unit = die.GetCU();
 
   // Exit early if we're searching exclusively for methods or selectors and
   // we have a context specified (no methods in namespaces).
@@ -39,9 +41,11 @@ void DWARFIndex::ProcessFunctionDIE(llvm::StringRef name, DIERef ref,
   if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
     return;
 
+  auto diepair = std::make_pair(main_unit, die);
+
   // In case of a full match, we just insert everything we find.
   if (name_type_mask & eFunctionNameTypeFull) {
-    dies.push_back(die);
+    dies.push_back(diepair);
     return;
   }
 
@@ -49,7 +53,7 @@ void DWARFIndex::ProcessFunctionDIE(llvm::StringRef name, DIERef ref,
   // possible selector.
   if (name_type_mask & eFunctionNameTypeSelector &&
       ObjCLanguage::IsPossibleObjCMethodName(die.GetName())) {
-    dies.push_back(die);
+    dies.push_back(diepair);
     return;
   }
 
@@ -61,6 +65,6 @@ void DWARFIndex::ProcessFunctionDIE(llvm::StringRef name, DIERef ref,
     // searching for.
     if ((looking_for_methods && looking_for_functions) ||
         looking_for_methods == die.IsMethod())
-      dies.push_back(die);
+      dies.push_back(diepair);
   }
 }

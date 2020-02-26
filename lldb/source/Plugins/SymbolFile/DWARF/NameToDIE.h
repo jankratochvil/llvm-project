@@ -47,7 +47,7 @@ public:
               &callback) const;
 
 protected:
-  lldb_private::UniqueCStringMap<DIERef> m_map;
+  lldb_private::UniqueCStringMap<user_id_t> m_map;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_NAMETODIE_H

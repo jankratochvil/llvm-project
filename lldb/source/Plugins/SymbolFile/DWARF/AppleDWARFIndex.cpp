@@ -156,11 +156,11 @@ void AppleDWARFIndex::GetNamespaces(ConstString name, DIEArray &offsets) {
 void AppleDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
                                    const CompilerDeclContext &parent_decl_ctx,
                                    uint32_t name_type_mask,
-                                   std::vector<DWARFDIE> &dies) {
+                                   std::vector<std::pair<DWARFUnit *main_unit, DWARFDIE>> &dies) {
   DIEArray offsets;
   m_apple_names_up->FindByName(name.GetStringRef(), offsets);
   for (const DIERef &die_ref : offsets) {
-    ProcessFunctionDIE(name.GetStringRef(), die_ref, dwarf, parent_decl_ctx,
+    ProcessFunctionDIE(name.GetStringRef(), nullptr/*main_unit*/, die_ref, dwarf, parent_decl_ctx,
                        name_type_mask, dies);
   }
 }

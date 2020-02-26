@@ -1065,7 +1065,7 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(
 
         block = parent_block;
       } else {
-        DWARFUnit *dwarf_cu = dwarf->GetDWARFCompileUnit(sc.comp_unit);
+        DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
 lldbassert(dwarf_cu);
         if (!dwarf_cu)
           break;
@@ -1468,13 +1468,13 @@ size_t SymbolFileDWARF::GetObjCMethodDIEOffsets(ConstString class_name,
   return method_die_offsets.size();
 }
 
-bool SymbolFileDWARF::GetFunction(const DWARFDIE &die, SymbolContext &sc) {
+bool SymbolFileDWARF::GetFunction(const DWARFDIE &die, DWARFUnit *main_unit, SymbolContext &sc) {
   sc.Clear(false);
 
-  if (die && llvm::isa<DWARFCompileUnit>(die.GetCU())) {
+  if (die && llvm::isa<DWARFCompileUnit>(main_unit)) {
     // Check if the symbol vendor already knows about this compile unit?
     sc.comp_unit =
-        GetCompUnitForDWARFCompUnit(llvm::cast<DWARFCompileUnit>(*die.GetCU()));
+        GetCompUnitForDWARFCompUnit(llvm::cast<DWARFCompileUnit>(*main_unit));
 
     sc.function = sc.comp_unit->FindFunctionByUID(die.GetID(main_unit)).get();
     if (sc.function == nullptr)
@@ -1753,7 +1753,7 @@ void SymbolFileDWARF::ResolveFunctionAndBlock(lldb::addr_t file_vm_addr,
   DWARFDIE function_die = cu.LookupAddress(file_vm_addr);
   DWARFDIE block_die;
   if (function_die) {
-    sc.function = sc.comp_unit->FindFunctionByUID(function_die.GetID(cu)).get();
+    sc.function = sc.comp_unit->FindFunctionByUID(function_die.GetID(&cu)).get();
     if (sc.function == nullptr)
       sc.function = ParseFunction(*sc.comp_unit, function_die);
 
@@ -1766,9 +1766,9 @@ void SymbolFileDWARF::ResolveFunctionAndBlock(lldb::addr_t file_vm_addr,
 
   Block &block = sc.function->GetBlock(true);
   if (block_die)
-    sc.block = block.FindBlockByID(block_die.GetID());
+    sc.block = block.FindBlockByID(block_die.GetID(&cu));
   else
-    sc.block = block.FindBlockByID(function_die.GetID());
+    sc.block = block.FindBlockByID(function_die.GetID(&cu));
 }
 
 uint32_t SymbolFileDWARF::ResolveSymbolContext(const Address &so_addr,
@@ -2168,7 +2168,7 @@ void SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
   }
 }
 
-bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
+bool SymbolFileDWARF::ResolveFunction(DWARFUnit *main_unit, const DWARFDIE &orig_die,
                                       bool include_inlines,
                                       SymbolContextList &sc_list) {
   SymbolContext sc;
@@ -2197,12 +2197,12 @@ bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
     }
   }
   assert(die && die.Tag() == DW_TAG_subprogram);
-  if (GetFunction(die, sc)) {
+  if (GetFunction(die, main_unit, sc)) {
     Address addr;
     // Parse all blocks if needed
     if (inlined_die) {
       Block &function_block = sc.function->GetBlock(true);
-      sc.block = function_block.FindBlockByID(inlined_die.GetID());
+      sc.block = function_block.FindBlockByID(inlined_die.GetID(main_unit));
       if (sc.block == nullptr)
         sc.block = function_block.FindBlockByID(inlined_die.GetOffset());
       if (sc.block == nullptr || !sc.block->GetStartAddress(addr))

@@ -208,7 +208,7 @@ void DebugNamesDWARFIndex::GetNamespaces(ConstString name, DIEArray &offsets) {
 void DebugNamesDWARFIndex::GetFunctions(
     ConstString name, SymbolFileDWARF &dwarf,
     const CompilerDeclContext &parent_decl_ctx, uint32_t name_type_mask,
-    std::vector<DWARFDIE> &dies) {
+    std::vector<std::pair<DWARFUnit *main_unit, DWARFDIE>> &dies) {
 
   std::vector<DWARFDIE> v;
   m_fallback.GetFunctions(name, dwarf, parent_decl_ctx, name_type_mask, v);
@@ -220,14 +220,16 @@ void DebugNamesDWARFIndex::GetFunctions(
       continue;
 
     if (llvm::Optional<DIERef> ref = ToDIERef(entry))
-      ProcessFunctionDIE(name.GetStringRef(), *ref, dwarf, parent_decl_ctx,
+      // FIXME: DWZ
+      ProcessFunctionDIE(name.GetStringRef(), nullptr/*main_unit*/, *ref, dwarf, parent_decl_ctx,
                          name_type_mask, v);
   }
 
   std::set<DWARFDebugInfoEntry *> seen;
   for (DWARFDIE die : v)
     if (seen.insert(die.GetDIE()).second)
-      dies.push_back(die);
+      // FIXME: DWZ
+      dies.push_back(std::make_pair(die.GetCU(), die));
 }
 
 void DebugNamesDWARFIndex::GetFunctions(const RegularExpression &regex,

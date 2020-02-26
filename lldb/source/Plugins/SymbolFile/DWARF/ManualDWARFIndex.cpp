@@ -416,7 +416,7 @@ void ManualDWARFIndex::GetNamespaces(ConstString name, DIEArray &offsets) {
 void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
                                     const CompilerDeclContext &parent_decl_ctx,
                                     uint32_t name_type_mask,
-                                    std::vector<DWARFDIE> &dies) {
+                                    std::vector<std::pair<DWARFUnit *main_unit, DWARFDIE>> &dies) {
   Index();
 
   if (name_type_mask & eFunctionNameTypeFull) {

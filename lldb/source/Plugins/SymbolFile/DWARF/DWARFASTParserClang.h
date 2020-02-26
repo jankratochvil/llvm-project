@@ -54,13 +54,13 @@ public:
                         lldb_private::CompilerType &compiler_type) override;
 
   lldb_private::CompilerDecl
-  GetDeclForUIDFromDWARF(const DWARFDIE &die) override;
+  GetDeclForUIDFromDWARF(DWARFUnit *main_unit, const DWARFDIE &die) override;
 
   void EnsureAllDIEsInDeclContextHaveBeenParsed(
       lldb_private::CompilerDeclContext decl_context) override;
 
   lldb_private::CompilerDeclContext
-  GetDeclContextForUIDFromDWARF(const DWARFDIE &die) override;
+  GetDeclContextForUIDFromDWARF(DWARFUnit *main_unit, const DWARFDIE &die) override;
 
   lldb_private::CompilerDeclContext
   GetDeclContextContainingUIDFromDWARF(const DWARFDIE &die) override;
@@ -73,12 +73,12 @@ protected:
   class DelayedAddObjCClassProperty;
   typedef std::vector<DelayedAddObjCClassProperty> DelayedPropertyList;
 
-  typedef llvm::SmallPtrSet<const DWARFDebugInfoEntry *, 4> DIEPointerSet;
-  typedef llvm::DenseMap<const DWARFDebugInfoEntry *, clang::DeclContext *>
+  typedef llvm::SmallPtrSet<std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>, 4> DIEPointerSet;
+  typedef llvm::DenseMap<std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>, clang::DeclContext *>
       DIEToDeclContextMap;
-  typedef std::multimap<const clang::DeclContext *, const DWARFDIE>
+  typedef std::multimap<const clang::DeclContext *, std::pair<DWARFUnit *, const DWARFDIE>>
       DeclContextToDIEMap;
-  typedef llvm::DenseMap<const DWARFDebugInfoEntry *, clang::Decl *>
+  typedef llvm::DenseMap<std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>, clang::Decl *>
       DIEToDeclMap;
   typedef llvm::DenseMap<const clang::Decl *, DIEPointerSet> DeclToDIEMap;
 
@@ -90,11 +90,11 @@ protected:
   std::unique_ptr<lldb_private::ClangASTImporter> m_clang_ast_importer_up;
   /// @}
 
-  clang::DeclContext *GetDeclContextForBlock(const DWARFDIE &die);
+  clang::DeclContext *GetDeclContextForBlock(DWARFUnit *main_unit, const DWARFDIE &die);
 
-  clang::BlockDecl *ResolveBlockDIE(const DWARFDIE &die);
+  clang::BlockDecl *ResolveBlockDIE(DWARFUnit *main_unit, const DWARFDIE &die);
 
-  clang::NamespaceDecl *ResolveNamespaceDIE(const DWARFDIE &die);
+  clang::NamespaceDecl *ResolveNamespaceDIE(DWARFUnit *main_unit, const DWARFDIE &die);
 
   bool ParseTemplateDIE(const DWARFDIE &die,
                         lldb_private::TypeSystemClang::TemplateParameterInfos
@@ -134,11 +134,11 @@ protected:
 
   lldb_private::Type *GetTypeForDIE(const DWARFDIE &die);
 
-  clang::Decl *GetClangDeclForDIE(const DWARFDIE &die);
+  clang::Decl *GetClangDeclForDIE(DWARFUnit *main_unit, const DWARFDIE &die);
 
-  clang::DeclContext *GetClangDeclContextForDIE(const DWARFDIE &die);
+  clang::DeclContext *GetClangDeclContextForDIE(DWARFUnit *main_unit, const DWARFDIE &die);
 
-  clang::DeclContext *GetClangDeclContextContainingDIE(const DWARFDIE &die,
+  clang::DeclContext *GetClangDeclContextContainingDIE(DWARFUnit *main_unit, const DWARFDIE &die,
                                                        DWARFDIE *decl_ctx_die);
 
   bool CopyUniqueClassMethodTypes(const DWARFDIE &src_class_die,
@@ -148,7 +148,7 @@ protected:
 
   clang::DeclContext *GetCachedClangDeclContextForDIE(const DWARFDIE &die);
 
-  void LinkDeclContextToDIE(clang::DeclContext *decl_ctx, const DWARFDIE &die);
+  void LinkDeclContextToDIE(clang::DeclContext *decl_ctx, DWARFUnit *main_unit, const DWARFDIE &die);
 
   void LinkDeclToDIE(clang::Decl *decl, const DWARFDIE &die);
 

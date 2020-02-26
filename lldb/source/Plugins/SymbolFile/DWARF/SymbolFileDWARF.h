@@ -347,7 +347,7 @@ protected:
 
   DWARFUnit *GetNextUnparsedDWARFCompileUnit(DWARFUnit *prev_cu);
 
-  bool GetFunction(const DWARFDIE &die, lldb_private::SymbolContext &sc);
+  bool GetFunction(const DWARFDIE &die, DWARFUnit *main_unit, lldb_private::SymbolContext &sc);
 
   lldb_private::Function *ParseFunction(lldb_private::CompileUnit &comp_unit,
                                         const DWARFDIE &die);
@@ -381,7 +381,7 @@ protected:
   bool ClassOrStructIsVirtual(const DWARFDIE &die);
 
   // Given a die_offset, figure out the symbol context representing that die.
-  bool ResolveFunction(const DWARFDIE &die, bool include_inlines,
+  bool ResolveFunction(DWARFUnit *main_unit, const DWARFDIE &die, bool include_inlines,
                        lldb_private::SymbolContextList &sc_list);
 
   /// Resolve functions and (possibly) blocks for the given file address and a
