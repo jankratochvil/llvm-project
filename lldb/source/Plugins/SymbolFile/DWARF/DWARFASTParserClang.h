@@ -63,7 +63,7 @@ public:
   GetDeclContextForUIDFromDWARF(DWARFUnit *main_unit, const DWARFDIE &die) override;
 
   lldb_private::CompilerDeclContext
-  GetDeclContextContainingUIDFromDWARF(const DWARFDIE &die) override;
+  GetDeclContextContainingUIDFromDWARF(DWARFUnit *main_unit, const DWARFDIE &die) override;
 
   lldb_private::ClangASTImporter &GetClangASTImporter();
 
@@ -146,7 +146,7 @@ protected:
                                   lldb_private::Type *class_type,
                                   std::vector<DWARFDIE> &failures);
 
-  clang::DeclContext *GetCachedClangDeclContextForDIE(const DWARFDIE &die);
+  clang::DeclContext *GetCachedClangDeclContextForDIE(DWARFUnit *main_unit, const DWARFDIE &die);
 
   void LinkDeclContextToDIE(clang::DeclContext *decl_ctx, DWARFUnit *main_unit, const DWARFDIE &die);
 

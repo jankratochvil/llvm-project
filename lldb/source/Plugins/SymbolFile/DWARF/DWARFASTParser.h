@@ -45,7 +45,7 @@ public:
   GetDeclContextForUIDFromDWARF(DWARFUnit *main_unit, const DWARFDIE &die) = 0;
 
   virtual lldb_private::CompilerDeclContext
-  GetDeclContextContainingUIDFromDWARF(const DWARFDIE &die) = 0;
+  GetDeclContextContainingUIDFromDWARF(DWARFUnit *main_unit, const DWARFDIE &die) = 0;
 
   virtual void EnsureAllDIEsInDeclContextHaveBeenParsed(
       lldb_private::CompilerDeclContext decl_context) = 0;
