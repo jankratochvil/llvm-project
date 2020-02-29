@@ -1245,6 +1245,7 @@ SymbolFileDWARF::DecodeUID(lldb::user_id_t uid) {
 
 DWARFDIE
 SymbolFileDWARF::GetDIE(lldb::user_id_t uid) {
+  // FIXME: DWZ: lock-less internal calls
   // This method can be called without going through the symbol vendor so we
   // need to lock the module.
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
@@ -2046,7 +2047,7 @@ void SymbolFileDWARF::FindGlobalVariables(
                                                       context, basename))
     basename = name.GetStringRef();
 
-  DIEArray die_offsets;
+  std::vector<lldb::user_id_t> die_offsets;
   m_index->GetGlobalVariables(ConstString(basename), die_offsets);
   const size_t num_die_matches = die_offsets.size();
   if (num_die_matches) {
@@ -2060,8 +2061,8 @@ void SymbolFileDWARF::FindGlobalVariables(
 
     bool done = false;
     for (size_t i = 0; i < num_die_matches && !done; ++i) {
-      const DIERef &die_ref = die_offsets[i];
-      DWARFDIE die = GetDIE(die_ref);
+      user_id_t uid = die_offsets[i];
+      DWARFDIE die = GetDIE(uid);
 
       if (die) {
         switch (die.Tag()) {

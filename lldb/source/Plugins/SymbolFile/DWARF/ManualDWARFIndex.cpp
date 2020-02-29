@@ -263,7 +263,9 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
       }
     }
 
-    DIERef ref = *DWARFDIE(&unit, &die).GetDIERef();
+    //DIERef ref = *DWARFDIE(&unit, &die).GetDIERef();
+    // FIXME: DWZ
+    user_id_t uid = DWARFDIE(&unit, &die).GetID(&unit);
     switch (tag) {
     case DW_TAG_inlined_subroutine:
     case DW_TAG_subprogram:
@@ -281,17 +283,17 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
               ConstString objc_fullname_no_category_name(
                   objc_method.GetFullNameWithoutCategory(true));
               ConstString class_name_no_category(objc_method.GetClassName());
-              set.function_fullnames.Insert(ConstString(name), ref);
+              set.function_fullnames.Insert(ConstString(name), uid);
               if (class_name_with_category)
-                set.objc_class_selectors.Insert(class_name_with_category, ref);
+                set.objc_class_selectors.Insert(class_name_with_category, uid);
               if (class_name_no_category &&
                   class_name_no_category != class_name_with_category)
-                set.objc_class_selectors.Insert(class_name_no_category, ref);
+                set.objc_class_selectors.Insert(class_name_no_category, uid);
               if (objc_selector_name)
-                set.function_selectors.Insert(objc_selector_name, ref);
+                set.function_selectors.Insert(objc_selector_name, uid);
               if (objc_fullname_no_category_name)
                 set.function_fullnames.Insert(objc_fullname_no_category_name,
-                                              ref);
+                                              uid);
             }
           }
           // If we have a mangled name, then the DW_AT_name attribute is
@@ -299,12 +301,12 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
           bool is_method = DWARFDIE(&unit, &die).IsMethod();
 
           if (is_method)
-            set.function_methods.Insert(ConstString(name), ref);
+            set.function_methods.Insert(ConstString(name), uid);
           else
-            set.function_basenames.Insert(ConstString(name), ref);
+            set.function_basenames.Insert(ConstString(name), uid);
 
           if (!is_method && !mangled_cstr && !is_objc_method)
-            set.function_fullnames.Insert(ConstString(name), ref);
+            set.function_fullnames.Insert(ConstString(name), uid);
         }
         if (mangled_cstr) {
           // Make sure our mangled name isn't the same string table entry as
@@ -314,7 +316,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
           if (name && name != mangled_cstr &&
               ((mangled_cstr[0] == '_') ||
                (::strcmp(name, mangled_cstr) != 0))) {
-            set.function_fullnames.Insert(ConstString(mangled_cstr), ref);
+            set.function_fullnames.Insert(ConstString(mangled_cstr), uid);
           }
         }
       }
@@ -332,19 +334,19 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
     case DW_TAG_union_type:
     case DW_TAG_unspecified_type:
       if (name && !is_declaration)
-        set.types.Insert(ConstString(name), ref);
+        set.types.Insert(ConstString(name), uid);
       if (mangled_cstr && !is_declaration)
-        set.types.Insert(ConstString(mangled_cstr), ref);
+        set.types.Insert(ConstString(mangled_cstr), uid);
       break;
 
     case DW_TAG_namespace:
       if (name)
-        set.namespaces.Insert(ConstString(name), ref);
+        set.namespaces.Insert(ConstString(name), uid);
       break;
 
     case DW_TAG_variable:
       if (name && has_location_or_const_value && is_global_or_static_variable) {
-        set.globals.Insert(ConstString(name), ref);
+        set.globals.Insert(ConstString(name), uid);
         // Be sure to include variables by their mangled and demangled names if
         // they have any since a variable can have a basename "i", a mangled
         // named "_ZN12_GLOBAL__N_11iE" and a demangled mangled name
@@ -356,7 +358,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
         // entries
         if (mangled_cstr && name != mangled_cstr &&
             ((mangled_cstr[0] == '_') || (::strcmp(name, mangled_cstr) != 0))) {
-          set.globals.Insert(ConstString(mangled_cstr), ref);
+          set.globals.Insert(ConstString(mangled_cstr), uid);
         }
       }
       break;
@@ -420,10 +422,10 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
   Index();
 
   if (name_type_mask & eFunctionNameTypeFull) {
-    DIEArray offsets;
+    std::vector<lldb::user_id_t> offsets;
     m_set.function_fullnames.Find(name, offsets);
-    for (const DIERef &die_ref: offsets) {
-      DWARFDIE die = dwarf.GetDIE(die_ref);
+    for (user_id_t uid : offsets) {
+      DWARFDIE die = dwarf.GetDIE(uid);
       if (!die)
         continue;
       if (SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
@@ -432,10 +434,10 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
     }
   }
   if (name_type_mask & eFunctionNameTypeBase) {
-    DIEArray offsets;
+    std::vector<lldb::user_id_t> offsets;
     m_set.function_basenames.Find(name, offsets);
-    for (const DIERef &die_ref: offsets) {
-      DWARFDIE die = dwarf.GetDIE(die_ref);
+    for (user_id_t uid : offsets) {
+      DWARFDIE die = dwarf.GetDIE(uid);
       if (!die)
         continue;
       if (SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
@@ -446,10 +448,10 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
   }
 
   if (name_type_mask & eFunctionNameTypeMethod && !parent_decl_ctx.IsValid()) {
-    DIEArray offsets;
+    std::vector<lldb::user_id_t> offsets;
     m_set.function_methods.Find(name, offsets);
-    for (const DIERef &die_ref: offsets) {
-      if (DWARFDIE die = dwarf.GetDIE(die_ref))
+    for (user_id_t uid : offsets) {
+      if (DWARFDIE die = dwarf.GetDIE(uid))
         // FIXME: DWZ: DIEArray
         dies.push_back(std::make_pair(die.GetCU(), die));
     }
@@ -457,10 +459,10 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
 
   if (name_type_mask & eFunctionNameTypeSelector &&
       !parent_decl_ctx.IsValid()) {
-    DIEArray offsets;
+    std::vector<lldb::user_id_t> offsets;
     m_set.function_selectors.Find(name, offsets);
-    for (const DIERef &die_ref: offsets) {
-      if (DWARFDIE die = dwarf.GetDIE(die_ref))
+    for (user_id_t uid : offsets) {
+      if (DWARFDIE die = dwarf.GetDIE(uid))
         // FIXME: DWZ: DIEArray
         dies.push_back(std::make_pair(die.GetCU(), die));
     }
