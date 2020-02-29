@@ -238,7 +238,7 @@ public:
   GetCompUnitForDWARFCompUnit(DWARFCompileUnit &dwarf_cu);
 
   virtual size_t GetObjCMethodDIEOffsets(lldb_private::ConstString class_name,
-                                         DIEArray &method_die_offsets);
+                                         std::vector<lldb::user_id_t> &method_die_offsets);
 
   bool Supports_DW_AT_APPLE_objc_complete_type(DWARFUnit *cu);
 
@@ -315,6 +315,16 @@ public:
   static lldb::LanguageType LanguageTypeFromDWARF(uint64_t val);
 
   static lldb::LanguageType GetLanguage(DWARFUnit &unit);
+
+  llvm::Optional<DIERef> GetDIERef(lldb::user_id_t uid) {
+    llvm::Optional<DecodedUID> decoded = DecodeUID(uid);
+    if (!decoded)
+      return {};
+    // FIXME:
+    if (&decoded->dwarf!=this)
+      return {};
+    return decoded->ref;
+  }
 
 protected:
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb_private::Type *>

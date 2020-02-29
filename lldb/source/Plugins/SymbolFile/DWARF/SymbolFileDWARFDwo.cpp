@@ -96,7 +96,7 @@ SymbolFileDWARFDwo::GetForwardDeclClangTypeToDie() {
 }
 
 size_t SymbolFileDWARFDwo::GetObjCMethodDIEOffsets(
-    lldb_private::ConstString class_name, DIEArray &method_die_offsets) {
+    lldb_private::ConstString class_name, std::vector<lldb::user_id_t> &method_die_offsets) {
   return GetBaseSymbolFile().GetObjCMethodDIEOffsets(class_name,
                                                      method_die_offsets);
 }

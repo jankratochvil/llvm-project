@@ -22,30 +22,34 @@ void NameToDIE::Finalize() {
   m_map.SizeToFit();
 }
 
-void NameToDIE::Insert(ConstString name, const DIERef &die_ref) {
-  m_map.Append(name, die_ref);
+void NameToDIE::Insert(ConstString name, user_id_t uid) {
+  m_map.Append(name, uid);
 }
 
-size_t NameToDIE::Find(ConstString name, DIEArray &info_array) const {
+size_t NameToDIE::Find(ConstString name, std::vector<lldb::user_id_t> &info_array) const {
   return m_map.GetValues(name, info_array);
 }
 
 size_t NameToDIE::Find(const RegularExpression &regex,
-                       DIEArray &info_array) const {
+                       std::vector<lldb::user_id_t> &info_array) const {
   return m_map.GetValues(regex, info_array);
 }
 
 size_t NameToDIE::FindAllEntriesForUnit(const DWARFUnit &unit,
-                                        DIEArray &info_array) const {
+                                        std::vector<lldb::user_id_t> &info_array) const {
   const size_t initial_size = info_array.size();
   const uint32_t size = m_map.GetSize();
   for (uint32_t i = 0; i < size; ++i) {
-    const DIERef &die_ref = m_map.GetValueAtIndexUnchecked(i);
+    user_id_t uid = m_map.GetValueAtIndexUnchecked(i);
+    llvm::Optional<DIERef> die_ref_opt = unit.GetSymbolFileDWARF().GetDIERef(uid);
+    if (!die_ref_opt)
+      continue;
+    DIERef die_ref = *die_ref_opt;
     if (unit.GetSymbolFileDWARF().GetDwoNum() == die_ref.dwo_num() &&
         unit.GetDebugSection() == die_ref.section() &&
         unit.GetOffset() <= die_ref.die_offset() &&
         die_ref.die_offset() < unit.GetNextUnitOffset())
-      info_array.push_back(die_ref);
+      info_array.push_back(uid);
   }
   return info_array.size() - initial_size;
 }
@@ -59,7 +63,7 @@ void NameToDIE::Dump(Stream *s) {
 }
 
 void NameToDIE::ForEach(
-    std::function<bool(ConstString name, const DIERef &die_ref)> const
+    std::function<bool(ConstString name, user_id_t uid)> const
         &callback) const {
   const uint32_t size = m_map.GetSize();
   for (uint32_t i = 0; i < size; ++i) {

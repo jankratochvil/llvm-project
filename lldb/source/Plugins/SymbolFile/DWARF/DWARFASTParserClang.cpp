@@ -2056,16 +2056,14 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
     if (class_language == eLanguageTypeObjC) {
       ConstString class_name(clang_type.GetTypeName());
       if (class_name) {
-        DIEArray method_die_offsets;
+        std::vector<lldb::user_id_t> method_die_offsets;
         dwarf->GetObjCMethodDIEOffsets(class_name, method_die_offsets);
 
         if (!method_die_offsets.empty()) {
-          DWARFDebugInfo &debug_info = dwarf->DebugInfo();
-
           const size_t num_matches = method_die_offsets.size();
           for (size_t i = 0; i < num_matches; ++i) {
-            const DIERef &die_ref = method_die_offsets[i];
-            DWARFDIE method_die = debug_info.GetDIE(die_ref);
+            user_id_t uid = method_die_offsets[i];
+            DWARFDIE method_die = dwarf->GetDIE(uid);
 
             if (method_die)
               method_die.ResolveType();

@@ -367,48 +367,48 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
   }
 }
 
-void ManualDWARFIndex::GetGlobalVariables(ConstString basename, DIEArray &offsets) {
+void ManualDWARFIndex::GetGlobalVariables(ConstString basename, std::vector<lldb::user_id_t> &offsets) {
   Index();
   m_set.globals.Find(basename, offsets);
 }
 
 void ManualDWARFIndex::GetGlobalVariables(const RegularExpression &regex,
-                                          DIEArray &offsets) {
+                                          std::vector<lldb::user_id_t> &offsets) {
   Index();
   m_set.globals.Find(regex, offsets);
 }
 
 void ManualDWARFIndex::GetGlobalVariables(const DWARFUnit &unit,
-                                          DIEArray &offsets) {
+                                          std::vector<lldb::user_id_t> &offsets) {
   Index();
   m_set.globals.FindAllEntriesForUnit(unit, offsets);
 }
 
 void ManualDWARFIndex::GetObjCMethods(ConstString class_name,
-                                      DIEArray &offsets) {
+                                      std::vector<lldb::user_id_t> &offsets) {
   Index();
   m_set.objc_class_selectors.Find(class_name, offsets);
 }
 
 void ManualDWARFIndex::GetCompleteObjCClass(ConstString class_name,
                                             bool must_be_implementation,
-                                            DIEArray &offsets) {
+                                            std::vector<lldb::user_id_t> &offsets) {
   Index();
   m_set.types.Find(class_name, offsets);
 }
 
-void ManualDWARFIndex::GetTypes(ConstString name, DIEArray &offsets) {
+void ManualDWARFIndex::GetTypes(ConstString name, std::vector<lldb::user_id_t> &offsets) {
   Index();
   m_set.types.Find(name, offsets);
 }
 
 void ManualDWARFIndex::GetTypes(const DWARFDeclContext &context,
-                                DIEArray &offsets) {
+                                std::vector<lldb::user_id_t> &offsets) {
   Index();
   m_set.types.Find(ConstString(context[0].name), offsets);
 }
 
-void ManualDWARFIndex::GetNamespaces(ConstString name, DIEArray &offsets) {
+void ManualDWARFIndex::GetNamespaces(ConstString name, std::vector<lldb::user_id_t> &offsets) {
   Index();
   m_set.namespaces.Find(name, offsets);
 }
@@ -468,7 +468,7 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
 }
 
 void ManualDWARFIndex::GetFunctions(const RegularExpression &regex,
-                                    DIEArray &offsets) {
+                                    std::vector<lldb::user_id_t> &offsets) {
   Index();
 
   m_set.function_basenames.Find(regex, offsets);

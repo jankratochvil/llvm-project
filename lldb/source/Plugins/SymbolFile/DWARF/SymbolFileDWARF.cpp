@@ -448,7 +448,7 @@ void SymbolFileDWARF::InitializeObject() {
     LoadSectionData(eSectionTypeDWARFAppleObjC, apple_objc);
 
     m_index = AppleDWARFIndex::Create(
-        *GetObjectFile()->GetModule(), apple_names, apple_namespaces,
+        *this, apple_names, apple_namespaces,
         apple_types, apple_objc, m_context.getOrLoadStrData());
 
     if (m_index)
@@ -1462,7 +1462,7 @@ SymbolFileDWARF::GetCompUnitForDWARFCompUnit(DWARFCompileUnit &dwarf_cu) {
 }
 
 size_t SymbolFileDWARF::GetObjCMethodDIEOffsets(ConstString class_name,
-                                                DIEArray &method_die_offsets) {
+                                                std::vector<lldb::user_id_t> &method_die_offsets) {
   method_die_offsets.clear();
   m_index->GetObjCMethods(class_name, method_die_offsets);
   return method_die_offsets.size();

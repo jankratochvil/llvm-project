@@ -58,9 +58,10 @@ DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) {
 }
 
 void DebugNamesDWARFIndex::Append(const DebugNames::Entry &entry,
-                                  DIEArray &offsets) {
+                                  std::vector<lldb::user_id_t> &offsets) {
   if (llvm::Optional<DIERef> ref = ToDIERef(entry))
-    offsets.push_back(*ref);
+    // FIXME: DWZ
+    offsets.push_back(m_debug_info.GetUID(*ref));
 }
 
 void DebugNamesDWARFIndex::MaybeLogLookupError(llvm::Error error,
@@ -75,7 +76,7 @@ void DebugNamesDWARFIndex::MaybeLogLookupError(llvm::Error error,
 }
 
 void DebugNamesDWARFIndex::GetGlobalVariables(ConstString basename,
-                                              DIEArray &offsets) {
+                                              std::vector<lldb::user_id_t> &offsets) {
   m_fallback.GetGlobalVariables(basename, offsets);
 
   for (const DebugNames::Entry &entry :
@@ -88,7 +89,7 @@ void DebugNamesDWARFIndex::GetGlobalVariables(ConstString basename,
 }
 
 void DebugNamesDWARFIndex::GetGlobalVariables(const RegularExpression &regex,
-                                              DIEArray &offsets) {
+                                              std::vector<lldb::user_id_t> &offsets) {
   m_fallback.GetGlobalVariables(regex, offsets);
 
   for (const DebugNames::NameIndex &ni: *m_debug_names_up) {
@@ -110,7 +111,7 @@ void DebugNamesDWARFIndex::GetGlobalVariables(const RegularExpression &regex,
 }
 
 void DebugNamesDWARFIndex::GetGlobalVariables(const DWARFUnit &cu,
-                                              DIEArray &offsets) {
+                                              std::vector<lldb::user_id_t> &offsets) {
   m_fallback.GetGlobalVariables(cu, offsets);
 
   uint64_t cu_offset = cu.GetOffset();
@@ -133,11 +134,12 @@ void DebugNamesDWARFIndex::GetGlobalVariables(const DWARFUnit &cu,
 
 void DebugNamesDWARFIndex::GetCompleteObjCClass(ConstString class_name,
                                                 bool must_be_implementation,
-                                                DIEArray &offsets) {
+                                                std::vector<lldb::user_id_t> &offsets) {
   m_fallback.GetCompleteObjCClass(class_name, must_be_implementation, offsets);
 
   // Keep a list of incomplete types as fallback for when we don't find the
   // complete type.
+  // FIXME: DWZ
   DIEArray incomplete_types;
 
   for (const DebugNames::Entry &entry :
@@ -163,18 +165,21 @@ void DebugNamesDWARFIndex::GetCompleteObjCClass(ConstString class_name,
 
     if (die.GetAttributeValueAsUnsigned(DW_AT_APPLE_objc_complete_type, 0)) {
       // If we find the complete version we're done.
-      offsets.push_back(*ref);
+      // FIXME: DWZ
+      offsets.push_back(m_debug_info.GetUID(*ref));
       return;
     } else {
       incomplete_types.push_back(*ref);
     }
   }
 
-  offsets.insert(offsets.end(), incomplete_types.begin(),
-                 incomplete_types.end());
+  offsets.reserve(offsets.size() + incomplete_types.size());
+  for (const auto ref : incomplete_types)
+    // FIXME: DWZ
+    offsets.push_back(m_debug_info.GetUID(ref));
 }
 
-void DebugNamesDWARFIndex::GetTypes(ConstString name, DIEArray &offsets) {
+void DebugNamesDWARFIndex::GetTypes(ConstString name, std::vector<lldb::user_id_t> &offsets) {
   m_fallback.GetTypes(name, offsets);
 
   for (const DebugNames::Entry &entry :
@@ -185,7 +190,7 @@ void DebugNamesDWARFIndex::GetTypes(ConstString name, DIEArray &offsets) {
 }
 
 void DebugNamesDWARFIndex::GetTypes(const DWARFDeclContext &context,
-                                    DIEArray &offsets) {
+                                    std::vector<lldb::user_id_t> &offsets) {
   m_fallback.GetTypes(context, offsets);
 
   for (const DebugNames::Entry &entry :
@@ -195,7 +200,7 @@ void DebugNamesDWARFIndex::GetTypes(const DWARFDeclContext &context,
   }
 }
 
-void DebugNamesDWARFIndex::GetNamespaces(ConstString name, DIEArray &offsets) {
+void DebugNamesDWARFIndex::GetNamespaces(ConstString name, std::vector<lldb::user_id_t> &offsets) {
   m_fallback.GetNamespaces(name, offsets);
 
   for (const DebugNames::Entry &entry :
@@ -233,7 +238,7 @@ void DebugNamesDWARFIndex::GetFunctions(
 }
 
 void DebugNamesDWARFIndex::GetFunctions(const RegularExpression &regex,
-                                        DIEArray &offsets) {
+                                        std::vector<lldb::user_id_t> &offsets) {
   m_fallback.GetFunctions(regex, offsets);
 
   for (const DebugNames::NameIndex &ni: *m_debug_names_up) {

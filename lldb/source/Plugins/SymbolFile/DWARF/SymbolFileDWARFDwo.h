@@ -32,7 +32,7 @@ public:
   DWARFCompileUnit *GetDWOCompileUnitForHash(uint64_t hash);
 
   size_t GetObjCMethodDIEOffsets(lldb_private::ConstString class_name,
-                                 DIEArray &method_die_offsets) override;
+                                 std::vector<lldb::user_id_t> &method_die_offsets) override;
 
   llvm::Expected<lldb_private::TypeSystem &>
   GetTypeSystemForLanguage(lldb::LanguageType language) override;

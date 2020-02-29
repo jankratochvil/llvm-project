@@ -19,6 +19,7 @@
 #include "DWARFDefines.h"
 #include "DWARFFormValue.h"
 #include "NameToDIE.h"
+#include "DIERef.h"
 
 class DWARFMappedHash {
 public:

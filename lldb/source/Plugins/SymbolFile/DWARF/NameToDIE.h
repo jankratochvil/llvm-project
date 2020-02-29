@@ -11,7 +11,6 @@
 
 #include <functional>
 
-#include "DIERef.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/lldb-defines.h"
@@ -26,28 +25,28 @@ public:
 
   void Dump(lldb_private::Stream *s);
 
-  void Insert(lldb_private::ConstString name, const DIERef &die_ref);
+  void Insert(lldb_private::ConstString name, lldb::user_id_t uid);
 
   void Append(const NameToDIE &other);
 
   void Finalize();
 
   size_t Find(lldb_private::ConstString name,
-              DIEArray &info_array) const;
+              std::vector<lldb::user_id_t> &info_array) const;
 
   size_t Find(const lldb_private::RegularExpression &regex,
-              DIEArray &info_array) const;
+              std::vector<lldb::user_id_t> &info_array) const;
 
   size_t FindAllEntriesForUnit(const DWARFUnit &unit,
-                               DIEArray &info_array) const;
+                               std::vector<lldb::user_id_t> &info_array) const;
 
   void
   ForEach(std::function<bool(lldb_private::ConstString name,
-                             const DIERef &die_ref)> const
+                             lldb::user_id_t uid)> const
               &callback) const;
 
 protected:
-  lldb_private::UniqueCStringMap<DIERef> m_map;
+  lldb_private::UniqueCStringMap<lldb::user_id_t> m_map;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_NAMETODIE_H
