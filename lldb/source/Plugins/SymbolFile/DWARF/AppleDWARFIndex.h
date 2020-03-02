@@ -50,7 +50,7 @@ public:
                     std::vector<std::pair<DWARFUnit *, DWARFDIE>> &dies) override;
   void GetFunctions(const RegularExpression &regex, std::vector<lldb::user_id_t> &offsets) override;
 
-  void ReportInvalidDIERef(const DIERef &ref, llvm::StringRef name) override;
+  void ReportInvalidDIEID(lldb::user_id_t uid, llvm::StringRef name) override;
   void Dump(Stream &s) override;
 
 private:

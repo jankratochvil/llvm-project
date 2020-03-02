@@ -220,12 +220,12 @@ void AppleDWARFIndex::GetFunctions(const RegularExpression &regex,
     offsets.push_back(m_dwarf.GetUID(ref, nullptr/* main_unit */));
 }
 
-void AppleDWARFIndex::ReportInvalidDIERef(const DIERef &ref,
+void AppleDWARFIndex::ReportInvalidDIEID(user_id_t uid,
                                           llvm::StringRef name) {
   m_module.ReportErrorIfModifyDetected(
       "the DWARF debug information has been modified (accelerator table had "
-      "bad die 0x%8.8x for '%s')\n",
-      ref.die_offset(), name.str().c_str());
+      "bad die 0x%8.8lx for '%s')\n",
+      uid, name.str().c_str());
 }
 
 void AppleDWARFIndex::Dump(Stream &s) {

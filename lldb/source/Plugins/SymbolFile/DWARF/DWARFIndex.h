@@ -46,7 +46,7 @@ public:
   virtual void GetFunctions(const RegularExpression &regex,
                             std::vector<lldb::user_id_t> &offsets) = 0;
 
-  virtual void ReportInvalidDIERef(const DIERef &ref, llvm::StringRef name) = 0;
+  virtual void ReportInvalidDIEID(lldb::user_id_t uid, llvm::StringRef name) = 0;
   virtual void Dump(Stream &s) = 0;
 
 protected:

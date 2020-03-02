@@ -258,7 +258,7 @@ public:
 
   virtual DWARFDIE GetDIE(const DIERef &die_ref);
 
-  DWARFDIE GetDIE(lldb::user_id_t uid);
+  DWARFDIE GetDIE(lldb::user_id_t uid, DWARFUnit **main_unit_return = nullptr);
 
   lldb::user_id_t GetUID(const DWARFBaseDIE &die, DWARFUnit *main_unit) {
     return GetUID(die.GetDIERef(), main_unit);

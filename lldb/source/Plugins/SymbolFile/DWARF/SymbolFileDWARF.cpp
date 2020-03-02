@@ -1244,7 +1244,7 @@ SymbolFileDWARF::DecodeUID(lldb::user_id_t uid) {
 }
 
 DWARFDIE
-SymbolFileDWARF::GetDIE(lldb::user_id_t uid) {
+SymbolFileDWARF::GetDIE(lldb::user_id_t uid, DWARFUnit **main_unit_return) {
   // FIXME: DWZ: lock-less internal calls
   // This method can be called without going through the symbol vendor so we
   // need to lock the module.
@@ -1252,8 +1252,13 @@ SymbolFileDWARF::GetDIE(lldb::user_id_t uid) {
 
   llvm::Optional<DecodedUID> decoded = DecodeUID(uid);
 
-  if (decoded)
-    return decoded->dwarf.GetDIE(decoded->ref);
+  if (decoded) {
+    DWARFDIE die = decoded->dwarf.GetDIE(decoded->ref);
+    if (main_unit_return)
+      // FIXME: DWZ
+      *main_unit_return = die.GetCU();
+    return die;
+  }
 
   return DWARFDIE();
 }
@@ -2062,7 +2067,8 @@ void SymbolFileDWARF::FindGlobalVariables(
     bool done = false;
     for (size_t i = 0; i < num_die_matches && !done; ++i) {
       user_id_t uid = die_offsets[i];
-      DWARFDIE die = GetDIE(uid);
+      DWARFUnit *main_unit;
+      DWARFDIE die = GetDIE(uid, &main_unit);
 
       if (die) {
         switch (die.Tag()) {
@@ -2082,7 +2088,7 @@ void SymbolFileDWARF::FindGlobalVariables(
           if (parent_decl_ctx) {
             if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.GetCU())) {
               CompilerDeclContext actual_parent_decl_ctx =
-                  dwarf_ast->GetDeclContextContainingUIDFromDWARF(die);
+                  dwarf_ast->GetDeclContextContainingUIDFromDWARF(main_unit, die);
               if (!actual_parent_decl_ctx ||
                   actual_parent_decl_ctx != parent_decl_ctx)
                 continue;
@@ -2105,7 +2111,7 @@ void SymbolFileDWARF::FindGlobalVariables(
         } break;
         }
       } else {
-        m_index->ReportInvalidDIERef(die_ref, name.GetStringRef());
+        m_index->ReportInvalidDIEID(uid, name.GetStringRef());
       }
     }
   }
@@ -2139,7 +2145,7 @@ void SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
   // Remember how many variables are in the list before we search.
   const uint32_t original_size = variables.GetSize();
 
-  DIEArray die_offsets;
+  std::vector<lldb::user_id_t> die_offsets;
   m_index->GetGlobalVariables(regex, die_offsets);
 
   SymbolContext sc;
@@ -2149,8 +2155,8 @@ void SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
   const size_t num_matches = die_offsets.size();
   if (num_matches) {
     for (size_t i = 0; i < num_matches; ++i) {
-      const DIERef &die_ref = die_offsets[i];
-      DWARFDIE die = GetDIE(die_ref);
+      user_id_t uid = die_offsets[i];
+      DWARFDIE die = GetDIE(uid);
 
       if (die) {
         DWARFCompileUnit *dwarf_cu =
@@ -2164,7 +2170,7 @@ void SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
         if (variables.GetSize() - original_size >= max_matches)
           break;
       } else
-        m_index->ReportInvalidDIERef(die_ref, regex.GetText());
+        m_index->ReportInvalidDIEID(uid, regex.GetText());
     }
   }
 }
@@ -2318,14 +2324,14 @@ void SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
   }
 
   DWARFDebugInfo &info = DebugInfo();
-  DIEArray offsets;
+  std::vector<lldb::user_id_t> offsets;
   m_index->GetFunctions(regex, offsets);
 
   llvm::DenseSet<const DWARFDebugInfoEntry *> resolved_dies;
-  for (DIERef ref : offsets) {
-    DWARFDIE die = info.GetDIE(ref);
+  for (user_id_t uid : offsets) {
+    DWARFDIE die = info.GetDIE(uid);
     if (!die) {
-      m_index->ReportInvalidDIERef(ref, regex.GetText());
+      m_index->ReportInvalidDIEID(uid, regex.GetText());
       continue;
     }
     if (resolved_dies.insert(die.GetDIE()).second)
@@ -2386,13 +2392,13 @@ void SymbolFileDWARF::FindTypes(
   if (!DeclContextMatchesThisSymbolFile(parent_decl_ctx))
     return;
 
-  DIEArray die_offsets;
+  std::vector<lldb::user_id_t> die_offsets;
   m_index->GetTypes(name, die_offsets);
   const size_t num_die_matches = die_offsets.size();
 
   for (size_t i = 0; i < num_die_matches; ++i) {
-    const DIERef &die_ref = die_offsets[i];
-    DWARFDIE die = GetDIE(die_ref);
+    user_id_t uid = die_offsets[i];
+    DWARFDIE die = GetDIE(uid);
     if (die) {
       if (!DIEInDeclContext(parent_decl_ctx, die))
         continue; // The containing decl contexts don't match
@@ -2406,7 +2412,7 @@ void SymbolFileDWARF::FindTypes(
           break;
       }
     } else {
-      m_index->ReportInvalidDIERef(die_ref, name.GetStringRef());
+      m_index->ReportInvalidDIEID(uid, name.GetStringRef());
     }
   }
 
@@ -2458,16 +2464,16 @@ void SymbolFileDWARF::FindTypes(
   if (!name)
     return;
 
-  DIEArray die_offsets;
+  std::vector<lldb::user_id_t> die_offsets;
   m_index->GetTypes(name, die_offsets);
   const size_t num_die_matches = die_offsets.size();
 
   for (size_t i = 0; i < num_die_matches; ++i) {
-    const DIERef &die_ref = die_offsets[i];
-    DWARFDIE die = GetDIE(die_ref);
+    user_id_t uid = die_offsets[i];
+    DWARFDIE die = GetDIE(uid);
 
     if (!die) {
-      m_index->ReportInvalidDIERef(die_ref, name.GetStringRef());
+      m_index->ReportInvalidDIEID(uid, name.GetStringRef());
       continue;
     }
     if (!languages[GetLanguage(*die.GetCU())])
@@ -2513,13 +2519,13 @@ SymbolFileDWARF::FindNamespace(ConstString name,
   if (!DeclContextMatchesThisSymbolFile(parent_decl_ctx))
     return namespace_decl_ctx;
 
-  DIEArray die_offsets;
+  std::vector<lldb::user_id_t> die_offsets;
   m_index->GetNamespaces(name, die_offsets);
   const size_t num_matches = die_offsets.size();
   if (num_matches) {
     for (size_t i = 0; i < num_matches; ++i) {
-      const DIERef &die_ref = die_offsets[i];
-      DWARFDIE die = GetDIE(die_ref);
+      user_id_t uid = die_offsets[i];
+      DWARFDIE die = GetDIE(uid);
 
       if (die) {
         if (!DIEInDeclContext(parent_decl_ctx, die))
@@ -2531,7 +2537,7 @@ SymbolFileDWARF::FindNamespace(ConstString name,
             break;
         }
       } else {
-        m_index->ReportInvalidDIERef(die_ref, name.GetStringRef());
+        m_index->ReportInvalidDIEID(uid, name.GetStringRef());
       }
     }
   }
@@ -2688,15 +2694,15 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
   if (!type_name || (must_be_implementation && !GetObjCClassSymbol(type_name)))
     return type_sp;
 
-  DIEArray die_offsets;
+  std::vector<lldb::user_id_t> die_offsets;
   m_index->GetCompleteObjCClass(type_name, must_be_implementation, die_offsets);
 
   const size_t num_matches = die_offsets.size();
 
   if (num_matches) {
     for (size_t i = 0; i < num_matches; ++i) {
-      const DIERef &die_ref = die_offsets[i];
-      DWARFDIE type_die = GetDIE(die_ref);
+      user_id_t uid = die_offsets[i];
+      DWARFDIE type_die = GetDIE(uid);
 
       if (type_die) {
         bool try_resolving_type = false;
@@ -2738,7 +2744,7 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
           }
         }
       } else {
-        m_index->ReportInvalidDIERef(die_ref, type_name.GetStringRef());
+        m_index->ReportInvalidDIEID(uid, type_name.GetStringRef());
       }
     }
   }
@@ -2855,7 +2861,7 @@ TypeSP SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(
             dwarf_decl_ctx.GetQualifiedName());
       }
 
-      DIEArray die_offsets;
+      std::vector<lldb::user_id_t> die_offsets;
       m_index->GetTypes(dwarf_decl_ctx, die_offsets);
       const size_t num_matches = die_offsets.size();
 
@@ -2877,8 +2883,8 @@ TypeSP SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(
       }
       if (num_matches) {
         for (size_t i = 0; i < num_matches; ++i) {
-          const DIERef &die_ref = die_offsets[i];
-          DWARFDIE type_die = GetDIE(die_ref);
+          user_id_t uid = die_offsets[i];
+          DWARFDIE type_die = GetDIE(uid);
 
           if (type_die) {
             // Make sure type_die's langauge matches the type system we are
@@ -2956,7 +2962,7 @@ TypeSP SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(
               }
             }
           } else {
-            m_index->ReportInvalidDIERef(die_ref, type_name.GetStringRef());
+            m_index->ReportInvalidDIEID(uid, type_name.GetStringRef());
           }
         }
       }
@@ -3103,14 +3109,14 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
         variables = std::make_shared<VariableList>();
         sc.comp_unit->SetVariableList(variables);
 
-        DIEArray die_offsets;
+        std::vector<lldb::user_id_t> die_offsets;
         m_index->GetGlobalVariables(dwarf_cu->GetNonSkeletonUnit(),
                                     die_offsets);
         const size_t num_matches = die_offsets.size();
         if (num_matches) {
           for (size_t i = 0; i < num_matches; ++i) {
-            const DIERef &die_ref = die_offsets[i];
-            DWARFDIE die = GetDIE(die_ref);
+            user_id_t uid = die_offsets[i];
+            DWARFDIE die = GetDIE(uid);
             if (die) {
               VariableSP var_sp(
                   ParseVariableDIE(sc, die, LLDB_INVALID_ADDRESS));
@@ -3119,7 +3125,7 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
                 ++vars_added;
               }
             } else
-              m_index->ReportInvalidDIERef(die_ref, "");
+              m_index->ReportInvalidDIEID(uid, "");
           }
         }
       }
