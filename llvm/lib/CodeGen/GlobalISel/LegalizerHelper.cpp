@@ -63,58 +63,6 @@ getNarrowTypeBreakDown(LLT OrigTy, LLT NarrowTy, LLT &LeftoverTy) {
   return std::make_pair(NumParts, NumLeftover);
 }
 
-static LLT getGCDType(LLT OrigTy, LLT TargetTy) {
-  if (OrigTy.isVector() && TargetTy.isVector()) {
-    assert(OrigTy.getElementType() == TargetTy.getElementType());
-    int GCD = greatestCommonDivisor(OrigTy.getNumElements(),
-                                    TargetTy.getNumElements());
-    return LLT::scalarOrVector(GCD, OrigTy.getElementType());
-  }
-
-  if (OrigTy.isVector() && !TargetTy.isVector()) {
-    assert(OrigTy.getElementType() == TargetTy);
-    return TargetTy;
-  }
-
-  assert(!OrigTy.isVector() && !TargetTy.isVector() &&
-         "GCD type of vector and scalar not implemented");
-
-  int GCD = greatestCommonDivisor(OrigTy.getSizeInBits(),
-                                  TargetTy.getSizeInBits());
-  return LLT::scalar(GCD);
-}
-
-static LLT getLCMType(LLT Ty0, LLT Ty1) {
-  if (!Ty0.isVector() && !Ty1.isVector()) {
-    unsigned Mul = Ty0.getSizeInBits() * Ty1.getSizeInBits();
-    int GCDSize = greatestCommonDivisor(Ty0.getSizeInBits(),
-                                        Ty1.getSizeInBits());
-    return LLT::scalar(Mul / GCDSize);
-  }
-
-  if (Ty0.isVector() && !Ty1.isVector()) {
-    assert(Ty0.getElementType() == Ty1 && "not yet handled");
-    return Ty0;
-  }
-
-  if (Ty1.isVector() && !Ty0.isVector()) {
-    assert(Ty1.getElementType() == Ty0 && "not yet handled");
-    return Ty1;
-  }
-
-  if (Ty0.isVector() && Ty1.isVector()) {
-    assert(Ty0.getElementType() == Ty1.getElementType() && "not yet handled");
-
-    int GCDElts = greatestCommonDivisor(Ty0.getNumElements(),
-                                        Ty1.getNumElements());
-
-    int Mul = Ty0.getNumElements() * Ty1.getNumElements();
-    return LLT::vector(Mul / GCDElts, Ty0.getElementType());
-  }
-
-  llvm_unreachable("not yet handled");
-}
-
 static Type *getFloatTypeForLLT(LLVMContext &Ctx, LLT Ty) {
 
   if (!Ty.isScalar())
@@ -2174,13 +2122,12 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     return lowerBitcast(MI);
   case TargetOpcode::G_SREM:
   case TargetOpcode::G_UREM: {
-    Register QuotReg = MRI.createGenericVirtualRegister(Ty);
-    MIRBuilder.buildInstr(MI.getOpcode() == G_SREM ? G_SDIV : G_UDIV, {QuotReg},
-                          {MI.getOperand(1), MI.getOperand(2)});
+    auto Quot =
+        MIRBuilder.buildInstr(MI.getOpcode() == G_SREM ? G_SDIV : G_UDIV, {Ty},
+                              {MI.getOperand(1), MI.getOperand(2)});
 
-    Register ProdReg = MRI.createGenericVirtualRegister(Ty);
-    MIRBuilder.buildMul(ProdReg, QuotReg, MI.getOperand(2));
-    MIRBuilder.buildSub(MI.getOperand(0), MI.getOperand(1), ProdReg);
+    auto Prod = MIRBuilder.buildMul(Ty, Quot, MI.getOperand(2));
+    MIRBuilder.buildSub(MI.getOperand(0), MI.getOperand(1), Prod);
     MI.eraseFromParent();
     return Legalized;
   }
@@ -2209,9 +2156,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     MIRBuilder.setInsertPt(MIRBuilder.getMBB(), ++MIRBuilder.getInsertPt());
 
     auto HiPart = MIRBuilder.buildInstr(Opcode, {Ty}, {LHS, RHS});
-
-    Register Zero = MRI.createGenericVirtualRegister(Ty);
-    MIRBuilder.buildConstant(Zero, 0);
+    auto Zero = MIRBuilder.buildConstant(Ty, 0);
 
     // For *signed* multiply, overflow is detected by checking:
     // (hi != (lo >> bitwidth-1))
@@ -2433,12 +2378,10 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     Register LHS = MI.getOperand(2).getReg();
     Register RHS = MI.getOperand(3).getReg();
     Register CarryIn = MI.getOperand(4).getReg();
+    LLT Ty = MRI.getType(Res);
 
-    Register TmpRes = MRI.createGenericVirtualRegister(Ty);
-    Register ZExtCarryIn = MRI.createGenericVirtualRegister(Ty);
-
-    MIRBuilder.buildAdd(TmpRes, LHS, RHS);
-    MIRBuilder.buildZExt(ZExtCarryIn, CarryIn);
+    auto TmpRes = MIRBuilder.buildAdd(Ty, LHS, RHS);
+    auto ZExtCarryIn = MIRBuilder.buildZExt(Ty, CarryIn);
     MIRBuilder.buildAdd(Res, TmpRes, ZExtCarryIn);
     MIRBuilder.buildICmp(CmpInst::ICMP_ULT, CarryOut, Res, LHS);
 
@@ -2463,17 +2406,15 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     Register LHS = MI.getOperand(2).getReg();
     Register RHS = MI.getOperand(3).getReg();
     Register BorrowIn = MI.getOperand(4).getReg();
+    const LLT CondTy = MRI.getType(BorrowOut);
+    const LLT Ty = MRI.getType(Res);
 
-    Register TmpRes = MRI.createGenericVirtualRegister(Ty);
-    Register ZExtBorrowIn = MRI.createGenericVirtualRegister(Ty);
-    Register LHS_EQ_RHS = MRI.createGenericVirtualRegister(LLT::scalar(1));
-    Register LHS_ULT_RHS = MRI.createGenericVirtualRegister(LLT::scalar(1));
-
-    MIRBuilder.buildSub(TmpRes, LHS, RHS);
-    MIRBuilder.buildZExt(ZExtBorrowIn, BorrowIn);
+    auto TmpRes = MIRBuilder.buildSub(Ty, LHS, RHS);
+    auto ZExtBorrowIn = MIRBuilder.buildZExt(Ty, BorrowIn);
     MIRBuilder.buildSub(Res, TmpRes, ZExtBorrowIn);
-    MIRBuilder.buildICmp(CmpInst::ICMP_EQ, LHS_EQ_RHS, LHS, RHS);
-    MIRBuilder.buildICmp(CmpInst::ICMP_ULT, LHS_ULT_RHS, LHS, RHS);
+
+    auto LHS_EQ_RHS = MIRBuilder.buildICmp(CmpInst::ICMP_EQ, CondTy, LHS, RHS);
+    auto LHS_ULT_RHS = MIRBuilder.buildICmp(CmpInst::ICMP_ULT, CondTy, LHS, RHS);
     MIRBuilder.buildSelect(BorrowOut, LHS_EQ_RHS, BorrowIn, LHS_ULT_RHS);
 
     MI.eraseFromParent();

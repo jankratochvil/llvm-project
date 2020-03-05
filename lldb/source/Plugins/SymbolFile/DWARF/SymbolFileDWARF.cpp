@@ -324,10 +324,8 @@ void SymbolFileDWARF::GetTypes(DWARFUnit *main_unit, const DWARFDIE &die, dw_off
       if (add_type) {
         const bool assert_not_being_parsed = true;
         Type *type = ResolveTypeUID(main_unit, die, assert_not_being_parsed);
-        if (type) {
-          if (type_set.find(type) == type_set.end())
-            type_set.insert(type);
-        }
+        if (type)
+          type_set.insert(type);
       }
     }
 

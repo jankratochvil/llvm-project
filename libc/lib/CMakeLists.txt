@@ -15,6 +15,17 @@ add_entrypoint_library(
 
     # signal.h entrypoints
     raise
+    sigaddset
+    sigemptyset
+    sigprocmask
+
+    # stdlib.h entrypoints
+    _Exit
+    abort
+
+    # threads.h entrypoints
+    thrd_create
+    thrd_join
 )
 
 add_entrypoint_library(

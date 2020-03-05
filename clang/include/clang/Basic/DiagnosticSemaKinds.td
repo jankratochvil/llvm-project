@@ -1941,6 +1941,9 @@ def ext_dtor_name_missing_template_arguments : Extension<
 def ext_qualified_dtor_named_in_lexical_scope : ExtWarn<
   "qualified destructor name only found in lexical scope; omit the qualifier "
   "to find this type name by unqualified lookup">, InGroup<DtorName>;
+def ext_dtor_name_ambiguous : Extension<
+  "ISO C++ considers this destructor name lookup to be ambiguous">,
+  InGroup<DtorName>;
 
 def err_destroy_attr_on_non_static_var : Error<
   "%select{no_destroy|always_destroy}0 attribute can only be applied to a"
@@ -4273,7 +4276,7 @@ def err_ovl_no_viable_literal_operator : Error<
 def err_template_param_shadow : Error<
   "declaration of %0 shadows template parameter">;
 def ext_template_param_shadow : ExtWarn<
-  err_template_param_shadow.Text>, InGroup<MicrosoftTemplate>;
+  err_template_param_shadow.Text>, InGroup<MicrosoftTemplateShadow>;
 def note_template_param_here : Note<"template parameter is declared here">;
 def warn_template_export_unsupported : Warning<
   "exported templates are unsupported">;
@@ -10028,8 +10031,14 @@ def note_omp_invalid_subscript_on_this_ptr_map : Note <
   "expected 'this' subscript expression on map clause to be 'this[0]'">;
 def err_omp_invalid_map_this_expr : Error <
   "invalid 'this' expression on 'map' clause">;
-def err_implied_omp_allocator_handle_t_not_found : Error<
-  "omp_allocator_handle_t type not found; include <omp.h>">;
+def err_omp_implied_type_not_found : Error<
+  "'%0' type not found; include <omp.h>">;
+def err_omp_expected_omp_depend_t_lvalue : Error<
+  "expected lvalue expression%select{ of 'omp_depend_t' type, not %1|}0">;
+def err_omp_depobj_expected : Error<
+  "expected depobj expression">;
+def err_omp_depobj_single_clause_expected : Error<
+  "exactly one of 'depend', 'destroy', or 'update' clauses is expected">;
 def err_omp_expected_predefined_allocator : Error<
   "expected one of the predefined allocators for the variables with the static "
   "storage: 'omp_default_mem_alloc', 'omp_large_cap_mem_alloc', "
@@ -10110,6 +10119,9 @@ def err_omp_flush_order_clause_and_list : Error<
   "'flush' directive with memory order clause '%0' cannot have the list">;
 def note_omp_flush_order_clause_here : Note<
   "memory order clause '%0' is specified here">;
+def err_omp_non_lvalue_in_map_or_motion_clauses: Error<
+  "expected addressable lvalue in '%0' clause"
+  >;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

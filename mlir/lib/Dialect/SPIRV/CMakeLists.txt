@@ -2,8 +2,9 @@ set(LLVM_TARGET_DEFINITIONS SPIRVCanonicalization.td)
 mlir_tablegen(SPIRVCanonicalization.inc -gen-rewriters)
 add_public_tablegen_target(MLIRSPIRVCanonicalizationIncGen)
 
-add_llvm_library(MLIRSPIRV
+add_mlir_dialect_library(MLIRSPIRV
   LayoutUtils.cpp
+  SPIRVCanonicalization.cpp
   SPIRVDialect.cpp
   SPIRVOps.cpp
   SPIRVLowering.cpp
@@ -15,6 +16,7 @@ add_llvm_library(MLIRSPIRV
   )
 
 add_dependencies(MLIRSPIRV
+  MLIRControlFlowInterfacesIncGen
   MLIRSPIRVAvailabilityIncGen
   MLIRSPIRVCanonicalizationIncGen
   MLIRSPIRVEnumAvailabilityIncGen

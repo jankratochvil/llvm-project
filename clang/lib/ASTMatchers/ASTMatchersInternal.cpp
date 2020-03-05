@@ -346,13 +346,12 @@ bool OptionallyVariadicOperator(const DynTypedNode &DynNode,
                                 ASTMatchFinder *Finder,
                                 BoundNodesTreeBuilder *Builder,
                                 ArrayRef<DynTypedMatcher> InnerMatchers) {
-  BoundNodesTreeBuilder Result;
-  for (const DynTypedMatcher &InnerMatcher : InnerMatchers) {
-    BoundNodesTreeBuilder BuilderInner(*Builder);
-    if (InnerMatcher.matches(DynNode, Finder, &BuilderInner))
-      Result.addMatch(BuilderInner);
-  }
-  *Builder = std::move(Result);
+  if (InnerMatchers.size() != 1)
+    return false;
+
+  BoundNodesTreeBuilder Result(*Builder);
+  if (InnerMatchers[0].matches(DynNode, Finder, &Result))
+    *Builder = std::move(Result);
   return true;
 }
 
@@ -513,7 +512,13 @@ bool HasNameMatcher::matchesNodeFullFast(const NamedDecl &Node) const {
   if (Ctx->isFunctionOrMethod())
     return Patterns.foundMatch(/*AllowFullyQualified=*/false);
 
-  for (; Ctx && isa<NamedDecl>(Ctx); Ctx = Ctx->getParent()) {
+  for (; Ctx; Ctx = Ctx->getParent()) {
+    // Linkage Spec can just be ignored
+    // FIXME: Any other DeclContext kinds that can be safely disregarded
+    if (isa<LinkageSpecDecl>(Ctx))
+      continue;
+    if (!isa<NamedDecl>(Ctx))
+      break;
     if (Patterns.foundMatch(/*AllowFullyQualified=*/false))
       return true;
 
@@ -847,9 +852,8 @@ const internal::VariadicOperatorMatcherFunc<
 const internal::VariadicOperatorMatcherFunc<
     2, std::numeric_limits<unsigned>::max()>
     allOf = {internal::DynTypedMatcher::VO_AllOf};
-const internal::VariadicOperatorMatcherFunc<
-    1, std::numeric_limits<unsigned>::max()>
-    optionally = {internal::DynTypedMatcher::VO_Optionally};
+const internal::VariadicOperatorMatcherFunc<1, 1> optionally = {
+    internal::DynTypedMatcher::VO_Optionally};
 const internal::VariadicFunction<internal::Matcher<NamedDecl>, StringRef,
                                  internal::hasAnyNameFunc>
     hasAnyName = {};

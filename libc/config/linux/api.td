@@ -84,6 +84,13 @@ def StdIOAPI : PublicAPI<"stdio.h"> {
   ];
 }
 
+def StdlibAPI : PublicAPI<"stdlib.h"> {
+  let Functions = [
+    "_Exit",
+    "abort",
+  ];
+}
+
 def ErrnoAPI : PublicAPI<"errno.h"> {
   let Macros = [
     ErrnoMacro,
@@ -135,11 +142,36 @@ def SysMManAPI : PublicAPI<"sys/mman.h"> {
 }
 
 def SignalAPI : PublicAPI<"signal.h"> {
+  let Functions = [
+    "raise",
+    "sigprocmask",
+    "sigemptyset",
+    "sigaddset",
+  ];
+}
+
+def ThreadStartT : TypeDecl<"thrd_start_t"> {
+  let Decl = "typedef int (*thrd_start_t)(void *);";
+}
+
+def ThreadsAPI : PublicAPI<"threads.h"> {
   let TypeDeclarations = [
-    SizeT, // This is needed by <linux/signal.h>.
+    ThreadStartT,
+  ];
+
+  let Enumerations = [
+    "mtx_plain",
+    "mtx_recursive",
+    "mtx_timed",
+    "thrd_timedout",
+    "thrd_success",
+    "thrd_busy",
+    "thrd_error",
+    "thrd_nomem",
   ];
 
   let Functions = [
-    "raise",
+    "thrd_create",
+    "thrd_join",
   ];
 }
