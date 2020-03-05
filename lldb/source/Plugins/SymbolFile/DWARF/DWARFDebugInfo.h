@@ -57,7 +57,7 @@ public:
   llvm::Expected<DWARFDebugAranges &> GetCompileUnitAranges();
 
   // FIXME: DWZ
-  lldb::user_id_t GetUID(DIERef ref) const { return m_dwarf.GetUID(ref, nullptr/*main_unit*/); }
+  lldb::user_id_t GetUID(DIERef ref) const { return m_dwarf.GetUID(nullptr/*main_unit*/, ref); }
 //  DWARFDIE GetDIE(lldb::user_id_t uid) const { return m_dwarf.GetDIE(uid); }
 
 protected:

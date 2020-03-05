@@ -345,16 +345,16 @@ void DWARFDIE::AppendTypeName(Stream &s) const {
   }
 }
 
-lldb_private::Type *DWARFDIE::ResolveType() const {
+lldb_private::Type *DWARFDIE::ResolveType(DWARFUnit *main_unit) const {
   if (IsValid())
-    return GetDWARF()->ResolveType(*this, true);
+    return GetDWARF()->ResolveType(main_unit, *this, true);
   else
     return nullptr;
 }
 
-lldb_private::Type *DWARFDIE::ResolveTypeUID(const DWARFDIE &die) const {
-  if (SymbolFileDWARF *dwarf = GetDWARF())
-    return dwarf->ResolveTypeUID(die, true);
+lldb_private::Type *DWARFDIE::ResolveTypeUID(DWARFUnit *main_unit, const DWARFDIE &die) const {
+  if (SymbolFileDWARF *dwarf = &main_unit->GetSymbolFileDWARF())
+    return dwarf->ResolveTypeUID(main_unit, die, true);
   return nullptr;
 }
 

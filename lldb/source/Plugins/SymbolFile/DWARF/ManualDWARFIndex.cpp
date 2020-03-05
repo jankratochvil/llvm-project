@@ -425,24 +425,24 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
     std::vector<lldb::user_id_t> offsets;
     m_set.function_fullnames.Find(name, offsets);
     for (user_id_t uid : offsets) {
-      DWARFDIE die = dwarf.GetDIE(uid);
+      DWARFUnit *main_unit;
+      DWARFDIE die = dwarf.GetDIE(uid, &main_unit);
       if (!die)
         continue;
-      if (SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
-        // FIXME: DWZ: DIEArray
-        dies.push_back(std::make_pair(die.GetCU(), die));
+      if (SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, main_unit, die))
+        dies.push_back(std::make_pair(main_unit, die));
     }
   }
   if (name_type_mask & eFunctionNameTypeBase) {
     std::vector<lldb::user_id_t> offsets;
     m_set.function_basenames.Find(name, offsets);
     for (user_id_t uid : offsets) {
-      DWARFDIE die = dwarf.GetDIE(uid);
+      DWARFUnit *main_unit;
+      DWARFDIE die = dwarf.GetDIE(uid, &main_unit);
       if (!die)
         continue;
-      if (SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
-        // FIXME: DWZ: DIEArray
-        dies.push_back(std::make_pair(die.GetCU(), die));
+      if (SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, main_unit, die))
+        dies.push_back(std::make_pair(main_unit, die));
     }
     offsets.clear();
   }

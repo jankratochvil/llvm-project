@@ -139,7 +139,7 @@ public:
 
   bool CompleteType(lldb_private::CompilerType &compiler_type) override;
 
-  lldb_private::Type *ResolveType(const DWARFDIE &die,
+  lldb_private::Type *ResolveType(DWARFUnit *main_unit, const DWARFDIE &die,
                                   bool assert_not_being_parsed = true,
                                   bool resolve_function_context = false);
 
@@ -260,15 +260,15 @@ public:
 
   DWARFDIE GetDIE(lldb::user_id_t uid, DWARFUnit **main_unit_return = nullptr);
 
-  lldb::user_id_t GetUID(const DWARFBaseDIE &die, DWARFUnit *main_unit) {
-    return GetUID(die.GetDIERef(), main_unit);
+  lldb::user_id_t GetUID(DWARFUnit *main_unit, const DWARFBaseDIE &die) {
+    return GetUID(main_unit, die.GetDIERef());
   }
 
-  lldb::user_id_t GetUID(const llvm::Optional<DIERef> &ref, DWARFUnit *main_unit) {
-    return ref ? GetUID(*ref, main_unit) : LLDB_INVALID_UID;
+  lldb::user_id_t GetUID(DWARFUnit *main_unit, const llvm::Optional<DIERef> &ref) {
+    return ref ? GetUID(main_unit, *ref) : LLDB_INVALID_UID;
   }
 
-  lldb::user_id_t GetUID(DIERef ref, DWARFUnit *main_unit);
+  lldb::user_id_t GetUID(DWARFUnit *main_unit, DIERef ref);
 
   std::shared_ptr<SymbolFileDWARFDwo>
   GetDwoSymbolFileForCompileUnit(DWARFUnit &dwarf_cu,
@@ -280,7 +280,7 @@ public:
   llvm::Optional<uint64_t> GetDWOId();
 
   static bool
-  DIEInDeclContext(const lldb_private::CompilerDeclContext &parent_decl_ctx,
+  DIEInDeclContext(const lldb_private::CompilerDeclContext &parent_decl_ctx, DWARFUnit *main_unit,
                    const DWARFDIE &die);
 
   std::vector<std::unique_ptr<lldb_private::CallEdge>>
@@ -303,12 +303,12 @@ public:
 
   // CompilerDecl related functions
 
-  static lldb_private::CompilerDecl GetDecl(const DWARFDIE &die);
+  static lldb_private::CompilerDecl GetDecl(DWARFUnit *main_unit, const DWARFDIE &die);
 
-  static lldb_private::CompilerDeclContext GetDeclContext(const DWARFDIE &die);
+  static lldb_private::CompilerDeclContext GetDeclContext(DWARFUnit *main_unit, const DWARFDIE &die);
 
   static lldb_private::CompilerDeclContext
-  GetContainingDeclContext(const DWARFDIE &die);
+  GetContainingDeclContext(DWARFUnit *main_unit, const DWARFDIE &die);
 
   static DWARFDeclContext GetDWARFDeclContext(const DWARFDIE &die);
 
@@ -357,7 +357,7 @@ protected:
 
   DWARFUnit *GetNextUnparsedDWARFCompileUnit(DWARFUnit *prev_cu);
 
-  bool GetFunction(const DWARFDIE &die, DWARFUnit *main_unit, lldb_private::SymbolContext &sc);
+  bool GetFunction(DWARFUnit *main_unit, const DWARFDIE &die, lldb_private::SymbolContext &sc);
 
   lldb_private::Function *ParseFunction(lldb_private::CompileUnit &comp_unit,
                                         const DWARFDIE &die);
@@ -373,10 +373,10 @@ protected:
   lldb::TypeSP ParseType(const lldb_private::SymbolContext &sc,
                          const DWARFDIE &die, bool *type_is_new);
 
-  lldb_private::Type *ResolveTypeUID(const DWARFDIE &die,
+  lldb_private::Type *ResolveTypeUID(DWARFUnit *main_unit, const DWARFDIE &die,
                                      bool assert_not_being_parsed);
 
-  lldb_private::Type *ResolveTypeUID(const DIERef &die_ref);
+  lldb_private::Type *ResolveTypeUID(DWARFUnit *main_unit, const DIERef &die_ref);
 
   lldb::VariableSP ParseVariableDIE(const lldb_private::SymbolContext &sc,
                                     const DWARFDIE &die,
@@ -411,7 +411,7 @@ protected:
   lldb_private::Symbol *
   GetObjCClassSymbol(lldb_private::ConstString objc_class_name);
 
-  lldb::TypeSP GetTypeForDIE(const DWARFDIE &die,
+  lldb::TypeSP GetTypeForDIE(DWARFUnit *main_unit, const DWARFDIE &die,
                              bool resolve_function_context = false);
 
   void SetDebugMapModule(const lldb::ModuleSP &module_sp) {
@@ -451,7 +451,7 @@ protected:
 
   typedef std::set<lldb_private::Type *> TypeSet;
 
-  void GetTypes(const DWARFDIE &die, dw_offset_t min_die_offset,
+  void GetTypes(DWARFUnit *main_unit, const DWARFDIE &die, dw_offset_t min_die_offset,
                 dw_offset_t max_die_offset, uint32_t type_mask,
                 TypeSet &type_set);
 

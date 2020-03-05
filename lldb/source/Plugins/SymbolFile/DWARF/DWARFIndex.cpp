@@ -16,18 +16,17 @@ using namespace lldb;
 
 DWARFIndex::~DWARFIndex() = default;
 
-void DWARFIndex::ProcessFunctionDIE(llvm::StringRef name, DWARFUnit *main_unit, DIERef ref,
+void DWARFIndex::ProcessFunctionDIE(llvm::StringRef name, user_id_t uid,
                                     SymbolFileDWARF &dwarf,
                                     const CompilerDeclContext &parent_decl_ctx,
                                     uint32_t name_type_mask,
                                     std::vector<std::pair<DWARFUnit *, DWARFDIE>> &dies) {
-  DWARFDIE die = dwarf.GetDIE(ref);
+  DWARFUnit *main_unit;
+  DWARFDIE die = dwarf.GetDIE(uid, &main_unit);
   if (!die) {
-    ReportInvalidDIERef(ref, name);
+    ReportInvalidDIEID(uid, name);
     return;
   }
-  if (main_unit == nullptr)
-    main_unit = die.GetCU();
 
   // Exit early if we're searching exclusively for methods or selectors and
   // we have a context specified (no methods in namespaces).
@@ -38,7 +37,7 @@ void DWARFIndex::ProcessFunctionDIE(llvm::StringRef name, DWARFUnit *main_unit, 
 
   // Otherwise, we need to also check that the context matches. If it does not
   // match, we do nothing.
-  if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
+  if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, main_unit, die))
     return;
 
   auto diepair = std::make_pair(main_unit, die);

@@ -96,10 +96,10 @@ protected:
 
   clang::NamespaceDecl *ResolveNamespaceDIE(DWARFUnit *main_unit, const DWARFDIE &die);
 
-  bool ParseTemplateDIE(const DWARFDIE &die,
+  bool ParseTemplateDIE(DWARFUnit *main_unit, const DWARFDIE &die,
                         lldb_private::TypeSystemClang::TemplateParameterInfos
                             &template_param_infos);
-  bool ParseTemplateParameterInfos(
+  bool ParseTemplateParameterInfos(DWARFUnit *main_unit,
       const DWARFDIE &parent_die,
       lldb_private::TypeSystemClang::TemplateParameterInfos
           &template_param_infos);
@@ -132,7 +132,7 @@ protected:
                                      const DWARFDIE &die,
                                      ParsedDWARFTypeAttributes &attrs);
 
-  lldb_private::Type *GetTypeForDIE(const DWARFDIE &die);
+  lldb_private::Type *GetTypeForDIE(DWARFUnit *main_unit, const DWARFDIE &die);
 
   clang::Decl *GetClangDeclForDIE(DWARFUnit *main_unit, const DWARFDIE &die);
 
@@ -141,7 +141,7 @@ protected:
   clang::DeclContext *GetClangDeclContextContainingDIE(DWARFUnit *main_unit, const DWARFDIE &die,
                                                        DWARFDIE *decl_ctx_die);
 
-  bool CopyUniqueClassMethodTypes(const DWARFDIE &src_class_die,
+  bool CopyUniqueClassMethodTypes(DWARFUnit *main_unit, const DWARFDIE &src_class_die,
                                   const DWARFDIE &dst_class_die,
                                   lldb_private::Type *class_type,
                                   std::vector<DWARFDIE> &failures);

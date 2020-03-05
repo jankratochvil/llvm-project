@@ -56,7 +56,7 @@ protected:
   /// the function given by "ref" matches search criteria given by
   /// "parent_decl_ctx" and "name_type_mask", it is inserted into the "dies"
   /// vector.
-  void ProcessFunctionDIE(llvm::StringRef name, DWARFUnit *main_unit, DIERef ref,
+  void ProcessFunctionDIE(llvm::StringRef name, lldb::user_id_t uid,
                           SymbolFileDWARF &dwarf,
                           const CompilerDeclContext &parent_decl_ctx,
                           uint32_t name_type_mask, std::vector<std::pair<DWARFUnit *, DWARFDIE>> &dies);

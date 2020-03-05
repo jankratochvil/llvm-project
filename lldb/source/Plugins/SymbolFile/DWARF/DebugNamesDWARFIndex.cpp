@@ -226,7 +226,7 @@ void DebugNamesDWARFIndex::GetFunctions(
 
     if (llvm::Optional<DIERef> ref = ToDIERef(entry))
       // FIXME: DWZ
-      ProcessFunctionDIE(name.GetStringRef(), nullptr/*main_unit*/, *ref, dwarf, parent_decl_ctx,
+      ProcessFunctionDIE(name.GetStringRef(), dwarf.GetUID(nullptr/*main_unit*/, *ref), dwarf, parent_decl_ctx,
                          name_type_mask, v);
   }
 

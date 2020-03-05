@@ -59,7 +59,7 @@ void AppleDWARFIndex::GetGlobalVariables(ConstString basename, std::vector<lldb:
   m_apple_names_up->FindByName(basename.GetStringRef(), refs);
   offsets.reserve(offsets.size() + refs.size());
   for (const auto ref : refs)
-    offsets.push_back(m_dwarf.GetUID(ref, nullptr/* main_unit */));
+    offsets.push_back(m_dwarf.GetUID(nullptr/* main_unit */, ref));
 }
 
 void AppleDWARFIndex::GetGlobalVariables(const RegularExpression &regex,
@@ -75,7 +75,7 @@ void AppleDWARFIndex::GetGlobalVariables(const RegularExpression &regex,
   DWARFMappedHash::ExtractDIEArray(hash_data, refs);
   offsets.reserve(offsets.size() + refs.size());
   for (const auto ref : refs)
-    offsets.push_back(m_dwarf.GetUID(ref, nullptr/* main_unit */));
+    offsets.push_back(m_dwarf.GetUID(nullptr/* main_unit */, ref));
 }
 
 void AppleDWARFIndex::GetGlobalVariables(const DWARFUnit &cu,
@@ -91,7 +91,7 @@ void AppleDWARFIndex::GetGlobalVariables(const DWARFUnit &cu,
   DWARFMappedHash::ExtractDIEArray(hash_data, refs);
   offsets.reserve(offsets.size() + refs.size());
   for (const auto ref : refs)
-    offsets.push_back(m_dwarf.GetUID(ref, nullptr/* main_unit */));
+    offsets.push_back(m_dwarf.GetUID(nullptr/* main_unit */, ref));
 }
 
 void AppleDWARFIndex::GetObjCMethods(ConstString class_name,
@@ -103,7 +103,7 @@ void AppleDWARFIndex::GetObjCMethods(ConstString class_name,
   m_apple_objc_up->FindByName(class_name.GetStringRef(), refs);
   offsets.reserve(offsets.size() + refs.size());
   for (const auto ref : refs)
-    offsets.push_back(m_dwarf.GetUID(ref, nullptr/* main_unit */));
+    offsets.push_back(m_dwarf.GetUID(nullptr/* main_unit */, ref));
 }
 
 void AppleDWARFIndex::GetCompleteObjCClass(ConstString class_name,
@@ -117,7 +117,7 @@ void AppleDWARFIndex::GetCompleteObjCClass(ConstString class_name,
         class_name.GetStringRef(), refs, must_be_implementation);
   offsets.reserve(offsets.size() + refs.size());
   for (const auto ref : refs)
-    offsets.push_back(m_dwarf.GetUID(ref, nullptr/* main_unit */));
+    offsets.push_back(m_dwarf.GetUID(nullptr/* main_unit */, ref));
 }
 
 void AppleDWARFIndex::GetTypes(ConstString name, std::vector<lldb::user_id_t> &offsets) {
@@ -128,7 +128,7 @@ void AppleDWARFIndex::GetTypes(ConstString name, std::vector<lldb::user_id_t> &o
   m_apple_types_up->FindByName(name.GetStringRef(), refs);
   offsets.reserve(offsets.size() + refs.size());
   for (const auto ref : refs)
-    offsets.push_back(m_dwarf.GetUID(ref, nullptr/* main_unit */));
+    offsets.push_back(m_dwarf.GetUID(nullptr/* main_unit */, ref));
 }
 
 void AppleDWARFIndex::GetTypes(const DWARFDeclContext &context,
@@ -178,7 +178,7 @@ void AppleDWARFIndex::GetTypes(const DWARFDeclContext &context,
     m_apple_types_up->FindByName(type_name.GetStringRef(), refs);
   offsets.reserve(offsets.size() + refs.size());
   for (const auto ref : refs)
-    offsets.push_back(m_dwarf.GetUID(ref, nullptr/* main_unit */));
+    offsets.push_back(m_dwarf.GetUID(nullptr/* main_unit */, ref));
 }
 
 void AppleDWARFIndex::GetNamespaces(ConstString name, std::vector<lldb::user_id_t> &offsets) {
@@ -189,7 +189,7 @@ void AppleDWARFIndex::GetNamespaces(ConstString name, std::vector<lldb::user_id_
   m_apple_namespaces_up->FindByName(name.GetStringRef(), refs);
   offsets.reserve(offsets.size() + refs.size());
   for (const auto ref : refs)
-    offsets.push_back(m_dwarf.GetUID(ref, nullptr/* main_unit */));
+    offsets.push_back(m_dwarf.GetUID(nullptr/* main_unit */, ref));
 }
 
 void AppleDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
@@ -199,7 +199,7 @@ void AppleDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
   DIEArray offsets;
   m_apple_names_up->FindByName(name.GetStringRef(), offsets);
   for (const DIERef &die_ref : offsets) {
-    ProcessFunctionDIE(name.GetStringRef(), nullptr/*main_unit*/, die_ref, dwarf, parent_decl_ctx,
+    ProcessFunctionDIE(name.GetStringRef(), dwarf.GetUID(nullptr/*main_unit*/, die_ref), dwarf, parent_decl_ctx,
                        name_type_mask, dies);
   }
 }
@@ -217,7 +217,7 @@ void AppleDWARFIndex::GetFunctions(const RegularExpression &regex,
   DWARFMappedHash::ExtractDIEArray(hash_data, refs);
   offsets.reserve(offsets.size() + refs.size());
   for (const auto ref : refs)
-    offsets.push_back(m_dwarf.GetUID(ref, nullptr/* main_unit */));
+    offsets.push_back(m_dwarf.GetUID(nullptr/* main_unit */, ref));
 }
 
 void AppleDWARFIndex::ReportInvalidDIEID(user_id_t uid,
