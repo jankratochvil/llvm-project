@@ -107,7 +107,7 @@ TEST_F(DWARFASTParserClangTests,
       (clang::DeclContext *)1LL, (clang::DeclContext *)2LL,
       (clang::DeclContext *)2LL, (clang::DeclContext *)3LL};
   for (int i = 0; i < 4; ++i)
-    ast_parser.LinkDeclContextToDIE(decl_ctxs[i], dies[i]);
+    ast_parser.LinkDeclContextToDIE(decl_ctxs[i], unit, dies[i]);
   ast_parser.EnsureAllDIEsInDeclContextHaveBeenParsed(
       CompilerDeclContext(nullptr, decl_ctxs[1]));
 

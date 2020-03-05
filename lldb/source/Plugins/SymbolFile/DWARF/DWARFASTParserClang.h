@@ -11,7 +11,7 @@
 
 #include "clang/AST/CharUnits.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include "DWARFASTParser.h"
@@ -73,7 +73,7 @@ protected:
   class DelayedAddObjCClassProperty;
   typedef std::vector<DelayedAddObjCClassProperty> DelayedPropertyList;
 
-  typedef llvm::SmallPtrSet<std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>, 4> DIEPointerSet;
+  typedef llvm::SmallSet<std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>, 4> DIEPointerSet;
   typedef llvm::DenseMap<std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>, clang::DeclContext *>
       DIEToDeclContextMap;
   typedef std::multimap<const clang::DeclContext *, std::pair<DWARFUnit *, const DWARFDIE>>
