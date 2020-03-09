@@ -480,6 +480,8 @@ protected:
 
   struct DecodedUID {
     SymbolFileDWARF &dwarf;
+    // FIXME: DWZ
+    uint32_t main_cu;
     DIERef ref;
   };
   llvm::Optional<DecodedUID> DecodeUID(lldb::user_id_t uid);

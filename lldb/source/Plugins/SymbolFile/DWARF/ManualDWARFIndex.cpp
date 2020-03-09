@@ -115,23 +115,23 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
 
   const LanguageType cu_language = SymbolFileDWARF::GetLanguage(unit);
 
-  IndexUnitImpl(unit, cu_language, set);
+  IndexUnitImpl(unit, &unit, cu_language, set);
 
   if (SymbolFileDWARFDwo *dwo_symbol_file = unit.GetDwoSymbolFile()) {
     // Type units in a dwp file are indexed separately, so we just need to
     // process the split unit here. However, if the split unit is in a dwo file,
     // then we need to process type units here.
     if (dwo_symbol_file == dwp) {
-      IndexUnitImpl(unit.GetNonSkeletonUnit(), cu_language, set);
+      IndexUnitImpl(unit.GetNonSkeletonUnit(), &unit, cu_language, set);
     } else {
       DWARFDebugInfo &dwo_info = dwo_symbol_file->DebugInfo();
       for (size_t i = 0; i < dwo_info.GetNumUnits(); ++i)
-        IndexUnitImpl(*dwo_info.GetUnitAtIndex(i), cu_language, set);
+        IndexUnitImpl(*dwo_info.GetUnitAtIndex(i), &unit, cu_language, set);
     }
   }
 }
 
-void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
+void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit, DWARFUnit *main_unit,
                                      const LanguageType cu_language,
                                      IndexSet &set) {
   for (const DWARFDebugInfoEntry &die : unit.dies()) {
@@ -263,9 +263,9 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
       }
     }
 
-    //DIERef ref = *DWARFDIE(&unit, &die).GetDIERef();
+    //DIERef ref = *DWARFDIE(main_unit, &die).GetDIERef();
     // FIXME: DWZ
-    user_id_t uid = DWARFDIE(&unit, &die).GetID(&unit);
+    user_id_t uid = DWARFDIE(main_unit, &die).GetID(main_unit);
     switch (tag) {
     case DW_TAG_inlined_subroutine:
     case DW_TAG_subprogram:
@@ -298,7 +298,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
           }
           // If we have a mangled name, then the DW_AT_name attribute is
           // usually the method name without the class or any parameters
-          bool is_method = DWARFDIE(&unit, &die).IsMethod();
+          bool is_method = DWARFDIE(main_unit, &die).IsMethod();
 
           if (is_method)
             set.function_methods.Insert(ConstString(name), uid);

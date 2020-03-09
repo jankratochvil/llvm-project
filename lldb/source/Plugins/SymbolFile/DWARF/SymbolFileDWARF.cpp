@@ -1197,15 +1197,23 @@ user_id_t SymbolFileDWARF::GetUID(DWARFUnit *main_unit, DIERef ref) {
   if (GetDebugMapSymfile())
     return GetID() | ref.die_offset();
 
+  lldbassert(main_unit);
   bool has_main_cu = main_unit && !main_unit->ContainsDIEOffset(ref.die_offset());
-  lldbassert(!(has_main_cu && GetDwoNum().hasValue()));
-  lldbassert(!has_main_cu || main_unit->GetID() < 0x1fffffff);
-  lldbassert(has_main_cu || !main_unit || &main_unit->GetSymbolFileDWARF() == this);
+  lldbassert(GetDwoNum() == ref.dwo_num());
+printf("%d: GetDwoNum().hasValue()=%d expr=%d\n",gettid(),GetDwoNum().hasValue(),(!GetDwoNum().hasValue() || has_main_cu));
+if (!(!GetDwoNum().hasValue() || has_main_cu)) printf("%d: FAIL\n",gettid());
+  lldbassert(!GetDwoNum().hasValue() || has_main_cu);
+  bool is_dwz = has_main_cu && !GetDwoNum().hasValue();
+  bool is_dwz_common = is_dwz && &main_unit->GetSymbolFileDWARF() != this;
+  lldbassert(!GetDwoNum().hasValue() || *GetDwoNum() < 0x1fffffff);
+  static_assert(sizeof(ref.die_offset()) * 8 == 32, "");
 
-  return user_id_t(has_main_cu ? main_unit->GetID() : GetDwoNum().getValueOr(0x1fffffff)) << 32 |
+  lldbassert(GetDIE(ref).IsValid()); // FIXME: Expensive
+
+  return user_id_t(is_dwz ? main_unit->GetID() : GetDwoNum().getValueOr(0x1fffffff)) << 32 |
          ref.die_offset() |
-         user_id_t(has_main_cu && &main_unit->GetSymbolFileDWARF() != this) << 61 |
-         user_id_t(has_main_cu) << 62 |
+         user_id_t(is_dwz_common) << 61 |
+         user_id_t(is_dwz) << 62 |
          (lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes) << 63);
 }
 
@@ -1225,7 +1233,7 @@ SymbolFileDWARF::DecodeUID(lldb::user_id_t uid) {
     SymbolFileDWARF *dwarf = debug_map->GetSymbolFileByOSOIndex(
         debug_map->GetOSOIndexFromUserID(uid));
     return DecodedUID{
-        *dwarf, {llvm::None, DIERef::Section::DebugInfo, dw_offset_t(uid)}};
+        *dwarf, 0xffffffff/*main_cu*/, {llvm::None, DIERef::Section::DebugInfo, dw_offset_t(uid)}};
   }
   dw_offset_t die_offset = uid;
   if (die_offset == DW_INVALID_OFFSET)
@@ -1234,11 +1242,19 @@ SymbolFileDWARF::DecodeUID(lldb::user_id_t uid) {
   DIERef::Section section =
       uid >> 63 ? DIERef::Section::DebugTypes : DIERef::Section::DebugInfo;
 
-  llvm::Optional<uint32_t> dwo_num = uid >> 32 & 0x7fffffff;
-  if (*dwo_num == 0x7fffffff)
+  bool is_dwz = (uid >> 62) & 1;
+  // FIXME: DWZ
+  __attribute__((unused)) bool is_dwz_common = (uid >> 61) & 1;
+
+  llvm::Optional<uint32_t> dwo_num = uid >> 32 & 0x1fffffff;
+  if (*dwo_num == 0x1fffffff || is_dwz)
     dwo_num = llvm::None;
 
-  return DecodedUID{*this, {dwo_num, section, die_offset}};
+  llvm::Optional<uint32_t> main_cu = uid >> 32 & 0x1fffffff;
+  if (*main_cu == 0x1fffffff || !is_dwz)
+    main_cu = llvm::None;
+
+  return DecodedUID{*this, main_cu.hasValue() ? *main_cu : 0xffffffff, {dwo_num, section, die_offset}};
 }
 
 DWARFDIE
