@@ -27,6 +27,9 @@ def NullMacro : MacroDef<"NULL"> {
 
 def ErrnoMacro : MacroDef<"errno"> {
   let Defn = [{
+    #ifdef __cplusplus
+    extern "C"
+    #endif
     int *__errno_location();
     #define errno (*__errno_location())
   }];
@@ -150,15 +153,7 @@ def SignalAPI : PublicAPI<"signal.h"> {
   ];
 }
 
-def ThreadStartT : TypeDecl<"thrd_start_t"> {
-  let Decl = "typedef int (*thrd_start_t)(void *);";
-}
-
 def ThreadsAPI : PublicAPI<"threads.h"> {
-  let TypeDeclarations = [
-    ThreadStartT,
-  ];
-
   let Enumerations = [
     "mtx_plain",
     "mtx_recursive",
@@ -168,10 +163,5 @@ def ThreadsAPI : PublicAPI<"threads.h"> {
     "thrd_busy",
     "thrd_error",
     "thrd_nomem",
-  ];
-
-  let Functions = [
-    "thrd_create",
-    "thrd_join",
   ];
 }
