@@ -61,7 +61,7 @@ void DebugNamesDWARFIndex::Append(const DebugNames::Entry &entry,
                                   std::vector<lldb::user_id_t> &offsets) {
   if (llvm::Optional<DIERef> ref = ToDIERef(entry))
     // FIXME: DWZ
-    offsets.push_back(m_debug_info.GetUID(*ref));
+    offsets.push_back(m_debug_info.GetUID(nullptr/*main_unit*/,*ref));
 }
 
 void DebugNamesDWARFIndex::MaybeLogLookupError(llvm::Error error,
@@ -166,7 +166,7 @@ void DebugNamesDWARFIndex::GetCompleteObjCClass(ConstString class_name,
     if (die.GetAttributeValueAsUnsigned(DW_AT_APPLE_objc_complete_type, 0)) {
       // If we find the complete version we're done.
       // FIXME: DWZ
-      offsets.push_back(m_debug_info.GetUID(*ref));
+      offsets.push_back(m_debug_info.GetUID(nullptr/*main_unit*/,*ref));
       return;
     } else {
       incomplete_types.push_back(*ref);
@@ -176,7 +176,7 @@ void DebugNamesDWARFIndex::GetCompleteObjCClass(ConstString class_name,
   offsets.reserve(offsets.size() + incomplete_types.size());
   for (const auto ref : incomplete_types)
     // FIXME: DWZ
-    offsets.push_back(m_debug_info.GetUID(ref));
+    offsets.push_back(m_debug_info.GetUID(nullptr/*main_unit*/,ref));
 }
 
 void DebugNamesDWARFIndex::GetTypes(ConstString name, std::vector<lldb::user_id_t> &offsets) {
