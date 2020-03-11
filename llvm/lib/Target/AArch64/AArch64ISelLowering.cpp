@@ -4264,7 +4264,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         RegsToPass.emplace_back(VA.getLocReg(), Arg);
         RegsUsed.insert(VA.getLocReg());
         const TargetOptions &Options = DAG.getTarget().Options;
-        if (Options.EnableDebugEntryValues)
+        if (Options.EmitCallSiteInfo)
           CSInfo.emplace_back(VA.getLocReg(), i);
       }
     } else {
@@ -11296,6 +11296,9 @@ static SDValue performIntrinsicCombine(SDNode *N,
     return LowerSVEIntrinsicDUP(N, DAG);
   case Intrinsic::aarch64_sve_ext:
     return LowerSVEIntrinsicEXT(N, DAG);
+  case Intrinsic::aarch64_sve_sel:
+    return DAG.getNode(ISD::VSELECT, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_cmpeq_wide:
     return tryConvertSVEWideCompare(N, Intrinsic::aarch64_sve_cmpeq,
                                     false, DCI, DAG);
