@@ -612,8 +612,13 @@ SymbolFileDWARF::GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) {
   // The compile unit ID is the index of the DWARF unit.
   DWARFUnit *dwarf_cu = DebugInfo().GetUnitAtIndex(comp_unit->GetID());
 fprintf(stderr,"GetDWARFCompileUnit:SymbolFileDWARF=%p DWARFDebugInfo=%p CompileUnit=%p GetID=0x%lx -> DWARFUnit=%p GetID=0x%lx\n",(void *)this,(void *)&DebugInfo(),(void *)comp_unit,comp_unit->GetID(),(void *)dwarf_cu,(!dwarf_cu?0:dwarf_cu->GetID()));
-  if (dwarf_cu && dwarf_cu->GetUserData() == nullptr)
+  if (!dwarf_cu)
+    return nullptr;
+
+  if (dwarf_cu->GetUserData() == nullptr)
     dwarf_cu->SetUserData(comp_unit);
+  else
+    lldbassert(dwarf_cu->GetUserData() == comp_unit);
   return dwarf_cu;
 }
 
@@ -3173,8 +3178,8 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
 VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                                              const DWARFDIE &die,
                                              const lldb::addr_t func_low_pc) {
-  if (die.GetDWARF() != this)
-    return die.GetDWARF()->ParseVariableDIE(sc, die, func_low_pc);
+//  if (die.GetDWARF() != this)
+//    return die.GetDWARF()->ParseVariableDIE(sc, die, func_low_pc);
 
   VariableSP var_sp;
   if (!die)
