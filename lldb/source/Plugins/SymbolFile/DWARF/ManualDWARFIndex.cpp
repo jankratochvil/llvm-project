@@ -265,7 +265,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit, DWARFUnit *main_unit,
 
     //DIERef ref = *DWARFDIE(main_unit, &die).GetDIERef();
     // FIXME: DWZ
-    user_id_t uid = DWARFDIE(main_unit, &die).GetID(main_unit);
+    user_id_t uid = DWARFDIE(&unit, &die).GetID(main_unit);
     switch (tag) {
     case DW_TAG_inlined_subroutine:
     case DW_TAG_subprogram:

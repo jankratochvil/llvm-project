@@ -1197,12 +1197,12 @@ user_id_t SymbolFileDWARF::GetUID(DWARFUnit *main_unit, DIERef ref) {
   if (GetDebugMapSymfile())
     return GetID() | ref.die_offset();
 
+//printf("%d: GetDwoNum().hasValue()=%d expr=%d\n",gettid(),GetDwoNum().hasValue(),(!GetDwoNum().hasValue() || has_main_cu));
+//if (!(!GetDwoNum().hasValue() || has_main_cu)) printf("%d: FAIL\n",gettid());
   lldbassert(main_unit);
-  bool has_main_cu = main_unit && !main_unit->ContainsDIEOffset(ref.die_offset());
-  lldbassert(GetDwoNum() == ref.dwo_num());
-printf("%d: GetDwoNum().hasValue()=%d expr=%d\n",gettid(),GetDwoNum().hasValue(),(!GetDwoNum().hasValue() || has_main_cu));
-if (!(!GetDwoNum().hasValue() || has_main_cu)) printf("%d: FAIL\n",gettid());
-  lldbassert(!GetDwoNum().hasValue() || has_main_cu);
+  bool has_main_cu = main_unit && (&main_unit->GetSymbolFileDWARF() != this || !main_unit->ContainsDIEOffset(ref.die_offset()));
+  lldbassert(!GetDwoNum().hasValue() || has_main_cu || (main_unit && main_unit->IsDWOUnit()));
+//  lldbassert(!main_unit || &main_unit->GetSymbolFileDWARF() != this || GetDwoNum() == ref.dwo_num());
   bool is_dwz = has_main_cu && !GetDwoNum().hasValue();
   bool is_dwz_common = is_dwz && &main_unit->GetSymbolFileDWARF() != this;
   lldbassert(!GetDwoNum().hasValue() || *GetDwoNum() < 0x1fffffff);
