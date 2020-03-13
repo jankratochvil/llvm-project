@@ -1209,7 +1209,7 @@ user_id_t SymbolFileDWARF::GetUID(DWARFUnit *main_unit, DIERef ref) {
 //if (!(!GetDwoNum().hasValue() || has_main_cu)) printf("%d: FAIL\n",gettid());
 //  lldbassert(main_unit);
   bool has_main_cu = main_unit && (&main_unit->GetSymbolFileDWARF() != this || !main_unit->ContainsDIEOffset(ref.die_offset()));
-  lldbassert(!ref.dwo_num().hasValue() || has_main_cu || (main_unit && main_unit->IsDWOUnit()));
+  lldbassert(!ref.dwo_num().hasValue() || has_main_cu || (main_unit && main_unit->IsDWOUnit()) || main_unit->GetDwoSymbolFile());
 //  lldbassert(!main_unit || &main_unit->GetSymbolFileDWARF() != this || GetDwoNum() == ref.dwo_num());
   bool is_dwz = has_main_cu && !ref.dwo_num().hasValue();
   bool is_dwz_common = is_dwz && &main_unit->GetSymbolFileDWARF() != this;
