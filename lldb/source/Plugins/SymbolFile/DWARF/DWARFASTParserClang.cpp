@@ -213,7 +213,7 @@ lldbassert(main_unit);
     return {};
   TypeSP type_sp(new Type(
       die.GetID(main_unit), dwarf, pcm_type_sp->GetName(), pcm_type_sp->GetByteSize(),
-      nullptr, LLDB_INVALID_UID, Type::eEncodingInvalid,
+      sc.comp_unit, LLDB_INVALID_UID, Type::eEncodingInvalid,
       &pcm_type_sp->GetDeclaration(), type, Type::ResolveState::Forward));
 
   dwarf->GetTypeList().Insert(type_sp);
@@ -717,7 +717,7 @@ lldbassert(main_unit);
   }
 
   type_sp = std::make_shared<Type>(
-      die.GetID(main_unit), dwarf, attrs.name, attrs.byte_size, nullptr,
+      die.GetID(main_unit), dwarf, attrs.name, attrs.byte_size, sc.comp_unit,
       dwarf->GetUID(main_unit, attrs.type.Reference()), encoding_data_type, &attrs.decl,
       clang_type, resolve_state);
 
@@ -814,7 +814,7 @@ lldbassert(main_unit);
   LinkDeclContextToDIE(TypeSystemClang::GetDeclContextForType(clang_type), main_unit, die);
 
   type_sp = std::make_shared<Type>(
-      die.GetID(main_unit), dwarf, attrs.name, attrs.byte_size, nullptr,
+      die.GetID(main_unit), dwarf, attrs.name, attrs.byte_size, sc.comp_unit,
       dwarf->GetUID(main_unit, attrs.type.Reference()), Type::eEncodingIsUID, &attrs.decl,
       clang_type, Type::ResolveState::Forward);
 
@@ -1244,7 +1244,7 @@ lldbassert(main_unit);
     }
   }
   return std::make_shared<Type>(
-      die.GetID(main_unit), dwarf, attrs.name, llvm::None, nullptr, LLDB_INVALID_UID,
+      die.GetID(main_unit), dwarf, attrs.name, llvm::None, sc.comp_unit, LLDB_INVALID_UID,
       Type::eEncodingIsUID, &attrs.decl, clang_type, Type::ResolveState::Full);
 }
 
@@ -1335,7 +1335,7 @@ lldbassert(main_unit);
 
   ConstString empty_name;
   TypeSP type_sp = std::make_shared<Type>(
-      die.GetID(main_unit), dwarf, empty_name, array_element_bit_stride / 8, nullptr,
+      die.GetID(main_unit), dwarf, empty_name, array_element_bit_stride / 8, sc.comp_unit,
       dwarf->GetUID(main_unit, type_die), Type::eEncodingIsUID, &attrs.decl, clang_type,
       Type::ResolveState::Full);
   type_sp->SetEncodingType(element_type);
@@ -1371,7 +1371,7 @@ lldbassert(main_unit);
       return {};
 
     return std::make_shared<Type>(die.GetID(main_unit), dwarf, attrs.name,
-                                  *clang_type_size, nullptr, LLDB_INVALID_UID,
+                                  *clang_type_size, sc.comp_unit, LLDB_INVALID_UID,
                                   Type::eEncodingIsUID, nullptr, clang_type,
                                   Type::ResolveState::Forward);
   }
@@ -1403,8 +1403,10 @@ lldbassert(main_unit);
     if (symbol_context_scope == nullptr)
       symbol_context_scope = sc.function;
   } else {
-    symbol_context_scope = sc.module_sp.get();
+    symbol_context_scope = sc.comp_unit;
   }
+lldbassert(symbol_context_scope);
+lldbassert(symbol_context_scope->CalculateSymbolContextCompileUnit());
 
   if (symbol_context_scope != nullptr)
     type_sp->SetSymbolContextScope(symbol_context_scope);
@@ -1681,7 +1683,7 @@ lldbassert(main_unit);
   // function prototypes.
   LinkDeclContextToDIE(m_ast.GetDeclContextForType(clang_type), main_unit, die);
   type_sp = std::make_shared<Type>(die.GetID(main_unit), dwarf, attrs.name,
-                                   attrs.byte_size, nullptr, LLDB_INVALID_UID,
+                                   attrs.byte_size, sc.comp_unit, LLDB_INVALID_UID,
                                    Type::eEncodingIsUID, &attrs.decl,
                                    clang_type, Type::ResolveState::Forward);
 

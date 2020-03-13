@@ -1204,20 +1204,21 @@ user_id_t SymbolFileDWARF::GetUID(DWARFUnit *main_unit, DIERef ref) {
   if (GetDebugMapSymfile())
     return GetID() | ref.die_offset();
 
+// WARNING: Use ref.dwo_num(), GetDwoNum() may not be valid in 'this'.
 //printf("%d: GetDwoNum().hasValue()=%d expr=%d\n",gettid(),GetDwoNum().hasValue(),(!GetDwoNum().hasValue() || has_main_cu));
 //if (!(!GetDwoNum().hasValue() || has_main_cu)) printf("%d: FAIL\n",gettid());
 //  lldbassert(main_unit);
   bool has_main_cu = main_unit && (&main_unit->GetSymbolFileDWARF() != this || !main_unit->ContainsDIEOffset(ref.die_offset()));
-  lldbassert(!GetDwoNum().hasValue() || has_main_cu || (main_unit && main_unit->IsDWOUnit()));
+  lldbassert(!ref.dwo_num().hasValue() || has_main_cu || (main_unit && main_unit->IsDWOUnit()));
 //  lldbassert(!main_unit || &main_unit->GetSymbolFileDWARF() != this || GetDwoNum() == ref.dwo_num());
-  bool is_dwz = has_main_cu && !GetDwoNum().hasValue();
+  bool is_dwz = has_main_cu && !ref.dwo_num().hasValue();
   bool is_dwz_common = is_dwz && &main_unit->GetSymbolFileDWARF() != this;
-  lldbassert(!GetDwoNum().hasValue() || *GetDwoNum() < 0x1fffffff);
+  lldbassert(!ref.dwo_num().hasValue() || *ref.dwo_num() < 0x1fffffff);
   static_assert(sizeof(ref.die_offset()) * 8 == 32, "");
 
   lldbassert(GetDIE(ref).IsValid()); // FIXME: Expensive
 
-  return user_id_t(is_dwz ? main_unit->GetID() : GetDwoNum().getValueOr(0x1fffffff)) << 32 |
+  return user_id_t(is_dwz ? main_unit->GetID() : ref.dwo_num().getValueOr(0x1fffffff)) << 32 |
          ref.die_offset() |
          user_id_t(is_dwz_common) << 61 |
          user_id_t(is_dwz) << 62 |
@@ -2595,7 +2596,10 @@ TypeSP SymbolFileDWARF::GetTypeForDIE(DWARFUnit *main_unit, const DWARFDIE &die,
       if (auto *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(main_unit))
         scope = GetCompUnitForDWARFCompUnit(*dwarf_cu);
       else
+{
         scope = GetObjectFile()->GetModule().get();
+lldbassert(dwarf_cu);
+}
       assert(scope);
       SymbolContext sc(scope);
       const DWARFDebugInfoEntry *parent_die = die.GetParent().GetDIE();
