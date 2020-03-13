@@ -347,7 +347,7 @@ void DWARFDIE::AppendTypeName(Stream &s) const {
 
 lldb_private::Type *DWARFDIE::ResolveType(DWARFUnit *main_unit) const {
   if (IsValid())
-    return GetDWARF()->ResolveType(main_unit, *this, true);
+    return main_unit->GetSymbolFileDWARF().ResolveType(main_unit, *this, true);
   else
     return nullptr;
 }

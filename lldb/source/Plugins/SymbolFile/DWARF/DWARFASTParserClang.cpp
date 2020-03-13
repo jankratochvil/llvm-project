@@ -3439,7 +3439,7 @@ DWARFASTParserClang::GetClangDeclContextForDIE(DWARFUnit *main_unit, const DWARF
     }
 
     if (decl_ctx == nullptr && try_parsing_type) {
-      Type *type = die.GetDWARF()->ResolveType(main_unit, die);
+      Type *type = main_unit->GetSymbolFileDWARF().ResolveType(main_unit, die);
       if (type)
         decl_ctx = GetCachedClangDeclContextForDIE(main_unit, die);
     }
