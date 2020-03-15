@@ -21,6 +21,7 @@ class CompileUnit;
 class ExecutionContext;
 }
 class SymbolFileDWARF;
+class DWARFCompileUnit;
 
 class DWARFASTParser {
 public:
@@ -39,13 +40,13 @@ public:
                         lldb_private::CompilerType &compiler_type) = 0;
 
   virtual lldb_private::CompilerDecl
-  GetDeclForUIDFromDWARF(DWARFUnit *main_unit, const DWARFDIE &die) = 0;
+  GetDeclForUIDFromDWARF(DWARFCompileUnit *main_unit, const DWARFDIE &die) = 0;
 
   virtual lldb_private::CompilerDeclContext
-  GetDeclContextForUIDFromDWARF(DWARFUnit *main_unit, const DWARFDIE &die) = 0;
+  GetDeclContextForUIDFromDWARF(DWARFCompileUnit *main_unit, const DWARFDIE &die) = 0;
 
   virtual lldb_private::CompilerDeclContext
-  GetDeclContextContainingUIDFromDWARF(DWARFUnit *main_unit, const DWARFDIE &die) = 0;
+  GetDeclContextContainingUIDFromDWARF(DWARFCompileUnit *main_unit, const DWARFDIE &die) = 0;
 
   virtual void EnsureAllDIEsInDeclContextHaveBeenParsed(
       lldb_private::CompilerDeclContext decl_context) = 0;

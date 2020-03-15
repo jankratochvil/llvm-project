@@ -12,7 +12,7 @@
 #include "DWARFDebugInfo.h"
 #include "DWARFDebugInfoEntry.h"
 #include "DWARFDeclContext.h"
-#include "DWARFUnit.h"
+#include "DWARFCompileUnit.h"
 
 using namespace lldb_private;
 
@@ -345,14 +345,14 @@ void DWARFDIE::AppendTypeName(Stream &s) const {
   }
 }
 
-lldb_private::Type *DWARFDIE::ResolveType(DWARFUnit *main_unit) const {
+lldb_private::Type *DWARFDIE::ResolveType(DWARFCompileUnit *main_unit) const {
   if (IsValid())
     return main_unit->GetSymbolFileDWARF().ResolveType(main_unit, *this, true);
   else
     return nullptr;
 }
 
-lldb_private::Type *DWARFDIE::ResolveTypeUID(DWARFUnit *main_unit, const DWARFDIE &die) const {
+lldb_private::Type *DWARFDIE::ResolveTypeUID(DWARFCompileUnit *main_unit, const DWARFDIE &die) const {
   if (SymbolFileDWARF *dwarf = &main_unit->GetSymbolFileDWARF())
     return dwarf->ResolveTypeUID(main_unit, die, true);
   return nullptr;
@@ -447,4 +447,22 @@ bool DWARFDIE::GetDIENamesAndRanges(
         call_file, call_line, call_column, frame_base);
   } else
     return false;
+}
+
+bool DWARFDIE::MainUnitIsValid(DWARFCompileUnit *main_unit) const {
+  DWARFDIE parent = GetParent();
+  if (parent)
+    return parent.MainUnitIsValid(main_unit);
+  switch (Tag()) {
+    case DW_TAG_compile_unit:
+      lldbassert(main_unit == GetCU());
+      return main_unit == GetCU();
+    case DW_TAG_partial_unit:
+lldbassert(0); // FIXME:DWZ
+//      lldbassert(main_unit->GetSymbolFileDWARF().GetDWZCommonFileFIXME() == GetDWARF());
+      return main_unit != nullptr;
+    default:
+      lldbassert(main_unit == nullptr);
+      return true;
+  }
 }

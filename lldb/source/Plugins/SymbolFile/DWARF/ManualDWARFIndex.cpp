@@ -12,6 +12,7 @@
 #include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDwo.h"
+#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Host/TaskPool.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -114,24 +115,25 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
   }
 
   const LanguageType cu_language = SymbolFileDWARF::GetLanguage(unit);
+  DWARFCompileUnit *main_unit = llvm::dyn_cast<DWARFCompileUnit>(&unit);
 
-  IndexUnitImpl(unit, &unit, cu_language, set);
+  IndexUnitImpl(unit, main_unit, cu_language, set);
 
   if (SymbolFileDWARFDwo *dwo_symbol_file = unit.GetDwoSymbolFile()) {
     // Type units in a dwp file are indexed separately, so we just need to
     // process the split unit here. However, if the split unit is in a dwo file,
     // then we need to process type units here.
     if (dwo_symbol_file == dwp) {
-      IndexUnitImpl(unit.GetNonSkeletonUnit(), &unit, cu_language, set);
+      IndexUnitImpl(unit.GetNonSkeletonUnit(), main_unit, cu_language, set);
     } else {
       DWARFDebugInfo &dwo_info = dwo_symbol_file->DebugInfo();
       for (size_t i = 0; i < dwo_info.GetNumUnits(); ++i)
-        IndexUnitImpl(*dwo_info.GetUnitAtIndex(i), &unit, cu_language, set);
+        IndexUnitImpl(*dwo_info.GetUnitAtIndex(i), main_unit, cu_language, set);
     }
   }
 }
 
-void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit, DWARFUnit *main_unit,
+void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit, DWARFCompileUnit *main_unit,
                                      const LanguageType cu_language,
                                      IndexSet &set) {
   for (const DWARFDebugInfoEntry &die : unit.dies()) {
@@ -418,14 +420,14 @@ void ManualDWARFIndex::GetNamespaces(ConstString name, std::vector<lldb::user_id
 void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
                                     const CompilerDeclContext &parent_decl_ctx,
                                     uint32_t name_type_mask,
-                                    std::vector<std::pair<DWARFUnit *, DWARFDIE>> &dies) {
+                                    std::vector<std::pair<DWARFCompileUnit *, DWARFDIE>> &dies) {
   Index();
 
   if (name_type_mask & eFunctionNameTypeFull) {
     std::vector<lldb::user_id_t> offsets;
     m_set.function_fullnames.Find(name, offsets);
     for (user_id_t uid : offsets) {
-      DWARFUnit *main_unit;
+      DWARFCompileUnit *main_unit;
       DWARFDIE die = dwarf.GetDIE(uid, &main_unit);
       if (!die)
         continue;
@@ -437,7 +439,7 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
     std::vector<lldb::user_id_t> offsets;
     m_set.function_basenames.Find(name, offsets);
     for (user_id_t uid : offsets) {
-      DWARFUnit *main_unit;
+      DWARFCompileUnit *main_unit;
       DWARFDIE die = dwarf.GetDIE(uid, &main_unit);
       if (!die)
         continue;
@@ -453,7 +455,7 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
     for (user_id_t uid : offsets) {
       if (DWARFDIE die = dwarf.GetDIE(uid))
         // FIXME: DWZ: DIEArray
-        dies.push_back(std::make_pair(die.GetCU(), die));
+        dies.push_back(std::make_pair(llvm::dyn_cast<DWARFCompileUnit>(die.GetCU()), die));
     }
   }
 
@@ -464,7 +466,7 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
     for (user_id_t uid : offsets) {
       if (DWARFDIE die = dwarf.GetDIE(uid))
         // FIXME: DWZ: DIEArray
-        dies.push_back(std::make_pair(die.GetCU(), die));
+        dies.push_back(std::make_pair(llvm::dyn_cast<DWARFCompileUnit>(die.GetCU()), die));
     }
   }
 }
