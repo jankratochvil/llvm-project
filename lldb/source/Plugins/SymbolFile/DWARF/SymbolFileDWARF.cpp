@@ -610,7 +610,7 @@ SymbolFileDWARF::GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) {
 
   // The compile unit ID is the index of the DWARF unit.
   DWARFUnit *dwarf_cu = DebugInfo().GetUnitAtIndex(comp_unit->GetID());
-if (!getenv("NODEBUG")) fprintf(stderr,"GetDWARFCompileUnit:SymbolFileDWARF=%p DWARFDebugInfo=%p CompileUnit=%p GetID=0x%lx -> DWARFUnit=%p GetID=0x%lx\n",(void *)this,(void *)&DebugInfo(),(void *)comp_unit,comp_unit->GetID(),(void *)dwarf_cu,(!dwarf_cu?0:dwarf_cu->GetID()));
+//if (!getenv("NODEBUG")) fprintf(stderr,"GetDWARFCompileUnit:SymbolFileDWARF=%p DWARFDebugInfo=%p CompileUnit=%p GetID=0x%lx -> DWARFUnit=%p GetID=0x%lx\n",(void *)this,(void *)&DebugInfo(),(void *)comp_unit,comp_unit->GetID(),(void *)dwarf_cu,(!dwarf_cu?0:dwarf_cu->GetID()));
   if (!dwarf_cu)
     return nullptr;
 
@@ -679,7 +679,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
           dwarf_cu.SetUserData(cu_sp.get());
 
           SetCompileUnitAtIndex(dwarf_cu.GetID(), cu_sp);
-if (!getenv("NODEBUG")) fprintf(stderr,"ParseCompileUnit:SymbolFileDWARF=%p DWARFDebugInfo=%p CompileUnit=%p GetID=0x%lx <- DWARFUnit=%p GetID=0x%lx\n",(void *)this,(void *)&DebugInfo(),(void *)cu_sp.get(),cu_sp->GetID(),(void *)&dwarf_cu,dwarf_cu.GetID());
+//if (!getenv("NODEBUG")) fprintf(stderr,"ParseCompileUnit:SymbolFileDWARF=%p DWARFDebugInfo=%p CompileUnit=%p GetID=0x%lx <- DWARFUnit=%p GetID=0x%lx\n",(void *)this,(void *)&DebugInfo(),(void *)cu_sp.get(),cu_sp->GetID(),(void *)&dwarf_cu,dwarf_cu.GetID());
         }
       }
     }
