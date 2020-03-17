@@ -88,8 +88,6 @@ public:
                             int &decl_line, int &decl_column, int &call_file,
                             int &call_line, int &call_column,
                             lldb_private::DWARFExpression *frame_base) const;
-
-  bool MainUnitIsValid(DWARFUnit *main_unit) const;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDIE_H

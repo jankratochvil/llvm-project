@@ -404,7 +404,8 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
   SymbolFileDWARF *dwarf = llvm::cast<SymbolFileDWARF>(sc.comp_unit->GetModule()->GetSymbolFile());
   DWARFUnit *main_unit = dwarf->GetDWARFCompileUnit(sc.comp_unit);
-  if (!die.MainUnitIsValid(main_unit))
+lldbassert(main_unit);
+  if (!main_unit)
     return nullptr;
   if (log) {
     DWARFDIE context_die;

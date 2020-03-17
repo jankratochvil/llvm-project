@@ -448,21 +448,3 @@ bool DWARFDIE::GetDIENamesAndRanges(
   } else
     return false;
 }
-
-bool DWARFDIE::MainUnitIsValid(DWARFUnit *main_unit) const {
-  DWARFDIE parent = GetParent();
-  if (parent)
-    return parent.MainUnitIsValid(main_unit);
-  switch (Tag()) {
-    case DW_TAG_compile_unit:
-      lldbassert(main_unit == GetCU());
-      return main_unit == GetCU();
-    case DW_TAG_partial_unit:
-lldbassert(0); // FIXME:DWZ
-//      lldbassert(main_unit->GetSymbolFileDWARF().GetDWZCommonFileFIXME() == GetDWARF());
-      return main_unit != nullptr;
-    default:
-      lldbassert(main_unit == nullptr);
-      return true;
-  }
-}
