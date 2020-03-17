@@ -1207,7 +1207,7 @@ user_id_t SymbolFileDWARF::GetUID(DWARFUnit *main_unit, DIERef ref) {
 // WARNING: Use ref.dwo_num(), GetDwoNum() may not be valid in 'this'.
 //printf("%d: GetDwoNum().hasValue()=%d expr=%d\n",gettid(),GetDwoNum().hasValue(),(!GetDwoNum().hasValue() || has_main_cu));
 //if (!(!GetDwoNum().hasValue() || has_main_cu)) printf("%d: FAIL\n",gettid());
-//  lldbassert(main_unit);
+  lldbassert(main_unit);
   bool has_main_cu = main_unit && (&main_unit->GetSymbolFileDWARF() != this || !main_unit->ContainsDIEOffset(ref.die_offset()));
   lldbassert(!ref.dwo_num().hasValue() || has_main_cu || (main_unit && main_unit->IsDWOUnit()) || main_unit->GetDwoSymbolFile());
 //  lldbassert(!main_unit || &main_unit->GetSymbolFileDWARF() != this || GetDwoNum() == ref.dwo_num());
@@ -1276,10 +1276,11 @@ SymbolFileDWARF::GetDIE(lldb::user_id_t uid, DWARFUnit **main_unit_return) {
 
   if (decoded) {
     DWARFDIE die = decoded->dwarf.GetDIE(decoded->ref);
+lldbassert(!die.GetCU()->GetSymbolFileDWARF().GetDwoNum().hasValue());
     if (main_unit_return) {
       // FIXME: DWZ
-      *main_unit_return = decoded->main_cu == 0xffffffff ? nullptr : DebugInfo().GetUnitAtIndex(decoded->main_cu);
-//      lldbassert(*main_unit_return);
+      *main_unit_return = decoded->main_cu == 0xffffffff ? die.GetCU() : DebugInfo().GetUnitAtIndex(decoded->main_cu);
+      lldbassert(*main_unit_return);
     }
     return die;
   }
@@ -2596,7 +2597,10 @@ TypeSP SymbolFileDWARF::GetTypeForDIE(DWARFUnit *main_unit, const DWARFDIE &die,
       if (auto *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(main_unit ? main_unit : die.GetCU()))
         scope = GetCompUnitForDWARFCompUnit(*dwarf_cu);
       else
+{
         scope = GetObjectFile()->GetModule().get();
+lldbassert(dwarf_cu);
+}
       assert(scope);
       SymbolContext sc(scope);
       const DWARFDebugInfoEntry *parent_die = die.GetParent().GetDIE();
