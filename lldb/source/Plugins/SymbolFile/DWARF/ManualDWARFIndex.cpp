@@ -12,7 +12,6 @@
 #include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDwo.h"
-#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Host/TaskPool.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -115,7 +114,7 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
   }
 
   const LanguageType cu_language = SymbolFileDWARF::GetLanguage(unit);
-  DWARFUnit *main_unit = llvm::dyn_cast<DWARFCompileUnit>(&unit);
+  DWARFUnit *main_unit = &unit;
 
   IndexUnitImpl(unit, main_unit, cu_language, set);
 
@@ -453,9 +452,9 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
     std::vector<lldb::user_id_t> offsets;
     m_set.function_methods.Find(name, offsets);
     for (user_id_t uid : offsets) {
-      if (DWARFDIE die = dwarf.GetDIE(uid))
-        // FIXME: DWZ: DIEArray
-        dies.push_back(std::make_pair(llvm::dyn_cast<DWARFCompileUnit>(die.GetCU()), die));
+      DWARFUnit *main_unit;
+      if (DWARFDIE die = dwarf.GetDIE(uid, &main_unit))
+        dies.push_back(std::make_pair(main_unit, die));
     }
   }
 
@@ -464,9 +463,9 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
     std::vector<lldb::user_id_t> offsets;
     m_set.function_selectors.Find(name, offsets);
     for (user_id_t uid : offsets) {
-      if (DWARFDIE die = dwarf.GetDIE(uid))
-        // FIXME: DWZ: DIEArray
-        dies.push_back(std::make_pair(llvm::dyn_cast<DWARFCompileUnit>(die.GetCU()), die));
+      DWARFUnit *main_unit;
+      if (DWARFDIE die = dwarf.GetDIE(uid, &main_unit))
+        dies.push_back(std::make_pair(main_unit, die));
     }
   }
 }

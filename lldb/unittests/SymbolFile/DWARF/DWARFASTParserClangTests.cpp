@@ -8,7 +8,6 @@
 
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDIE.h"
-#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -95,7 +94,7 @@ TEST_F(DWARFASTParserClangTests,
   TypeSystemClang ast_ctx("dummy ASTContext", HostInfoBase::GetTargetTriple());
   DWARFASTParserClangStub ast_parser(ast_ctx);
 
-  DWARFCompileUnit *unit = llvm::cast<DWARFCompileUnit>(t.GetDwarfUnit().get());
+  DWARFUnit *unit = t.GetDwarfUnit().get();
   const DWARFDebugInfoEntry *die_first = unit->DIE().GetDIE();
   const DWARFDebugInfoEntry *die_child0 = die_first->GetFirstChild();
   const DWARFDebugInfoEntry *die_child1 = die_child0->GetSibling();

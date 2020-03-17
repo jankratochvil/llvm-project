@@ -12,7 +12,7 @@
 #include "DWARFDebugInfo.h"
 #include "DWARFDebugInfoEntry.h"
 #include "DWARFDeclContext.h"
-#include "DWARFCompileUnit.h"
+#include "DWARFUnit.h"
 
 using namespace lldb_private;
 
