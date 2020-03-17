@@ -59,7 +59,7 @@ private:
   void Index();
   void IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp, IndexSet &set);
 
-  static void IndexUnitImpl(DWARFUnit &unit, DWARFCompileUnit *main_unit,
+  static void IndexUnitImpl(DWARFUnit &unit, DWARFUnit *main_unit,
                             const lldb::LanguageType cu_language,
                             IndexSet &set);
 

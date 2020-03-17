@@ -35,10 +35,10 @@ public:
 
   void AppendTypeName(lldb_private::Stream &s) const;
 
-  lldb_private::Type *ResolveType(DWARFCompileUnit *main_unit) const;
+  lldb_private::Type *ResolveType(DWARFUnit *main_unit) const;
 
   // Resolve a type by UID using this DIE's DWARF file
-  lldb_private::Type *ResolveTypeUID(DWARFCompileUnit *main_unit, const DWARFDIE &die) const;
+  lldb_private::Type *ResolveTypeUID(DWARFUnit *main_unit, const DWARFDIE &die) const;
 
   // Functions for obtaining DIE relations and references
 
@@ -89,7 +89,7 @@ public:
                             int &call_line, int &call_column,
                             lldb_private::DWARFExpression *frame_base) const;
 
-  bool MainUnitIsValid(DWARFCompileUnit *main_unit) const;
+  bool MainUnitIsValid(DWARFUnit *main_unit) const;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDIE_H

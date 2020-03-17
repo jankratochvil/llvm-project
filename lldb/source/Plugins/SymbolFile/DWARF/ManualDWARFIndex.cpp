@@ -115,7 +115,7 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
   }
 
   const LanguageType cu_language = SymbolFileDWARF::GetLanguage(unit);
-  DWARFCompileUnit *main_unit = llvm::dyn_cast<DWARFCompileUnit>(&unit);
+  DWARFUnit *main_unit = llvm::dyn_cast<DWARFCompileUnit>(&unit);
 
   IndexUnitImpl(unit, main_unit, cu_language, set);
 
@@ -133,7 +133,7 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
   }
 }
 
-void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit, DWARFCompileUnit *main_unit,
+void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit, DWARFUnit *main_unit,
                                      const LanguageType cu_language,
                                      IndexSet &set) {
   for (const DWARFDebugInfoEntry &die : unit.dies()) {
@@ -427,7 +427,7 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
     std::vector<lldb::user_id_t> offsets;
     m_set.function_fullnames.Find(name, offsets);
     for (user_id_t uid : offsets) {
-      DWARFCompileUnit *main_unit;
+      DWARFUnit *main_unit;
       DWARFDIE die = dwarf.GetDIE(uid, &main_unit);
       if (!die)
         continue;
@@ -439,7 +439,7 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
     std::vector<lldb::user_id_t> offsets;
     m_set.function_basenames.Find(name, offsets);
     for (user_id_t uid : offsets) {
-      DWARFCompileUnit *main_unit;
+      DWARFUnit *main_unit;
       DWARFDIE die = dwarf.GetDIE(uid, &main_unit);
       if (!die)
         continue;

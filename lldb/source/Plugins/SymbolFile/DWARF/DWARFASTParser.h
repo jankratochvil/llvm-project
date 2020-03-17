@@ -40,13 +40,13 @@ public:
                         lldb_private::CompilerType &compiler_type) = 0;
 
   virtual lldb_private::CompilerDecl
-  GetDeclForUIDFromDWARF(DWARFCompileUnit *main_unit, const DWARFDIE &die) = 0;
+  GetDeclForUIDFromDWARF(DWARFUnit *main_unit, const DWARFDIE &die) = 0;
 
   virtual lldb_private::CompilerDeclContext
-  GetDeclContextForUIDFromDWARF(DWARFCompileUnit *main_unit, const DWARFDIE &die) = 0;
+  GetDeclContextForUIDFromDWARF(DWARFUnit *main_unit, const DWARFDIE &die) = 0;
 
   virtual lldb_private::CompilerDeclContext
-  GetDeclContextContainingUIDFromDWARF(DWARFCompileUnit *main_unit, const DWARFDIE &die) = 0;
+  GetDeclContextContainingUIDFromDWARF(DWARFUnit *main_unit, const DWARFDIE &die) = 0;
 
   virtual void EnsureAllDIEsInDeclContextHaveBeenParsed(
       lldb_private::CompilerDeclContext decl_context) = 0;

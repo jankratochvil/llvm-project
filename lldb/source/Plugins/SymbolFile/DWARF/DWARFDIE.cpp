@@ -345,14 +345,14 @@ void DWARFDIE::AppendTypeName(Stream &s) const {
   }
 }
 
-lldb_private::Type *DWARFDIE::ResolveType(DWARFCompileUnit *main_unit) const {
+lldb_private::Type *DWARFDIE::ResolveType(DWARFUnit *main_unit) const {
   if (IsValid())
     return (main_unit ? main_unit : GetCU())->GetSymbolFileDWARF().ResolveType(main_unit, *this, true);
   else
     return nullptr;
 }
 
-lldb_private::Type *DWARFDIE::ResolveTypeUID(DWARFCompileUnit *main_unit, const DWARFDIE &die) const {
+lldb_private::Type *DWARFDIE::ResolveTypeUID(DWARFUnit *main_unit, const DWARFDIE &die) const {
   if (SymbolFileDWARF *dwarf = &(main_unit ? main_unit : GetCU())->GetSymbolFileDWARF())
     return dwarf->ResolveTypeUID(main_unit, die, true);
   return nullptr;
@@ -449,7 +449,7 @@ bool DWARFDIE::GetDIENamesAndRanges(
     return false;
 }
 
-bool DWARFDIE::MainUnitIsValid(DWARFCompileUnit *main_unit) const {
+bool DWARFDIE::MainUnitIsValid(DWARFUnit *main_unit) const {
   DWARFDIE parent = GetParent();
   if (parent)
     return parent.MainUnitIsValid(main_unit);
