@@ -73,12 +73,12 @@ protected:
   class DelayedAddObjCClassProperty;
   typedef std::vector<DelayedAddObjCClassProperty> DelayedPropertyList;
 
-  typedef llvm::SmallSet<std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>, 4> DIEPointerSet;
-  typedef llvm::DenseMap<std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>, clang::DeclContext *>
+  typedef llvm::SmallSet<std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>, 4> DIEPointerSet;
+  typedef llvm::DenseMap<std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>, clang::DeclContext *>
       DIEToDeclContextMap;
-  typedef std::multimap<const clang::DeclContext *, std::pair<DWARFCompileUnit *, const DWARFDIE>>
+  typedef std::multimap<const clang::DeclContext *, std::pair<DWARFUnit *, const DWARFDIE>>
       DeclContextToDIEMap;
-  typedef llvm::DenseMap<std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>, clang::Decl *>
+  typedef llvm::DenseMap<std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>, clang::Decl *>
       DIEToDeclMap;
   typedef llvm::DenseMap<const clang::Decl *, DIEPointerSet> DeclToDIEMap;
 

@@ -420,7 +420,7 @@ void ManualDWARFIndex::GetNamespaces(ConstString name, std::vector<lldb::user_id
 void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
                                     const CompilerDeclContext &parent_decl_ctx,
                                     uint32_t name_type_mask,
-                                    std::vector<std::pair<DWARFCompileUnit *, DWARFDIE>> &dies) {
+                                    std::vector<std::pair<DWARFUnit *, DWARFDIE>> &dies) {
   Index();
 
   if (name_type_mask & eFunctionNameTypeFull) {

@@ -42,7 +42,7 @@ public:
   virtual void GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
                             const CompilerDeclContext &parent_decl_ctx,
                             uint32_t name_type_mask,
-                            std::vector<std::pair<DWARFCompileUnit *, DWARFDIE>> &dies) = 0;
+                            std::vector<std::pair<DWARFUnit *, DWARFDIE>> &dies) = 0;
   virtual void GetFunctions(const RegularExpression &regex,
                             std::vector<lldb::user_id_t> &offsets) = 0;
 
@@ -59,7 +59,7 @@ protected:
   void ProcessFunctionDIE(llvm::StringRef name, lldb::user_id_t uid,
                           SymbolFileDWARF &dwarf,
                           const CompilerDeclContext &parent_decl_ctx,
-                          uint32_t name_type_mask, std::vector<std::pair<DWARFCompileUnit *, DWARFDIE>> &dies);
+                          uint32_t name_type_mask, std::vector<std::pair<DWARFUnit *, DWARFDIE>> &dies);
 };
 } // namespace lldb_private
 

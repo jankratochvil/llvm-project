@@ -1265,7 +1265,7 @@ SymbolFileDWARF::DecodeUID(lldb::user_id_t uid) {
 }
 
 DWARFDIE
-SymbolFileDWARF::GetDIE(lldb::user_id_t uid, DWARFCompileUnit **main_unit_return) {
+SymbolFileDWARF::GetDIE(lldb::user_id_t uid, DWARFUnit **main_unit_return) {
   // FIXME: DWZ: lock-less internal calls
   // This method can be called without going through the symbol vendor so we
   // need to lock the module.
@@ -1277,7 +1277,7 @@ SymbolFileDWARF::GetDIE(lldb::user_id_t uid, DWARFCompileUnit **main_unit_return
     DWARFDIE die = decoded->dwarf.GetDIE(decoded->ref);
     if (main_unit_return) {
       // FIXME: DWZ
-      *main_unit_return = decoded->main_cu == 0xffffffff ? nullptr : llvm::cast<DWARFCompileUnit>(DebugInfo().GetUnitAtIndex(decoded->main_cu));
+      *main_unit_return = decoded->main_cu == 0xffffffff ? nullptr : DebugInfo().GetUnitAtIndex(decoded->main_cu);
 //      lldbassert(*main_unit_return);
     }
     return die;
@@ -1504,9 +1504,10 @@ size_t SymbolFileDWARF::GetObjCMethodDIEOffsets(ConstString class_name,
 bool SymbolFileDWARF::GetFunction(DWARFUnit *main_unit, const DWARFDIE &die, SymbolContext &sc) {
   sc.Clear(false);
 
-  if (die && main_unit) {
+  if (die && llvm::isa_and_nonnull<DWARFCompileUnit>(main_unit)) {
     // Check if the symbol vendor already knows about this compile unit?
-    sc.comp_unit = GetCompUnitForDWARFCompUnit(*main_unit);
+    sc.comp_unit =
+        GetCompUnitForDWARFCompUnit(*llvm::cast<DWARFCompileUnit>(main_unit));
 
     sc.function = sc.comp_unit->FindFunctionByUID(die.GetID(main_unit)).get();
     if (sc.function == nullptr)
@@ -2310,10 +2311,10 @@ void SymbolFileDWARF::FindFunctions(ConstString name,
 
   const uint32_t original_size = sc_list.GetSize();
 
-  llvm::DenseSet<std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>> resolved_dies;
+  llvm::DenseSet<std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>> resolved_dies;
   DIEArray offsets;
 
-  std::vector<std::pair<DWARFCompileUnit *, DWARFDIE>> dies;
+  std::vector<std::pair<DWARFUnit *, DWARFDIE>> dies;
   m_index->GetFunctions(name, *this, parent_decl_ctx, name_type_mask, dies);
   for (const auto &diepair : dies) {
     if (resolved_dies.insert(std::make_pair(diepair.first,diepair.second.GetDIE())).second)
@@ -2352,7 +2353,7 @@ void SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
   std::vector<lldb::user_id_t> offsets;
   m_index->GetFunctions(regex, offsets);
 
-  llvm::DenseSet<std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>> resolved_dies;
+  llvm::DenseSet<std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>> resolved_dies;
   for (user_id_t uid : offsets) {
     DWARFUnit *main_unit;
     DWARFDIE die = GetDIE(uid, &main_unit);

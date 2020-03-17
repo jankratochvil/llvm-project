@@ -20,7 +20,7 @@ void DWARFIndex::ProcessFunctionDIE(llvm::StringRef name, user_id_t uid,
                                     SymbolFileDWARF &dwarf,
                                     const CompilerDeclContext &parent_decl_ctx,
                                     uint32_t name_type_mask,
-                                    std::vector<std::pair<DWARFCompileUnit *, DWARFDIE>> &dies) {
+                                    std::vector<std::pair<DWARFUnit *, DWARFDIE>> &dies) {
   DWARFUnit *main_unit;
   DWARFDIE die = dwarf.GetDIE(uid, &main_unit);
   if (!die) {
