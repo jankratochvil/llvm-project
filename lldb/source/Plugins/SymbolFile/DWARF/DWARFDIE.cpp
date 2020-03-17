@@ -347,13 +347,13 @@ void DWARFDIE::AppendTypeName(Stream &s) const {
 
 lldb_private::Type *DWARFDIE::ResolveType(DWARFCompileUnit *main_unit) const {
   if (IsValid())
-    return main_unit->GetSymbolFileDWARF().ResolveType(main_unit, *this, true);
+    return (main_unit ? main_unit : GetCU())->GetSymbolFileDWARF().ResolveType(main_unit, *this, true);
   else
     return nullptr;
 }
 
 lldb_private::Type *DWARFDIE::ResolveTypeUID(DWARFCompileUnit *main_unit, const DWARFDIE &die) const {
-  if (SymbolFileDWARF *dwarf = &main_unit->GetSymbolFileDWARF())
+  if (SymbolFileDWARF *dwarf = &(main_unit ? main_unit : GetCU())->GetSymbolFileDWARF())
     return dwarf->ResolveTypeUID(main_unit, die, true);
   return nullptr;
 }

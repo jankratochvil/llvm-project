@@ -2591,7 +2591,7 @@ TypeSP SymbolFileDWARF::GetTypeForDIE(DWARFCompileUnit *main_unit, const DWARFDI
     Type *type_ptr = GetDIEToType().lookup(die.GetDIE());
     if (type_ptr == nullptr) {
       SymbolContextScope *scope;
-      if (auto *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(main_unit))
+      if (auto *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(main_unit ? main_unit : die.GetCU()))
         scope = GetCompUnitForDWARFCompUnit(*dwarf_cu);
       else
         scope = GetObjectFile()->GetModule().get();
