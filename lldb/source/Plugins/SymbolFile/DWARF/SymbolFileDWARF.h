@@ -320,7 +320,7 @@ public:
     llvm::Optional<DecodedUID> decoded = DecodeUID(uid);
     if (!decoded)
       return {};
-    // FIXME:
+    // FIXME:DWZ
     if (&decoded->dwarf!=this)
       return {};
     return decoded->ref;

@@ -1276,7 +1276,7 @@ SymbolFileDWARF::GetDIE(lldb::user_id_t uid, DWARFUnit **main_unit_return) {
 
   if (decoded) {
     DWARFDIE die = decoded->dwarf.GetDIE(decoded->ref);
-lldbassert(!die.GetCU()->GetSymbolFileDWARF().GetDwoNum().hasValue());
+lldbassert(decoded->ref.dwo_num()==die.GetCU()->GetSymbolFileDWARF().GetDwoNum()); // 'die' should be from the non-skeleton file.
     if (main_unit_return) {
       // FIXME: DWZ
       *main_unit_return = decoded->main_cu == 0xffffffff ? die.GetCU() : DebugInfo().GetUnitAtIndex(decoded->main_cu);
