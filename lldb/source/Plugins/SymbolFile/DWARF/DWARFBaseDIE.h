@@ -17,10 +17,12 @@
 class DIERef;
 class DWARFASTParser;
 class DWARFAttributes;
+class DWARFCompileUnit;
 class DWARFUnit;
 class DWARFDebugInfoEntry;
 class DWARFDeclContext;
 class SymbolFileDWARF;
+class DWARFCompileUnit;
 
 class DWARFBaseDIE {
 public:
@@ -90,7 +92,7 @@ public:
   // but it might have a SymbolFileDWARF::GetID() in the high 32 bits if
   // we are doing Darwin DWARF in .o file, or DWARF stand alone debug
   // info.
-  lldb::user_id_t GetID(DWARFUnit *main_unit) const;
+  lldb::user_id_t GetID(DWARFCompileUnit *main_unit) const;
 
   const char *GetName() const;
 

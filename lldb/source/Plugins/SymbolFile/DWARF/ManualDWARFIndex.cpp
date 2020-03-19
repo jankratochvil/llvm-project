@@ -12,6 +12,7 @@
 #include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDwo.h"
+#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Host/TaskPool.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -114,7 +115,7 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
   }
 
   const LanguageType cu_language = SymbolFileDWARF::GetLanguage(unit);
-  DWARFUnit *main_unit = &unit;
+  DWARFCompileUnit *main_unit = llvm::dyn_cast<DWARFCompileUnit>(&unit);
 
   IndexUnitImpl(unit, main_unit, cu_language, set);
 
@@ -132,7 +133,7 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
   }
 }
 
-void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit, DWARFUnit *main_unit,
+void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit, DWARFCompileUnit *main_unit,
                                      const LanguageType cu_language,
                                      IndexSet &set) {
   for (const DWARFDebugInfoEntry &die : unit.dies()) {
@@ -419,14 +420,14 @@ void ManualDWARFIndex::GetNamespaces(ConstString name, std::vector<lldb::user_id
 void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
                                     const CompilerDeclContext &parent_decl_ctx,
                                     uint32_t name_type_mask,
-                                    std::vector<std::pair<DWARFUnit *, DWARFDIE>> &dies) {
+                                    std::vector<std::pair<DWARFCompileUnit *, DWARFDIE>> &dies) {
   Index();
 
   if (name_type_mask & eFunctionNameTypeFull) {
     std::vector<lldb::user_id_t> offsets;
     m_set.function_fullnames.Find(name, offsets);
     for (user_id_t uid : offsets) {
-      DWARFUnit *main_unit;
+      DWARFCompileUnit *main_unit;
       DWARFDIE die = dwarf.GetDIE(uid, &main_unit);
       if (!die)
         continue;
@@ -438,7 +439,7 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
     std::vector<lldb::user_id_t> offsets;
     m_set.function_basenames.Find(name, offsets);
     for (user_id_t uid : offsets) {
-      DWARFUnit *main_unit;
+      DWARFCompileUnit *main_unit;
       DWARFDIE die = dwarf.GetDIE(uid, &main_unit);
       if (!die)
         continue;
@@ -452,7 +453,7 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
     std::vector<lldb::user_id_t> offsets;
     m_set.function_methods.Find(name, offsets);
     for (user_id_t uid : offsets) {
-      DWARFUnit *main_unit;
+      DWARFCompileUnit *main_unit;
       if (DWARFDIE die = dwarf.GetDIE(uid, &main_unit))
         dies.push_back(std::make_pair(main_unit, die));
     }
@@ -463,7 +464,7 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
     std::vector<lldb::user_id_t> offsets;
     m_set.function_selectors.Find(name, offsets);
     for (user_id_t uid : offsets) {
-      DWARFUnit *main_unit;
+      DWARFCompileUnit *main_unit;
       if (DWARFDIE die = dwarf.GetDIE(uid, &main_unit))
         dies.push_back(std::make_pair(main_unit, die));
     }
