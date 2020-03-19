@@ -104,7 +104,7 @@ protected:
       lldb_private::TypeSystemClang::TemplateParameterInfos
           &template_param_infos);
 
-  bool ParseChildMembers(lldb_private::CompileUnit &comp_unit,
+  bool ParseChildMembers(lldb_private::CompileUnit *comp_unit,
       const DWARFDIE &die, lldb_private::CompilerType &class_compiler_type,
       const lldb::LanguageType class_language,
       std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
@@ -115,7 +115,7 @@ protected:
       lldb_private::ClangASTImporter::LayoutInfo &layout_info);
 
   size_t
-  ParseChildParameters(lldb_private::CompileUnit &comp_unit, clang::DeclContext *containing_decl_ctx,
+  ParseChildParameters(lldb_private::CompileUnit *comp_unit, clang::DeclContext *containing_decl_ctx,
                        const DWARFDIE &parent_die, bool skip_artificial,
                        bool &is_static, bool &is_variadic,
                        bool &has_template_params,
@@ -188,7 +188,7 @@ private:
   };
 
   void
-  ParseSingleMember(lldb_private::CompileUnit &comp_unit, const DWARFDIE &die, const DWARFDIE &parent_die,
+  ParseSingleMember(lldb_private::CompileUnit *comp_unit, const DWARFDIE &die, const DWARFDIE &parent_die,
                     lldb_private::CompilerType &class_clang_type,
                     const lldb::LanguageType class_language,
                     std::vector<int> &member_accessibilities,
