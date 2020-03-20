@@ -3131,6 +3131,7 @@ size_t SymbolFileDWARF::ParseTypes(CompileUnit &comp_unit) {
     if (dwarf_cu_die && dwarf_cu_die.HasChildren()) {
       SymbolContext sc;
       sc.comp_unit = &comp_unit;
+      sc.module_sp = sc.comp_unit->GetModule();
       types_added = ParseTypes(sc, dwarf_cu_die.GetFirstChild(), true, true);
     }
   }
