@@ -1202,6 +1202,14 @@ void SymbolFileDWARF::ParseDeclsForContext(CompilerDeclContext decl_ctx) {
         decl_ctx);
 }
 
+static user_id_t debuguid(user_id_t uid) {
+  return uid;
+}
+
+user_id_t SymbolFileDWARF::GetUID(DWARFCompileUnit *main_unit, const DWARFBaseDIE &die) {
+  return GetUID(die.IsValid() && llvm::isa<DWARFCompileUnit>(die.GetCU()) ? main_unit : nullptr, die.GetDIERef());
+}
+
 user_id_t SymbolFileDWARF::GetUID(DWARFCompileUnit *main_unit, DIERef ref) {
   if (GetDebugMapSymfile())
     return GetID() | ref.die_offset();
@@ -1220,11 +1228,13 @@ user_id_t SymbolFileDWARF::GetUID(DWARFCompileUnit *main_unit, DIERef ref) {
 
   lldbassert(GetDIE(ref).IsValid()); // FIXME: Expensive
 
-  return user_id_t(is_dwz ? main_unit->GetID() : ref.dwo_num().getValueOr(0x1fffffff)) << 32 |
+  user_id_t retval = user_id_t(is_dwz ? main_unit->GetID() : ref.dwo_num().getValueOr(0x1fffffff)) << 32 |
          ref.die_offset() |
          user_id_t(is_dwz_common) << 61 |
          user_id_t(is_dwz) << 62 |
          (lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes) << 63);
+debuguid(retval);
+  return retval;
 }
 
 llvm::Optional<SymbolFileDWARF::DecodedUID>
