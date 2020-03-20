@@ -1537,7 +1537,7 @@ lldb::ModuleSP SymbolFileDWARF::GetExternalModule(ConstString name) {
 DWARFDIE
 SymbolFileDWARF::GetDIE(const DIERef &die_ref) {
   if (die_ref.dwo_num()) {
-    SymbolFileDWARF *dwarf = *die_ref.dwo_num() == 0x3fffffff
+    SymbolFileDWARF *dwarf = *die_ref.dwo_num() == 0x1ffffffe
                                  ? m_dwp_symfile.get()
                                  : this->DebugInfo()
                                        .GetUnitAtIndex(*die_ref.dwo_num())
@@ -3971,7 +3971,7 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
       if (!dwp_obj_file)
         return;
       m_dwp_symfile =
-          std::make_shared<SymbolFileDWARFDwo>(*this, dwp_obj_file, 0x3fffffff);
+          std::make_shared<SymbolFileDWARFDwo>(*this, dwp_obj_file, 0x1ffffffe);
     }
   });
   return m_dwp_symfile;
