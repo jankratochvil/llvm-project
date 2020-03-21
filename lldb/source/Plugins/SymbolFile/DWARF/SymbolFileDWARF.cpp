@@ -1517,10 +1517,10 @@ size_t SymbolFileDWARF::GetObjCMethodDIEOffsets(ConstString class_name,
 bool SymbolFileDWARF::GetFunction(DWARFCompileUnit *main_unit, const DWARFDIE &die, SymbolContext &sc) {
   sc.Clear(false);
 
-  if (die && llvm::isa_and_nonnull<DWARFCompileUnit>(main_unit)) {
+  if (die && llvm::isa<DWARFCompileUnit>(main_unit ? main_unit : die.GetCU())) {
     // Check if the symbol vendor already knows about this compile unit?
     sc.comp_unit =
-        GetCompUnitForDWARFCompUnit(*llvm::cast<DWARFCompileUnit>(main_unit));
+        GetCompUnitForDWARFCompUnit(*llvm::cast<DWARFCompileUnit>(main_unit? main_unit : die.GetCU()));
 
     sc.function = sc.comp_unit->FindFunctionByUID(die.GetID(main_unit)).get();
     if (sc.function == nullptr)
