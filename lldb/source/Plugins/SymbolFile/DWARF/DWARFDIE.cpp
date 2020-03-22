@@ -347,13 +347,13 @@ void DWARFDIE::AppendTypeName(Stream &s) const {
 
 lldb_private::Type *DWARFDIE::ResolveType(DWARFCompileUnit *main_unit) const {
   if (IsValid())
-    return MainCU(main_unit)->GetSymbolFileDWARF().ResolveType(main_unit, *this, true);
+    return MainCUDWARF(main_unit).ResolveType(main_unit, *this, true);
   else
     return nullptr;
 }
 
 lldb_private::Type *DWARFDIE::ResolveTypeUID(DWARFCompileUnit *main_unit, const DWARFDIE &die) const {
-  if (SymbolFileDWARF *dwarf = &MainCU(main_unit)->GetSymbolFileDWARF())
+  if (SymbolFileDWARF *dwarf = &MainCUDWARF(main_unit))
     return dwarf->ResolveTypeUID(main_unit, die, true);
   return nullptr;
 }
@@ -455,6 +455,13 @@ DWARFCompileUnit *DWARFDIE::MainCU(DWARFCompileUnit *main_unit) const {
   if (main_unit)
     main_unit = &main_unit->GetNonSkeletonUnit();
   return main_unit;
+}
+
+SymbolFileDWARF &DWARFDIE::MainCUDWARF(DWARFCompileUnit *main_unit) const {
+  DWARFUnit *unit = MainCU(main_unit);
+  if (!unit)
+    unit = GetCU();
+  return unit->GetSymbolFileDWARF();
 }
 
 std::pair<DWARFCompileUnit *, DWARFDIE> DWARFDIE::MainCUtoDWARFDIEPair(DWARFCompileUnit *main_unit) const {

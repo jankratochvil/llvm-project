@@ -90,6 +90,7 @@ public:
                             lldb_private::DWARFExpression *frame_base) const;
 
   DWARFCompileUnit *MainCU(DWARFCompileUnit *main_unit) const;
+  SymbolFileDWARF &MainCUDWARF(DWARFCompileUnit *main_unit) const;
   std::pair<DWARFCompileUnit *, DWARFDIE> MainCUtoDWARFDIEPair(DWARFCompileUnit *main_unit) const;
   std::pair<DWARFCompileUnit *, DWARFDebugInfoEntry *> MainCUtoDIEPair(DWARFCompileUnit *main_unit) const;
 };
