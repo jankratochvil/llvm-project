@@ -10,6 +10,7 @@
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDIE.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
+#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 
 using namespace lldb_private;
 using namespace lldb;
@@ -40,7 +41,7 @@ void DWARFIndex::ProcessFunctionDIE(llvm::StringRef name, user_id_t uid,
   if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, main_unit, die))
     return;
 
-  auto diepair = std::make_pair(main_unit, die);
+  auto diepair = std::make_pair(main_unit ? main_unit : llvm::dyn_cast<DWARFCompileUnit>(die.GetCU()), die);
 
   // In case of a full match, we just insert everything we find.
   if (name_type_mask & eFunctionNameTypeFull) {

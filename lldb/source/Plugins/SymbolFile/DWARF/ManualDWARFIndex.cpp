@@ -432,7 +432,7 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
       if (!die)
         continue;
       if (SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, main_unit, die))
-        dies.push_back(std::make_pair(main_unit, die));
+        dies.push_back(std::make_pair(main_unit ? main_unit : llvm::dyn_cast<DWARFCompileUnit>(die.GetCU()), die));
     }
   }
   if (name_type_mask & eFunctionNameTypeBase) {
@@ -444,7 +444,7 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
       if (!die)
         continue;
       if (SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, main_unit, die))
-        dies.push_back(std::make_pair(main_unit, die));
+        dies.push_back(std::make_pair(main_unit ? main_unit : llvm::dyn_cast<DWARFCompileUnit>(die.GetCU()), die));
     }
     offsets.clear();
   }
@@ -455,7 +455,7 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
     for (user_id_t uid : offsets) {
       DWARFCompileUnit *main_unit;
       if (DWARFDIE die = dwarf.GetDIE(uid, &main_unit))
-        dies.push_back(std::make_pair(main_unit, die));
+        dies.push_back(std::make_pair(main_unit ? main_unit : llvm::dyn_cast<DWARFCompileUnit>(die.GetCU()), die));
     }
   }
 
@@ -466,7 +466,7 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
     for (user_id_t uid : offsets) {
       DWARFCompileUnit *main_unit;
       if (DWARFDIE die = dwarf.GetDIE(uid, &main_unit))
-        dies.push_back(std::make_pair(main_unit, die));
+        dies.push_back(std::make_pair(main_unit ? main_unit : llvm::dyn_cast<DWARFCompileUnit>(die.GetCU()), die));
     }
   }
 }

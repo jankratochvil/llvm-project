@@ -2374,7 +2374,7 @@ void SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
       m_index->ReportInvalidDIEID(uid, regex.GetText());
       continue;
     }
-    if (resolved_dies.insert(std::make_pair(main_unit, die.GetDIE())).second)
+    if (resolved_dies.insert(std::make_pair(main_unit ? main_unit : llvm::dyn_cast<DWARFCompileUnit>(die.GetCU()), die.GetDIE())).second)
       ResolveFunction(main_unit, die, include_inlines, sc_list);
   }
 }
