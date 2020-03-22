@@ -13,7 +13,6 @@
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
-#include "llvm/Support/Format.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -80,16 +79,4 @@ void NameToDIE::Append(const NameToDIE &other) {
     m_map.Append(other.m_map.GetCStringAtIndexUnchecked(i),
                  other.m_map.GetValueAtIndexUnchecked(i));
   }
-}
-
-void llvm::format_provider<user_id_t>::format(user_id_t uid, raw_ostream &OS,
-                                           StringRef Style) {
-
-  OS << "llvm::format_provider<user_id_t>::format";
-#if 0
-  if (ref.dwo_num())
-    OS << format_hex_no_prefix(*ref.dwo_num(), 8) << "/";
-  OS << (ref.section() == DIERef::DebugInfo ? "INFO" : "TYPE");
-  OS << "/" << format_hex_no_prefix(ref.die_offset(), 8);
-#endif
 }

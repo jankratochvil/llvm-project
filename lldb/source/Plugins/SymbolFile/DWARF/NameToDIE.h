@@ -14,7 +14,6 @@
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/lldb-defines.h"
-#include "llvm/Support/FormatProviders.h"
 
 class DWARFUnit;
 
@@ -49,11 +48,5 @@ public:
 protected:
   lldb_private::UniqueCStringMap<lldb::user_id_t> m_map;
 };
-
-namespace llvm {
-template<> struct format_provider<lldb::user_id_t> {
-  static void format(lldb::user_id_t uid, raw_ostream &OS, StringRef Style);
-};
-} // namespace llvm
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_NAMETODIE_H
