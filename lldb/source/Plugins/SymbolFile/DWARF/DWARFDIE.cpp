@@ -347,13 +347,13 @@ void DWARFDIE::AppendTypeName(Stream &s) const {
 
 lldb_private::Type *DWARFDIE::ResolveType(DWARFCompileUnit *main_unit) const {
   if (IsValid())
-    return MainCUDWARF(main_unit).ResolveType(main_unit, *this, true);
+    return MainDWARFUnit(main_unit)->GetSymbolFileDWARF().ResolveType(main_unit, *this, true);
   else
     return nullptr;
 }
 
 lldb_private::Type *DWARFDIE::ResolveTypeUID(DWARFCompileUnit *main_unit, const DWARFDIE &die) const {
-  if (SymbolFileDWARF *dwarf = &MainCUDWARF(main_unit))
+  if (SymbolFileDWARF *dwarf = &MainDWARFUnit(main_unit)->GetSymbolFileDWARF())
     return dwarf->ResolveTypeUID(main_unit, die, true);
   return nullptr;
 }
@@ -449,7 +449,7 @@ bool DWARFDIE::GetDIENamesAndRanges(
     return false;
 }
 
-DWARFCompileUnit *DWARFDIE::MainCU(DWARFCompileUnit *main_unit) const {
+DWARFCompileUnit *DWARFDIE::MainDWARFCompileUnit(DWARFCompileUnit *main_unit) const {
   if (!main_unit)
     main_unit = llvm::dyn_cast<DWARFCompileUnit>(GetCU());
   if (main_unit)
@@ -457,17 +457,17 @@ DWARFCompileUnit *DWARFDIE::MainCU(DWARFCompileUnit *main_unit) const {
   return main_unit;
 }
 
-SymbolFileDWARF &DWARFDIE::MainCUDWARF(DWARFCompileUnit *main_unit) const {
-  DWARFUnit *unit = MainCU(main_unit);
-  if (!unit)
-    unit = GetCU();
-  return unit->GetSymbolFileDWARF();
+DWARFUnit *DWARFDIE::MainDWARFUnit(DWARFCompileUnit *main_unit) const {
+  main_unit = MainDWARFCompileUnit(main_unit);
+  if (main_unit)
+    return main_unit;
+  return GetCU();
 }
 
 std::pair<DWARFCompileUnit *, DWARFDIE> DWARFDIE::MainCUtoDWARFDIEPair(DWARFCompileUnit *main_unit) const {
-  return std::make_pair(MainCU(main_unit), *this);
+  return std::make_pair(MainDWARFCompileUnit(main_unit), *this);
 }
 
 std::pair<DWARFCompileUnit *, DWARFDebugInfoEntry *> DWARFDIE::MainCUtoDIEPair(DWARFCompileUnit *main_unit) const {
-  return std::make_pair(MainCU(main_unit), GetDIE());
+  return std::make_pair(MainDWARFCompileUnit(main_unit), GetDIE());
 }
