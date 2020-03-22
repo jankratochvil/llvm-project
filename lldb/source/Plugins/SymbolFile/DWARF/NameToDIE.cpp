@@ -55,10 +55,19 @@ size_t NameToDIE::FindAllEntriesForUnit(const DWARFUnit &unit,
 }
 
 void NameToDIE::Dump(Stream *s) {
+  llvm::raw_ostream &OS = s->AsRawOstream();
   const uint32_t size = m_map.GetSize();
   for (uint32_t i = 0; i < size; ++i) {
-    s->Format("{0} \"{1}\"\n", m_map.GetValueAtIndexUnchecked(i),
-              m_map.GetCStringAtIndexUnchecked(i));
+    user_id_t uid = m_map.GetValueAtIndexUnchecked(i);
+    uint32_t upper = (uid >> 32) & 0x1fffffff;
+    if (upper != 0x1fffffff)
+      OS << llvm::format_hex_no_prefix(upper, 8) << "/";
+    OS << (uid & (1ULL << 63) ? "TYPE" : "INFO");
+    if (uid & (1ULL << 61))
+      OS << "/DWZCOMMON";
+    else if (uid & (1ULL << 62))
+      OS << "/DWZ";
+    OS << "/" << llvm::format_hex_no_prefix(uid & 0xffffffff, 8) << " \"" << m_map.GetCStringAtIndexUnchecked(i).GetStringRef() << "\"\n";
   }
 }
 
