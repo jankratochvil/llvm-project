@@ -1517,10 +1517,10 @@ size_t SymbolFileDWARF::GetObjCMethodDIEOffsets(ConstString class_name,
 bool SymbolFileDWARF::GetFunction(DWARFCompileUnit *main_unit, const DWARFDIE &die, SymbolContext &sc) {
   sc.Clear(false);
 
-  if (die && llvm::isa<DWARFCompileUnit>(main_unit ? main_unit : die.GetCU())) {
+  if (die && die.MainCU(main_unit)) {
     // Check if the symbol vendor already knows about this compile unit?
     sc.comp_unit =
-        GetCompUnitForDWARFCompUnit(*llvm::cast<DWARFCompileUnit>(main_unit? main_unit : die.GetCU()));
+        GetCompUnitForDWARFCompUnit(*die.MainCU(main_unit));
 
     sc.function = sc.comp_unit->FindFunctionByUID(die.GetID(main_unit)).get();
     if (sc.function == nullptr)
@@ -2280,7 +2280,7 @@ bool SymbolFileDWARF::DIEInDeclContext(const CompilerDeclContext &decl_ctx, DWAR
     return true;
 
   if (die) {
-    if (DWARFASTParser *dwarf_ast = GetDWARFParser(*(main_unit ? main_unit : die.GetCU()))) {
+    if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.MainCU(main_unit))) {
       if (CompilerDeclContext actual_decl_ctx =
               dwarf_ast->GetDeclContextContainingUIDFromDWARF(main_unit, die))
         return decl_ctx.IsContainedInLookup(actual_decl_ctx);
@@ -2374,7 +2374,7 @@ void SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
       m_index->ReportInvalidDIEID(uid, regex.GetText());
       continue;
     }
-    if (resolved_dies.insert(std::make_pair(main_unit ? main_unit : llvm::dyn_cast<DWARFCompileUnit>(die.GetCU()), die.GetDIE())).second)
+    if (resolved_dies.insert(die.MainCUtoDIEPair(main_unit)).second)
       ResolveFunction(main_unit, die, include_inlines, sc_list);
   }
 }
@@ -2574,7 +2574,7 @@ SymbolFileDWARF::FindNamespace(ConstString name,
         if (!DIEInDeclContext(parent_decl_ctx, main_unit, die))
           continue; // The containing decl contexts don't match
 
-        if (DWARFASTParser *dwarf_ast = GetDWARFParser(*(main_unit ? main_unit : die.GetCU()))) {
+        if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.MainCU(main_unit))) {
           namespace_decl_ctx = dwarf_ast->GetDeclContextForUIDFromDWARF(main_unit, die);
           if (namespace_decl_ctx)
             break;
@@ -2605,7 +2605,7 @@ TypeSP SymbolFileDWARF::GetTypeForDIE(DWARFCompileUnit *main_unit, const DWARFDI
     Type *type_ptr = GetDIEToType().lookup(die.GetDIE());
     if (type_ptr == nullptr) {
       SymbolContextScope *scope;
-      if (auto *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(main_unit ? main_unit : die.GetCU()))
+      if (auto *dwarf_cu = die.MainCU(main_unit))
         scope = GetCompUnitForDWARFCompUnit(*dwarf_cu);
       else
 {
@@ -4003,20 +4003,20 @@ DWARFASTParser *SymbolFileDWARF::GetDWARFParser(DWARFUnit &unit) {
 }
 
 CompilerDecl SymbolFileDWARF::GetDecl(DWARFCompileUnit *main_unit, const DWARFDIE &die) {
-  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*(main_unit ? main_unit : die.GetCU())))
+  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.MainCU(main_unit)))
     return dwarf_ast->GetDeclForUIDFromDWARF(main_unit, die);
   return CompilerDecl();
 }
 
 CompilerDeclContext SymbolFileDWARF::GetDeclContext(DWARFCompileUnit *main_unit, const DWARFDIE &die) {
-  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*(main_unit ? main_unit : die.GetCU())))
+  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.MainCU(main_unit)))
     return dwarf_ast->GetDeclContextForUIDFromDWARF(main_unit, die);
   return CompilerDeclContext();
 }
 
 CompilerDeclContext
 SymbolFileDWARF::GetContainingDeclContext(DWARFCompileUnit *main_unit, const DWARFDIE &die) {
-  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*(main_unit ? main_unit : die.GetCU())))
+  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.MainCU(main_unit)))
     return dwarf_ast->GetDeclContextContainingUIDFromDWARF(main_unit, die);
   return CompilerDeclContext();
 }

@@ -88,6 +88,10 @@ public:
                             int &decl_line, int &decl_column, int &call_file,
                             int &call_line, int &call_column,
                             lldb_private::DWARFExpression *frame_base) const;
+
+  DWARFCompileUnit *MainCU(DWARFCompileUnit *main_unit) const;
+  std::pair<DWARFCompileUnit *, DWARFDIE> MainCUtoDWARFDIEPair(DWARFCompileUnit *main_unit) const;
+  std::pair<DWARFCompileUnit *, DWARFDebugInfoEntry *> MainCUtoDIEPair(DWARFCompileUnit *main_unit) const;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDIE_H

@@ -41,7 +41,7 @@ void DWARFIndex::ProcessFunctionDIE(llvm::StringRef name, user_id_t uid,
   if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, main_unit, die))
     return;
 
-  auto diepair = std::make_pair(main_unit ? main_unit : llvm::dyn_cast<DWARFCompileUnit>(die.GetCU()), die);
+  auto diepair = die.MainCUtoDWARFDIEPair(main_unit);
 
   // In case of a full match, we just insert everything we find.
   if (name_type_mask & eFunctionNameTypeFull) {
