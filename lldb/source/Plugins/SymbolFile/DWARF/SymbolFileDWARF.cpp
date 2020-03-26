@@ -1222,7 +1222,6 @@ user_id_t SymbolFileDWARF::GetUID(DWARFCompileUnit *main_unit, DIERef ref) {
 //  lldbassert(!ref.dwo_num().hasValue() || has_main_cu || (main_unit && main_unit->IsDWOUnit()) || main_unit->GetDwoSymbolFile());
 //  lldbassert(!main_unit || &main_unit->GetSymbolFileDWARF() != this || GetDwoNum() == ref.dwo_num());
   bool is_dwz = has_main_cu && !ref.dwo_num().hasValue();
-lldbassert(!is_dwz);
   bool is_dwz_common = is_dwz && &main_unit->GetSymbolFileDWARF() != this;
   lldbassert(!ref.dwo_num().hasValue() || *ref.dwo_num() < 0x1fffffff);
   static_assert(sizeof(ref.die_offset()) * 8 == 32, "");
@@ -1235,8 +1234,6 @@ lldbassert(!is_dwz);
          user_id_t(is_dwz) << 62 |
          (lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes) << 63);
 debuguid(retval);
-fprintf(stderr,"%s: DIERef 0x%x %s -> 0x%lx\n",m_objfile_sp->GetFileSpec().GetFilename().GetCString(),ref.die_offset(),(ref.section() == DIERef::Section::DebugTypes?"type":"info"),retval);
-lldbassert(!ref.dwo_num().hasValue());
   return retval;
 }
 
@@ -1268,8 +1265,6 @@ SymbolFileDWARF::DecodeUID(lldb::user_id_t uid) {
   bool is_dwz = (uid >> 62) & 1;
   // FIXME: DWZ
   __attribute__((unused)) bool is_dwz_common = (uid >> 61) & 1;
-lldbassert(!is_dwz);
-lldbassert(!is_dwz_common);
 
   llvm::Optional<uint32_t> dwo_num = uid >> 32 & 0x1fffffff;
   if (*dwo_num == 0x1fffffff || is_dwz)
@@ -1279,9 +1274,6 @@ lldbassert(!is_dwz_common);
   if (*main_cu == 0x1fffffff || !is_dwz)
     main_cu = llvm::None;
 
-fprintf(stderr,"%s: 0x%lx -> DecodedUID 0x%x %s\n",m_objfile_sp->GetFileSpec().GetFilename().GetCString(),uid, die_offset,(section==DIERef::Section::DebugTypes?"type":"info"));
-lldbassert(!dwo_num.hasValue());
-lldbassert(!main_cu.hasValue());
   return DecodedUID{*this, main_cu.hasValue() ? *main_cu : 0xffffffff, {dwo_num, section, die_offset}};
 }
 
