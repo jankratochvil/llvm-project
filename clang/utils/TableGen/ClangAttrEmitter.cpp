@@ -107,7 +107,7 @@ static std::string ReadPCHRecord(StringRef type) {
       .Case("IdentifierInfo *", "Record.readIdentifier()")
       .Case("StringRef", "Record.readString()")
       .Case("ParamIdx", "ParamIdx::deserialize(Record.readInt())")
-      .Case("OMPTraitInfo", "Record.readOMPTraitInfo()")
+      .Case("OMPTraitInfo *", "Record.readOMPTraitInfo()")
       .Default("Record.readInt()");
 }
 
@@ -131,7 +131,7 @@ static std::string WritePCHRecord(StringRef type, StringRef name) {
              .Case("StringRef", "AddString(" + std::string(name) + ");\n")
              .Case("ParamIdx",
                    "push_back(" + std::string(name) + ".serialize());\n")
-             .Case("OMPTraitInfo",
+             .Case("OMPTraitInfo *",
                    "writeOMPTraitInfo(" + std::string(name) + ");\n")
              .Default("push_back(" + std::string(name) + ");\n");
 }
@@ -363,7 +363,7 @@ namespace {
           OS << "    if (SA->get" << getUpperName() << "().isValid())\n  ";
         OS << "    OS << \" \" << SA->get" << getUpperName()
            << "().getSourceIndex();\n";
-      } else if (type == "OMPTraitInfo") {
+      } else if (type == "OMPTraitInfo *") {
         OS << "    OS << \" \" << SA->get" << getUpperName() << "();\n";
       } else {
         llvm_unreachable("Unknown SimpleArgument type!");
@@ -1331,7 +1331,7 @@ createArgument(const Record &Arg, StringRef Attr,
   else if (ArgName == "VersionArgument")
     Ptr = std::make_unique<VersionArgument>(Arg, Attr);
   else if (ArgName == "OMPTraitInfoArgument")
-    Ptr = std::make_unique<SimpleArgument>(Arg, Attr, "OMPTraitInfo");
+    Ptr = std::make_unique<SimpleArgument>(Arg, Attr, "OMPTraitInfo *");
 
   if (!Ptr) {
     // Search in reverse order so that the most-derived type is handled first.
@@ -3661,6 +3661,20 @@ static void GenerateSpellingIndexToSemanticSpelling(const Record &Attr,
   OS << "}\n\n";
 }
 
+static void GenerateHandleDeclAttribute(const Record &Attr, raw_ostream &OS) {
+  // Only generate if Attr can be handled simply.
+  if (!Attr.getValueAsBit("SimpleHandler"))
+    return;
+
+  // Generate a function which just converts from ParsedAttr to the Attr type.
+  OS << "virtual AttrHandling handleDeclAttribute(Sema &S, Decl *D,";
+  OS << "const ParsedAttr &Attr) const {\n";
+  OS << "  D->addAttr(::new (S.Context) " << Attr.getName();
+  OS << "Attr(S.Context, Attr));\n";
+  OS << "  return AttributeApplied;\n";
+  OS << "}\n\n";
+}
+
 static bool IsKnownToGCC(const Record &Attr) {
   // Look at the spellings for this subject; if there are any spellings which
   // claim to be known to GCC, the attribute is known to GCC.
@@ -3725,10 +3739,8 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
     for (const auto &S : GetFlattenedSpellings(Attr)) {
       const std::string &RawSpelling = S.name();
       std::string Spelling;
-      if (S.variety() == "CXX11" || S.variety() == "C2x") {
-        Spelling += S.nameSpace();
-        Spelling += "::";
-      }
+      if (!S.nameSpace().empty())
+        Spelling += S.nameSpace() + "::";
       if (S.variety() == "GNU")
         Spelling += NormalizeGNUAttrSpelling(RawSpelling);
       else
@@ -3742,6 +3754,7 @@ void EmitClangAttrParsedAttrImpl(RecordKeeper &Records, raw_ostream &OS) {
     GenerateTargetRequirements(Attr, Dupes, OS);
     GenerateSpellingIndexToSemanticSpelling(Attr, OS);
     PragmaAttributeSupport.generateStrictConformsTo(*I->second, OS);
+    GenerateHandleDeclAttribute(Attr, OS);
     OS << "static const ParsedAttrInfo" << I->first << " Instance;\n";
     OS << "};\n";
     OS << "const ParsedAttrInfo" << I->first << " ParsedAttrInfo" << I->first
@@ -3800,12 +3813,12 @@ void EmitClangAttrParsedAttrKinds(RecordKeeper &Records, raw_ostream &OS) {
         const std::string &Variety = S.variety();
         if (Variety == "CXX11") {
           Matches = &CXX11;
-          Spelling += S.nameSpace();
-          Spelling += "::";
+          if (!S.nameSpace().empty())
+            Spelling += S.nameSpace() + "::";
         } else if (Variety == "C2x") {
           Matches = &C2x;
-          Spelling += S.nameSpace();
-          Spelling += "::";
+          if (!S.nameSpace().empty())
+            Spelling += S.nameSpace() + "::";
         } else if (Variety == "GNU")
           Matches = &GNU;
         else if (Variety == "Declspec")
