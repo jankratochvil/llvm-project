@@ -450,8 +450,11 @@ bool DWARFDIE::GetDIENamesAndRanges(
 }
 
 DWARFCompileUnit *DWARFDIE::MainDWARFCompileUnit(DWARFCompileUnit *main_unit) const {
+  if (llvm::isa<DWARFTypeUnit>(GetCU()))
+    return nullptr;
   if (!main_unit)
     main_unit = llvm::dyn_cast<DWARFCompileUnit>(GetCU());
+  lldbassert(main_unit);
   if (main_unit)
     main_unit = &main_unit->GetNonSkeletonUnit();
   return main_unit;

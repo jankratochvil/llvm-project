@@ -3629,14 +3629,20 @@ DWARFASTParserClang::GetCachedClangDeclContextForDIE(DWARFCompileUnit *main_unit
   if (die) {
     DIEToDeclContextMap::iterator pos = m_die_to_decl_ctx.find(die.MainCUtoDIEPair(main_unit));
     if (pos != m_die_to_decl_ctx.end())
+{
+fprintf(stderr,"GetCachedClangDeclContextForDIE: DWARFASTParserClang=%p <%p,%p:0x%x>=%p\n",(void *)this,(void *)main_unit,(void *)die.GetCU(),die.GetOffset(),(void *)pos->second);
       return pos->second;
+}
   }
+fprintf(stderr,"GetCachedClangDeclContextForDIE: DWARFASTParserClang=%p <%p,%p:0x%x>=nullptr\n",(void *)this,(void *)main_unit,(void *)die.GetCU(),die.GetOffset());
   return nullptr;
 }
 
 void DWARFASTParserClang::LinkDeclContextToDIE(clang::DeclContext *decl_ctx,
                                                DWARFCompileUnit *main_unit, const DWARFDIE &die) {
   m_die_to_decl_ctx[die.MainCUtoDIEPair(main_unit)] = decl_ctx;
+fprintf(stderr,"LinkDeclContextToDIE: DWARFASTParserClang=%p <%p,%p:0x%x>=%p\n",(void *)this,(void *)main_unit,(void *)die.GetCU(),die.GetOffset(),(void *)decl_ctx);
+lldbassert(GetCachedClangDeclContextForDIE(main_unit,die)==decl_ctx);
   // There can be many DIEs for a single decl context
   // m_decl_ctx_to_die[decl_ctx].insert(die.GetDIE());
   m_decl_ctx_to_die.insert(std::make_pair(decl_ctx, die.MainCUtoDWARFDIEPair(main_unit)));
