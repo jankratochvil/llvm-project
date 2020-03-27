@@ -1458,6 +1458,7 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
     GetForwardDeclClangTypeToDie().erase(die_it);
 
     Type *type = GetDIEToType().lookup(dwarf_die.MainCUtoDIEPair(main_unit));
+    lldbassert(type);
 
     Log *log(LogChannelDWARF::GetLogIfAny(DWARF_LOG_DEBUG_INFO |
                                           DWARF_LOG_TYPE_COMPLETION));
