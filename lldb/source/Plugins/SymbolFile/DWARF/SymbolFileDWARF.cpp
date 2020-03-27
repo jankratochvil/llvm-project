@@ -1448,7 +1448,8 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
     return true;
   }
 
-  DWARFDIE dwarf_die = GetDIE(die_it->getSecond());
+  DWARFCompileUnit *main_unit;
+  DWARFDIE dwarf_die = GetDIE(die_it->getSecond(), &main_unit);
   if (dwarf_die) {
     // Once we start resolving this type, remove it from the forward
     // declaration map in case anyone child members or other types require this

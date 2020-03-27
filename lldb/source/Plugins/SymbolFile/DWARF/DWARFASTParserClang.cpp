@@ -1795,7 +1795,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
           clang_type.GetOpaqueQualType();
       dwarf->GetForwardDeclClangTypeToDie().try_emplace(
           ClangUtil::RemoveFastQualifiers(clang_type).GetOpaqueQualType(),
-          *die.GetDIERef());
+          die.GetID(main_unit));
       m_ast.SetHasExternalStorage(clang_type.GetOpaqueQualType(), true);
     }
   }
