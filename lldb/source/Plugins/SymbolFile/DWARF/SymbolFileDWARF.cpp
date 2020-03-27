@@ -3205,7 +3205,12 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
   if (!die)
     return var_sp;
 
-  var_sp = GetDIEToVariable()[die.GetDIE()];
+  DWARFCompileUnit *main_unit = GetDWARFCompileUnit(sc.comp_unit);
+//lldbassert(main_unit);
+//  if (!main_unit)
+//    return var_sp;
+
+  var_sp = GetDIEToVariable()[die.MainCUtoDIEPair(main_unit)];
   if (var_sp)
     return var_sp; // Already been parsed!
 
@@ -3530,11 +3535,6 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
         }
       }
 
-      DWARFCompileUnit *main_unit = GetDWARFCompileUnit(sc.comp_unit);
-//lldbassert(main_unit);
-//      if (!main_unit)
-//        return var_sp;
-
       if (symbol_context_scope == nullptr) {
         switch (parent_tag) {
         case DW_TAG_subprogram:
@@ -3580,9 +3580,9 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
     // missing vital information to be able to be displayed in the debugger
     // (missing location due to optimization, etc)) so we don't re-parse this
     // DIE over and over later...
-    GetDIEToVariable()[die.GetDIE()] = var_sp;
+    GetDIEToVariable()[die.MainCUtoDIEPair(main_unit)] = var_sp;
     if (spec_die)
-      GetDIEToVariable()[spec_die.GetDIE()] = var_sp;
+      GetDIEToVariable()[spec_die.MainCUtoDIEPair(main_unit)] = var_sp;
   }
   return var_sp;
 }
@@ -3641,6 +3641,10 @@ size_t SymbolFileDWARF::ParseVariables(const SymbolContext &sc,
     return 0;
 
   VariableListSP variable_list_sp;
+  DWARFCompileUnit *main_unit = GetDWARFCompileUnit(sc.comp_unit);
+//lldbassert(main_unit);
+//  if (!main_unit)
+//    break;
 
   size_t vars_added = 0;
   DWARFDIE die = orig_die;
@@ -3648,7 +3652,7 @@ size_t SymbolFileDWARF::ParseVariables(const SymbolContext &sc,
     dw_tag_t tag = die.Tag();
 
     // Check to see if we have already parsed this variable or constant?
-    VariableSP var_sp = GetDIEToVariable()[die.GetDIE()];
+    VariableSP var_sp = GetDIEToVariable()[die.MainCUtoDIEPair(main_unit)];
     if (var_sp) {
       if (cc_variable_list)
         cc_variable_list->AddVariableIfUnique(var_sp);
@@ -3682,12 +3686,6 @@ size_t SymbolFileDWARF::ParseVariables(const SymbolContext &sc,
             if (sc.function != nullptr) {
               // Check to see if we already have parsed the variables for the
               // given scope
-
-              DWARFCompileUnit *main_unit = GetDWARFCompileUnit(sc.comp_unit);
-//lldbassert(main_unit);
-//              if (!main_unit)
-//                break;
-
               Block *block = sc.function->GetBlock(true).FindBlockByID(
                   sc_parent_die.GetID(main_unit));
               if (block == nullptr) {
