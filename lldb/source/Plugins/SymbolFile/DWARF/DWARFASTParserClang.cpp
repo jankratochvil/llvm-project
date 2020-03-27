@@ -789,7 +789,7 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
   CompilerType enumerator_clang_type;
   CompilerType clang_type;
   clang_type.SetCompilerType(
-      &m_ast, dwarf->GetForwardDeclDieToClangType().lookup(die.GetDIE()));
+      &m_ast, dwarf->GetForwardDeclDieToClangType().lookup(die.MainCUtoDIEPair(main_unit)));
   if (!clang_type) {
     if (attrs.type.IsValid()) {
       Type *enumerator_type =
@@ -1626,7 +1626,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   assert(tag_decl_kind != -1);
   bool clang_type_was_created = false;
   clang_type.SetCompilerType(
-      &m_ast, dwarf->GetForwardDeclDieToClangType().lookup(die.GetDIE()));
+      &m_ast, dwarf->GetForwardDeclDieToClangType().lookup(die.MainCUtoDIEPair(main_unit)));
   if (!clang_type) {
     clang::DeclContext *decl_ctx =
         GetClangDeclContextContainingDIE(main_unit, die, nullptr);
@@ -1791,7 +1791,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
       // Can't assume m_ast.GetSymbolFile() is actually a
       // SymbolFileDWARF, it can be a SymbolFileDWARFDebugMap for Apple
       // binaries.
-      dwarf->GetForwardDeclDieToClangType()[die.GetDIE()] =
+      dwarf->GetForwardDeclDieToClangType()[die.MainCUtoDIEPair(main_unit)] =
           clang_type.GetOpaqueQualType();
       dwarf->GetForwardDeclClangTypeToDie().try_emplace(
           ClangUtil::RemoveFastQualifiers(clang_type).GetOpaqueQualType(),

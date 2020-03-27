@@ -329,7 +329,7 @@ protected:
       DIEToTypePtr;
   typedef llvm::DenseMap<std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>, lldb::VariableSP>
       DIEToVariableSP;
-  typedef llvm::DenseMap<const DWARFDebugInfoEntry *,
+  typedef llvm::DenseMap<std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>,
                          lldb::opaque_compiler_type_t>
       DIEToClangType;
   typedef llvm::DenseMap<lldb::opaque_compiler_type_t, lldb::user_id_t> ClangTypeToDIE;
