@@ -265,8 +265,6 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit, DWARFCompileUnit *main_uni
       }
     }
 
-    //DIERef ref = *DWARFDIE(main_unit, &die).GetDIERef();
-    // FIXME: DWZ
     user_id_t uid = DWARFDIE(&unit, &die).GetID(main_unit);
     switch (tag) {
     case DW_TAG_inlined_subroutine:
@@ -300,7 +298,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit, DWARFCompileUnit *main_uni
           }
           // If we have a mangled name, then the DW_AT_name attribute is
           // usually the method name without the class or any parameters
-          bool is_method = DWARFDIE(main_unit, &die).IsMethod();
+          bool is_method = DWARFDIE(&unit, &die).IsMethod();
 
           if (is_method)
             set.function_methods.Insert(ConstString(name), uid);
