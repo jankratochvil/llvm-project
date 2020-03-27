@@ -1456,7 +1456,7 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
     // to SymbolFileDWARF::ResolveClangOpaqueTypeDefinition are done.
     GetForwardDeclClangTypeToDie().erase(die_it);
 
-    Type *type = GetDIEToType().lookup(dwarf_die.GetDIE());
+    Type *type = GetDIEToType().lookup(dwarf_die.MainCUtoDIEPair(main_unit));
 
     Log *log(LogChannelDWARF::GetLogIfAny(DWARF_LOG_DEBUG_INFO |
                                           DWARF_LOG_TYPE_COMPLETION));
@@ -2602,7 +2602,7 @@ TypeSP SymbolFileDWARF::GetTypeForDIE(DWARFCompileUnit *main_unit, const DWARFDI
                                       bool resolve_function_context) {
   TypeSP type_sp;
   if (die) {
-    Type *type_ptr = GetDIEToType().lookup(die.GetDIE());
+    Type *type_ptr = GetDIEToType().lookup(die.MainCUtoDIEPair(main_unit));
     if (type_ptr == nullptr) {
       SymbolContextScope *scope;
       if (auto *dwarf_cu = die.MainDWARFCompileUnit(main_unit))
@@ -2784,7 +2784,7 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
                            type_die.GetID(), type_cu->GetID());
 
               if (die)
-                GetDIEToType()[die.GetDIE()] = resolved_type;
+                GetDIEToType()[die.MainCUtoDIEPair(main_unit)] = resolved_type;
               type_sp = resolved_type->shared_from_this();
               break;
             }

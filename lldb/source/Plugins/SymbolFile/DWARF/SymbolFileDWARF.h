@@ -325,7 +325,7 @@ public:
   }
 
 protected:
-  typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb_private::Type *>
+  typedef llvm::DenseMap<std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>, lldb_private::Type *>
       DIEToTypePtr;
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb::VariableSP>
       DIEToVariableSP;
