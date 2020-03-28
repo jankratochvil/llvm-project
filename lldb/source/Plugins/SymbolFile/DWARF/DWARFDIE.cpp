@@ -453,17 +453,13 @@ bool DWARFDIE::GetDIENamesAndRanges(
 DWARFCompileUnit *DWARFDIE::MainDWARFCompileUnit(DWARFCompileUnit *main_unit) const {
   if (llvm::isa<DWARFTypeUnit>(GetCU()))
     return nullptr;
-#if 0
-  if (GetCU()->GetDwoSymbolFile())
-    return nullptr;
-  if (llvm::isa<SymbolFileDWARFDwo>(&GetCU()->GetSymbolFileDWARF()))
-    return nullptr;
-#endif
   if (!main_unit)
     main_unit = llvm::dyn_cast<DWARFCompileUnit>(GetCU());
   lldbassert(main_unit);
+#if 0
   if (main_unit)
     main_unit = &main_unit->GetNonSkeletonUnit();
+#endif
   return main_unit;
 }
 
@@ -474,20 +470,18 @@ DWARFUnit *DWARFDIE::MainDWARFUnit(DWARFCompileUnit *main_unit) const {
   return GetCU();
 }
 
+DWARFCompileUnit *DWARFDIE::MainDWARFCompileUnitOrNull(DWARFCompileUnit *main_unit) const {
+  if (GetCU()->GetDwoSymbolFile())
+    return nullptr;
+  if (llvm::isa<SymbolFileDWARFDwo>(&GetCU()->GetSymbolFileDWARF()))
+    return nullptr;
+  return MainDWARFCompileUnit(main_unit);
+}
+
 std::pair<DWARFCompileUnit *, DWARFDIE> DWARFDIE::MainCUtoDWARFDIEPair(DWARFCompileUnit *main_unit) const {
-  main_unit = MainDWARFCompileUnit(main_unit);
-  if (main_unit && GetCU()->GetDwoSymbolFile())
-    main_unit = nullptr;
-  if (main_unit && llvm::isa<SymbolFileDWARFDwo>(&GetCU()->GetSymbolFileDWARF()))
-    main_unit = nullptr;
-  return std::make_pair(main_unit, *this);
+  return std::make_pair(MainDWARFCompileUnitOrNull(main_unit), *this);
 }
 
 std::pair<DWARFCompileUnit *, DWARFDebugInfoEntry *> DWARFDIE::MainCUtoDIEPair(DWARFCompileUnit *main_unit) const {
-  main_unit = MainDWARFCompileUnit(main_unit);
-  if (main_unit && GetCU()->GetDwoSymbolFile())
-    main_unit = nullptr;
-  if (main_unit && llvm::isa<SymbolFileDWARFDwo>(&GetCU()->GetSymbolFileDWARF()))
-    main_unit = nullptr;
-  return std::make_pair(main_unit, GetDIE());
+  return std::make_pair(MainDWARFCompileUnitOrNull(main_unit), GetDIE());
 }
