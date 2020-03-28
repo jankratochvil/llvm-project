@@ -1614,7 +1614,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
       // it and cache the fact that we found a complete type for this die
       dwarf->GetDIEToType()[die.MainCUtoDIEPair(main_unit)] = type_sp.get();
       DWARFCompileUnit *main_unit;
-      DWARFDIE die = dwarf->GetDIE(type_sp->GetID(), &main_unit);
+      DWARFDIE die = dwarf->GetDIEUnlocked(type_sp->GetID(), &main_unit);
       clang::DeclContext *defn_decl_ctx =
           GetCachedClangDeclContextForDIE(main_unit, die);
       if (defn_decl_ctx)
@@ -2084,7 +2084,7 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
           const size_t num_matches = method_die_offsets.size();
           for (size_t i = 0; i < num_matches; ++i) {
             user_id_t uid = method_die_offsets[i];
-            DWARFDIE method_die = dwarf->GetDIE(uid);
+            DWARFDIE method_die = dwarf->GetDIEUnlocked(uid);
 
             if (method_die)
               method_die.ResolveType(main_unit);

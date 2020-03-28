@@ -258,7 +258,9 @@ public:
 
   virtual DWARFDIE GetDIE(const DIERef &die_ref);
 
-  DWARFDIE GetDIE(lldb::user_id_t uid, DWARFCompileUnit **main_unit_return = nullptr);
+  DWARFDIE GetDIE(lldb::user_id_t uid);
+
+  DWARFDIE GetDIEUnlocked(lldb::user_id_t uid, DWARFCompileUnit **main_unit_return = nullptr);
 
   lldb::user_id_t GetUID(DWARFCompileUnit *main_unit, const DWARFBaseDIE &die);
 
@@ -318,9 +320,7 @@ public:
     llvm::Optional<DecodedUID> decoded = DecodeUID(uid);
     if (!decoded)
       return {};
-    // FIXME:DWZ
-    if (&decoded->dwarf!=this)
-      return {};
+    lldbassert(&decoded->dwarf==this); // FIXME:DWZ
     return decoded->ref;
   }
 
@@ -482,6 +482,7 @@ protected:
     uint32_t main_cu;
     DIERef ref;
   };
+  llvm::Optional<DecodedUID> DecodeUIDUnlocked(lldb::user_id_t uid);
   llvm::Optional<DecodedUID> DecodeUID(lldb::user_id_t uid);
 
   void FindDwpSymbolFile();

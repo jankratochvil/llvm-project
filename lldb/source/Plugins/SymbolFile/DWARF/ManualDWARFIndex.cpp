@@ -426,7 +426,7 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
     m_set.function_fullnames.Find(name, offsets);
     for (user_id_t uid : offsets) {
       DWARFCompileUnit *main_unit;
-      DWARFDIE die = dwarf.GetDIE(uid, &main_unit);
+      DWARFDIE die = dwarf.GetDIEUnlocked(uid, &main_unit);
       if (!die)
         continue;
       if (SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, main_unit, die))
@@ -438,7 +438,7 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
     m_set.function_basenames.Find(name, offsets);
     for (user_id_t uid : offsets) {
       DWARFCompileUnit *main_unit;
-      DWARFDIE die = dwarf.GetDIE(uid, &main_unit);
+      DWARFDIE die = dwarf.GetDIEUnlocked(uid, &main_unit);
       if (!die)
         continue;
       if (SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, main_unit, die))
@@ -452,7 +452,7 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
     m_set.function_methods.Find(name, offsets);
     for (user_id_t uid : offsets) {
       DWARFCompileUnit *main_unit;
-      if (DWARFDIE die = dwarf.GetDIE(uid, &main_unit))
+      if (DWARFDIE die = dwarf.GetDIEUnlocked(uid, &main_unit))
         dies.push_back(die.MainCUtoDWARFDIEPair(main_unit));
     }
   }
@@ -463,7 +463,7 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
     m_set.function_selectors.Find(name, offsets);
     for (user_id_t uid : offsets) {
       DWARFCompileUnit *main_unit;
-      if (DWARFDIE die = dwarf.GetDIE(uid, &main_unit))
+      if (DWARFDIE die = dwarf.GetDIEUnlocked(uid, &main_unit))
         dies.push_back(die.MainCUtoDWARFDIEPair(main_unit));
     }
   }
