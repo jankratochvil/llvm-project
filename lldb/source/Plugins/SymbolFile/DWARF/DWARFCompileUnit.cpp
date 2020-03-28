@@ -117,4 +117,3 @@ void DWARFCompileUnit::BuildAddressRangeTable(
 DWARFCompileUnit &DWARFCompileUnit::GetNonSkeletonUnit() {
   return llvm::cast<DWARFCompileUnit>(DWARFUnit::GetNonSkeletonUnit());
 }
-

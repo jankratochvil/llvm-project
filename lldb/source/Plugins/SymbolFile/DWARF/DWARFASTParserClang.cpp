@@ -1324,7 +1324,6 @@ TypeSP DWARFASTParserClang::ParseArrayType(const SymbolContext &sc, const DWARFD
     clang_type =
         m_ast.CreateArrayType(array_element_type, 0, attrs.is_vector);
   }
-
   ConstString empty_name;
   TypeSP type_sp = std::make_shared<Type>(
       die.GetID(main_unit), dwarf, empty_name, array_element_bit_stride / 8, sc.comp_unit,
@@ -1339,7 +1338,6 @@ TypeSP DWARFASTParserClang::ParseArrayType(const SymbolContext &sc, const DWARFD
 TypeSP DWARFASTParserClang::ParsePointerToMemberType(const SymbolContext &sc,
     const DWARFDIE &die, const ParsedDWARFTypeAttributes &attrs) {
   SymbolFileDWARF *dwarf = llvm::cast<SymbolFileDWARF>(sc.module_sp->GetSymbolFile());
-
   DWARFCompileUnit *main_unit = dwarf->GetDWARFCompileUnit(sc.comp_unit);
   Type *pointee_type = dwarf->ResolveTypeUID(main_unit, attrs.type.Reference(), true);
   Type *class_type =
@@ -1578,7 +1576,6 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
       return type_sp;
     }
   }
-
   assert(tag_decl_kind != -1);
   bool clang_type_was_created = false;
   clang_type.SetCompilerType(
@@ -2013,7 +2010,6 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
     bool is_a_class = false;
     // Parse members and base classes first
     std::vector<DWARFDIE> member_function_dies;
-
     DWARFCompileUnit *main_unit = dwarf->GetDWARFCompileUnit(comp_unit);
 
     DelayedPropertyList delayed_properties;
@@ -3280,7 +3276,6 @@ clang::Decl *DWARFASTParserClang::GetClangDeclForDIE(DWARFCompileUnit *main_unit
   }
 
   auto diepair = die.MainCUtoDIEPair(main_unit);
-
   DIEToDeclMap::iterator cache_pos = m_die_to_decl.find(diepair);
   if (cache_pos != m_die_to_decl.end())
     return cache_pos->second;
