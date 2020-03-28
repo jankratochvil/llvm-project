@@ -1071,9 +1071,6 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(
         block = parent_block;
       } else {
         DWARFCompileUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
-//lldbassert(dwarf_cu);
-//        if (!dwarf_cu)
-//          break;
         BlockSP block_sp(new Block(die.GetID(dwarf_cu)));
         parent_block->AddChild(block_sp);
         block = block_sp.get();
@@ -1200,10 +1197,6 @@ void SymbolFileDWARF::ParseDeclsForContext(CompilerDeclContext decl_ctx) {
         decl_ctx);
 }
 
-static user_id_t debuguid(user_id_t uid) {
-  return uid;
-}
-
 user_id_t SymbolFileDWARF::GetUID(DWARFCompileUnit *main_unit, const DWARFBaseDIE &die) {
   return GetUID(die.IsValid() && llvm::isa<DWARFCompileUnit>(die.GetCU()) ? main_unit : nullptr, die.GetDIERef());
 }
@@ -1217,13 +1210,8 @@ DWARFDIE dwarfdie_check=GetDIE(ref);
 lldbassert(dwarfdie_check.IsValid());
 lldbassert(*dwarfdie_check.GetDIERef() == ref);
 
-// WARNING: Use ref.dwo_num(), GetDwoNum() may not be valid in 'this'.
-//printf("%d: GetDwoNum().hasValue()=%d expr=%d\n",gettid(),GetDwoNum().hasValue(),(!GetDwoNum().hasValue() || has_main_cu));
-//if (!(!GetDwoNum().hasValue() || has_main_cu)) printf("%d: FAIL\n",gettid());
-//  lldbassert(main_unit);
+  // WARNING: Use ref.dwo_num(), GetDwoNum() may not be valid in 'this'.
   bool has_main_cu = main_unit && (&main_unit->GetSymbolFileDWARF() != this || !main_unit->ContainsDIEOffset(ref.die_offset()));
-//  lldbassert(!ref.dwo_num().hasValue() || has_main_cu || (main_unit && main_unit->IsDWOUnit()) || main_unit->GetDwoSymbolFile());
-//  lldbassert(!main_unit || &main_unit->GetSymbolFileDWARF() != this || GetDwoNum() == ref.dwo_num());
   bool is_dwz = has_main_cu && !ref.dwo_num().hasValue();
   bool is_dwz_common = is_dwz && &main_unit->GetSymbolFileDWARF() != this;
   lldbassert(!ref.dwo_num().hasValue() || *ref.dwo_num() < 0x1fffffff);
@@ -1234,7 +1222,6 @@ lldbassert(*dwarfdie_check.GetDIERef() == ref);
          user_id_t(is_dwz_common) << 61 |
          user_id_t(is_dwz) << 62 |
          (lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes) << 63);
-debuguid(retval);
 
 // FIXME: Expensive
 DWARFCompileUnit *main_unit_check;
@@ -1297,7 +1284,6 @@ SymbolFileDWARF::GetDIEUnlocked(lldb::user_id_t uid, DWARFCompileUnit **main_uni
 
   if (decoded) {
     DWARFDIE die = decoded->dwarf.GetDIE(decoded->ref);
-lldbassert(decoded->ref.dwo_num()==die.GetCU()->GetSymbolFileDWARF().GetDwoNum()); // 'die' should be from the non-skeleton file.
     if (main_unit_return) {
       // FIXME: DWZ
       *main_unit_return = decoded->main_cu == 0xffffffff ? nullptr : llvm::cast<DWARFCompileUnit>(DebugInfo().GetUnitAtIndex(decoded->main_cu));
@@ -2628,10 +2614,7 @@ TypeSP SymbolFileDWARF::GetTypeForDIE(DWARFCompileUnit *main_unit, const DWARFDI
       if (auto *dwarf_cu = die.MainDWARFCompileUnit(main_unit))
         scope = GetCompUnitForDWARFCompUnit(*dwarf_cu);
       else
-{
         scope = GetObjectFile()->GetModule().get();
-//lldbassert(dwarf_cu);
-}
       assert(scope);
       SymbolContext sc(scope);
       const DWARFDebugInfoEntry *parent_die = die.GetParent().GetDIE();
@@ -3061,10 +3044,6 @@ TypeSP SymbolFileDWARF::ParseType(const SymbolContext &sc, const DWARFDIE &die,
 
     if (die.Tag() == DW_TAG_subprogram) {
       DWARFCompileUnit *main_unit = GetDWARFCompileUnit(sc.comp_unit);
-//lldbassert(main_unit);
-//      if (!main_unit)
-//        return type_sp;
-
       std::string scope_qualified_name(GetDeclContextForUID(die.GetID(main_unit))
                                            .GetScopeQualifiedName()
                                            .AsCString(""));
@@ -3102,10 +3081,6 @@ size_t SymbolFileDWARF::ParseTypes(const SymbolContext &sc,
     if (parse_children && die.HasChildren()) {
       if (die.Tag() == DW_TAG_subprogram) {
         DWARFCompileUnit *main_unit = GetDWARFCompileUnit(sc.comp_unit);
-//lldbassert(main_unit);
-//        if (!main_unit)
-//          break;
-
         SymbolContext child_sc(sc);
         child_sc.function = sc.comp_unit->FindFunctionByUID(die.GetID(main_unit)).get();
         types_added += ParseTypes(child_sc, die.GetFirstChild(), true, true);
@@ -3225,9 +3200,6 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
     return var_sp;
 
   DWARFCompileUnit *main_unit = GetDWARFCompileUnit(sc.comp_unit);
-//lldbassert(main_unit);
-//  if (!main_unit)
-//    return var_sp;
 
   var_sp = GetDIEToVariable()[die.MainCUtoDIEPair(main_unit)];
   if (var_sp)
@@ -3661,9 +3633,6 @@ size_t SymbolFileDWARF::ParseVariables(const SymbolContext &sc,
 
   VariableListSP variable_list_sp;
   DWARFCompileUnit *main_unit = GetDWARFCompileUnit(sc.comp_unit);
-//lldbassert(main_unit);
-//  if (!main_unit)
-//    break;
 
   size_t vars_added = 0;
   DWARFDIE die = orig_die;
