@@ -470,6 +470,7 @@ DWARFUnit *DWARFDIE::MainDWARFUnit(DWARFCompileUnit *main_unit) const {
   return GetCU();
 }
 
+// FIXME: Is it possible to unify it with MainDWARFCompileUnit()?
 DWARFCompileUnit *DWARFDIE::MainDWARFCompileUnitOrNull(DWARFCompileUnit *main_unit) const {
   if (GetCU()->GetDwoSymbolFile())
     return nullptr;
