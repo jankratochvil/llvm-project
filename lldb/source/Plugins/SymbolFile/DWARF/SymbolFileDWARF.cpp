@@ -1478,7 +1478,6 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
     GetForwardDeclClangTypeToDie().erase(die_it);
 
     Type *type = GetDIEToType().lookup(dwarf_die.MainCUtoDIEPair(main_unit));
-fprintf(stderr,"%p(%s) %p:%x -> %p\n",(void *)this,GetObjectFile()->GetFileSpec().GetCString(),(void *)dwarf_die.MainCUtoDIEPair(main_unit).first,dwarf_die.MainCUtoDIEPair(main_unit).second->GetOffset(),(void *)type);
     lldbassert(type);
 
     Log *log(LogChannelDWARF::GetLogIfAny(DWARF_LOG_DEBUG_INFO |
@@ -2807,10 +2806,7 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
                            type_die.GetID(), type_cu->GetID());
 
               if (die)
-{
                 GetDIEToType()[die.MainCUtoDIEPair(main_unit)] = resolved_type;
-fprintf(stderr,"%p(%s) %p:%x=%p\n",(void *)this,GetObjectFile()->GetFileSpec().GetCString(),(void *)die.MainCUtoDIEPair(main_unit).first,die.MainCUtoDIEPair(main_unit).second->GetOffset(),(void *)resolved_type);
-}
               type_sp = resolved_type->shared_from_this();
               break;
             }
