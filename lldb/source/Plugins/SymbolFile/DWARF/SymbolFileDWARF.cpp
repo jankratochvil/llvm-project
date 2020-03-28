@@ -3674,6 +3674,7 @@ size_t SymbolFileDWARF::ParseVariables(const SymbolContext &sc,
             if (sc.function != nullptr) {
               // Check to see if we already have parsed the variables for the
               // given scope
+
               Block *block = sc.function->GetBlock(true).FindBlockByID(
                   sc_parent_die.GetID(main_unit));
               if (block == nullptr) {
