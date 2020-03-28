@@ -58,7 +58,6 @@ public:
 
   // FIXME: DWZ
   lldb::user_id_t GetUID(DWARFCompileUnit *main_unit, DIERef ref) const { return m_dwarf.GetUID(main_unit, ref); }
-//  DWARFDIE GetDIE(lldb::user_id_t uid) const { return m_dwarf.GetDIE(uid); }
 
 protected:
   typedef std::vector<DWARFUnitSP> UnitColl;
