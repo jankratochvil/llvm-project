@@ -13,6 +13,7 @@
 #include "DWARFDebugInfoEntry.h"
 #include "DWARFDeclContext.h"
 #include "DWARFCompileUnit.h"
+#include "SymbolFileDWARFDwo.h"
 
 using namespace lldb_private;
 
@@ -452,6 +453,12 @@ bool DWARFDIE::GetDIENamesAndRanges(
 DWARFCompileUnit *DWARFDIE::MainDWARFCompileUnit(DWARFCompileUnit *main_unit) const {
   if (llvm::isa<DWARFTypeUnit>(GetCU()))
     return nullptr;
+#if 0
+  if (GetCU()->GetDwoSymbolFile())
+    return nullptr;
+  if (llvm::isa<SymbolFileDWARFDwo>(&GetCU()->GetSymbolFileDWARF()))
+    return nullptr;
+#endif
   if (!main_unit)
     main_unit = llvm::dyn_cast<DWARFCompileUnit>(GetCU());
   lldbassert(main_unit);
@@ -468,9 +475,19 @@ DWARFUnit *DWARFDIE::MainDWARFUnit(DWARFCompileUnit *main_unit) const {
 }
 
 std::pair<DWARFCompileUnit *, DWARFDIE> DWARFDIE::MainCUtoDWARFDIEPair(DWARFCompileUnit *main_unit) const {
-  return std::make_pair(MainDWARFCompileUnit(main_unit), *this);
+  main_unit = MainDWARFCompileUnit(main_unit);
+  if (main_unit && GetCU()->GetDwoSymbolFile())
+    main_unit = nullptr;
+  if (main_unit && llvm::isa<SymbolFileDWARFDwo>(&GetCU()->GetSymbolFileDWARF()))
+    main_unit = nullptr;
+  return std::make_pair(main_unit, *this);
 }
 
 std::pair<DWARFCompileUnit *, DWARFDebugInfoEntry *> DWARFDIE::MainCUtoDIEPair(DWARFCompileUnit *main_unit) const {
-  return std::make_pair(MainDWARFCompileUnit(main_unit), GetDIE());
+  main_unit = MainDWARFCompileUnit(main_unit);
+  if (main_unit && GetCU()->GetDwoSymbolFile())
+    main_unit = nullptr;
+  if (main_unit && llvm::isa<SymbolFileDWARFDwo>(&GetCU()->GetSymbolFileDWARF()))
+    main_unit = nullptr;
+  return std::make_pair(main_unit, GetDIE());
 }

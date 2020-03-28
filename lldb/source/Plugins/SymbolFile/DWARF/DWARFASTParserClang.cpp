@@ -221,6 +221,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
 
   dwarf->GetTypeList().Insert(type_sp);
   dwarf->GetDIEToType()[die.MainCUtoDIEPair(main_unit)] = type_sp.get();
+fprintf(stderr,"%p(%s) %p:%x=%p\n",(void *)dwarf,dwarf->GetObjectFile()->GetFileSpec().GetCString(),(void *)die.MainCUtoDIEPair(main_unit).first,die.MainCUtoDIEPair(main_unit).second->GetOffset(),(void *)type_sp.get());
   clang::TagDecl *tag_decl = TypeSystemClang::GetAsTagDecl(type);
   if (tag_decl)
     LinkDeclContextToDIE(tag_decl, main_unit, die);
@@ -430,6 +431,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
     return type_ptr->shared_from_this();
   // Set a bit that lets us know that we are currently parsing this
   dwarf->GetDIEToType()[die.MainCUtoDIEPair(main_unit)] = DIE_IS_BEING_PARSED;
+fprintf(stderr,"%p(%s) %p:%x=DIE_IS_BEING_PARSED\n",(void *)dwarf,dwarf->GetObjectFile()->GetFileSpec().GetCString(),(void *)die.MainCUtoDIEPair(main_unit).first,die.MainCUtoDIEPair(main_unit).second->GetOffset());
 
   ParsedDWARFTypeAttributes attrs(die);
 
@@ -437,6 +439,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
     if (TypeSP type_sp =
             ParseTypeFromDWARF(sc, signature_die, type_is_new_ptr)) {
       dwarf->GetDIEToType()[die.MainCUtoDIEPair(main_unit)] = type_sp.get();
+fprintf(stderr,"%p(%s) %p:%x=%p\n",(void *)dwarf,dwarf->GetObjectFile()->GetFileSpec().GetCString(),(void *)die.MainCUtoDIEPair(main_unit).first,die.MainCUtoDIEPair(main_unit).second->GetOffset(),(void *)type_sp.get());
       if (clang::DeclContext *decl_ctx =
               GetCachedClangDeclContextForDIE(main_unit, signature_die))
         LinkDeclContextToDIE(decl_ctx, main_unit, die);
@@ -725,6 +728,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
       clang_type, resolve_state);
 
   dwarf->GetDIEToType()[die.MainCUtoDIEPair(main_unit)] = type_sp.get();
+fprintf(stderr,"%p(%s) %p:%x=%p\n",(void *)dwarf,dwarf->GetObjectFile()->GetFileSpec().GetCString(),(void *)die.MainCUtoDIEPair(main_unit).first,die.MainCUtoDIEPair(main_unit).second->GetOffset(),(void *)type_sp.get());
   return type_sp;
 }
 
@@ -776,6 +780,7 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
       // it and cache the fact that we found a complete type for this
       // die
       dwarf->GetDIEToType()[die.MainCUtoDIEPair(main_unit)] = type_sp.get();
+fprintf(stderr,"%p(%s) %p:%x=%p\n",(void *)dwarf,dwarf->GetObjectFile()->GetFileSpec().GetCString(),(void *)die.MainCUtoDIEPair(main_unit).first,die.MainCUtoDIEPair(main_unit).second->GetOffset(),(void *)type_sp.get());
       clang::DeclContext *defn_decl_ctx =
           GetCachedClangDeclContextForDIE(main_unit, dwarf->GetDIE(type_sp->GetID()));
       if (defn_decl_ctx)
@@ -1148,6 +1153,7 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const SymbolContext &sc, const DWARF
                 // doesn't think we are trying to parse this DIE
                 // anymore...
                 dwarf->GetDIEToType()[die.MainCUtoDIEPair(main_unit)] = NULL;
+fprintf(stderr,"%p(%s) %p:%x=NULL\n",(void *)dwarf,dwarf->GetObjectFile()->GetFileSpec().GetCString(),(void *)die.MainCUtoDIEPair(main_unit).first,die.MainCUtoDIEPair(main_unit).second->GetOffset());
 
                 // Now we get the full type to force our class type to
                 // complete itself using the clang::ExternalASTSource
@@ -1430,6 +1436,7 @@ lldbassert(symbol_context_scope);
   type_list.Insert(type_sp);
 
   dwarf->GetDIEToType()[die.MainCUtoDIEPair(main_unit)] = type_sp.get();
+fprintf(stderr,"%p(%s) %p:%x=%p\n",(void *)dwarf,dwarf->GetObjectFile()->GetFileSpec().GetCString(),(void *)die.MainCUtoDIEPair(main_unit).first,die.MainCUtoDIEPair(main_unit).second->GetOffset(),(void *)type_sp.get());
   return type_sp;
 }
 
@@ -1476,6 +1483,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
 //          return type_sp;
 
         dwarf->GetDIEToType()[die.MainCUtoDIEPair(main_unit)] = type_sp.get();
+fprintf(stderr,"%p(%s) %p:%x=%p\n",(void *)dwarf,dwarf->GetObjectFile()->GetFileSpec().GetCString(),(void *)die.MainCUtoDIEPair(main_unit).first,die.MainCUtoDIEPair(main_unit).second->GetOffset(),(void *)type_sp.get());
         LinkDeclContextToDIE(
             GetCachedClangDeclContextForDIE(main_unit, unique_ast_entry_up->m_die), main_unit, die);
         return type_sp;
@@ -1557,6 +1565,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
         // it and cache the fact that we found a complete type for this
         // die
         dwarf->GetDIEToType()[die.MainCUtoDIEPair(main_unit)] = type_sp.get();
+fprintf(stderr,"%p(%s) %p:%x=%p\n",(void *)dwarf,dwarf->GetObjectFile()->GetFileSpec().GetCString(),(void *)die.MainCUtoDIEPair(main_unit).first,die.MainCUtoDIEPair(main_unit).second->GetOffset(),(void *)type_sp.get());
         return type_sp;
       }
     }
@@ -1613,6 +1622,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
       // We found a real definition for this type elsewhere so lets use
       // it and cache the fact that we found a complete type for this die
       dwarf->GetDIEToType()[die.MainCUtoDIEPair(main_unit)] = type_sp.get();
+fprintf(stderr,"%p(%s) %p:%x=%p\n",(void *)dwarf,dwarf->GetObjectFile()->GetFileSpec().GetCString(),(void *)die.MainCUtoDIEPair(main_unit).first,die.MainCUtoDIEPair(main_unit).second->GetOffset(),(void *)type_sp.get());
       DWARFCompileUnit *main_unit;
       DWARFDIE die = dwarf->GetDIEUnlocked(type_sp->GetID(), &main_unit);
       clang::DeclContext *defn_decl_ctx =
@@ -3790,6 +3800,7 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(DWARFCompileUnit *main_unit
                   static_cast<void *>(src_child_type), src_child_type->GetID(),
                   src_die.GetOffset(), dst_die.GetOffset());
         dst_die.GetDWARF()->GetDIEToType()[dst_die.MainCUtoDIEPair(main_unit)] = src_child_type;
+fprintf(stderr,"%p(%s) %p:%x=%p\n",(void *)dst_die.GetDWARF(),dst_die.GetDWARF()->GetObjectFile()->GetFileSpec().GetCString(),(void *)dst_die.MainCUtoDIEPair(main_unit).first,dst_die.MainCUtoDIEPair(main_unit).second->GetOffset(),(void *)src_child_type);
       } else {
         LLDB_LOGF(log,
                   "warning: tried to unique lldb_private::Type from "
@@ -3835,6 +3846,7 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(DWARFCompileUnit *main_unit
                 src_die.GetOffset(), dst_die.GetOffset());
             dst_die.GetDWARF()->GetDIEToType()[dst_die.MainCUtoDIEPair(main_unit)] =
                 src_child_type;
+fprintf(stderr,"%p(%s) %p:%x=%p\n",(void *)dst_die.GetDWARF(),dst_die.GetDWARF()->GetObjectFile()->GetFileSpec().GetCString(),(void *)dst_die.MainCUtoDIEPair(main_unit).first,dst_die.MainCUtoDIEPair(main_unit).second->GetOffset(),(void *)src_child_type);
           } else {
             LLDB_LOGF(log,
                       "warning: tried to unique lldb_private::Type from "
@@ -3889,6 +3901,7 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(DWARFCompileUnit *main_unit
               static_cast<void *>(src_child_type), src_child_type->GetID(),
               src_die.GetOffset(), dst_die.GetOffset());
           dst_die.GetDWARF()->GetDIEToType()[dst_die.MainCUtoDIEPair(main_unit)] = src_child_type;
+fprintf(stderr,"%p(%s) %p:%x=%p\n",(void *)dst_die.GetDWARF(),dst_die.GetDWARF()->GetObjectFile()->GetFileSpec().GetCString(),(void *)dst_die.MainCUtoDIEPair(main_unit).first,dst_die.MainCUtoDIEPair(main_unit).second->GetOffset(),(void *)src_child_type);
         } else {
           LLDB_LOGF(log,
                     "warning: tried to unique lldb_private::Type from "
