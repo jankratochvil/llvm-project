@@ -932,6 +932,7 @@ protected:
 /// FuncOp legalization pattern that converts MemRef arguments to pointers to
 /// MemRef descriptors (LLVM struct data types) containing all the MemRef type
 /// information.
+static constexpr StringRef kEmitIfaceAttrName = "llvm.emit_c_interface";
 struct FuncOpConversion : public FuncOpConversionBase {
   FuncOpConversion(LLVMTypeConverter &converter, bool emitCWrappers)
       : FuncOpConversionBase(converter), emitWrappers(emitCWrappers) {}
@@ -942,7 +943,7 @@ struct FuncOpConversion : public FuncOpConversionBase {
     auto funcOp = cast<FuncOp>(op);
 
     auto newFuncOp = convertFuncOpToLLVMFuncOp(funcOp, rewriter);
-    if (emitWrappers) {
+    if (emitWrappers || funcOp.getAttrOfType<UnitAttr>(kEmitIfaceAttrName)) {
       if (newFuncOp.isExternal())
         wrapExternalFunction(rewriter, op->getLoc(), typeConverter, funcOp,
                              newFuncOp);
@@ -1087,8 +1088,9 @@ void nDVectorIterate(const NDVectorTypeInfo &info, OpBuilder &builder,
     fun(position);
   }
 }
+////////////// End Support for Lowering operations on n-D vectors //////////////
 
-/// Replaces the given operaiton "op" with a new operation of type "targetOp"
+/// Replaces the given operation "op" with a new operation of type "targetOp"
 /// and given operands.
 LogicalResult LLVM::detail::oneToOneRewrite(
     Operation *op, StringRef targetOp, ValueRange operands,
@@ -1127,29 +1129,6 @@ LogicalResult LLVM::detail::oneToOneRewrite(
   rewriter.replaceOp(op, results);
   return success();
 }
-
-////////////// End Support for Lowering operations on n-D vectors //////////////
-namespace {
-template <typename SourceOp, unsigned OpCount>
-struct OpCountValidator {
-  static_assert(
-      std::is_base_of<
-          typename OpTrait::NOperands<OpCount>::template Impl<SourceOp>,
-          SourceOp>::value,
-      "wrong operand count");
-};
-
-template <typename SourceOp>
-struct OpCountValidator<SourceOp, 1> {
-  static_assert(std::is_base_of<OpTrait::OneOperand<SourceOp>, SourceOp>::value,
-                "expected a single operand");
-};
-
-template <typename SourceOp, unsigned OpCount>
-void ValidateOpCount() {
-  OpCountValidator<SourceOp, OpCount>();
-}
-} // namespace
 
 static LogicalResult handleMultidimensionalVectors(
     Operation *op, ValueRange operands, LLVMTypeConverter &typeConverter,
@@ -1222,6 +1201,7 @@ using CopySignOpLowering =
 using CosOpLowering = VectorConvertToLLVMPattern<CosOp, LLVM::CosOp>;
 using DivFOpLowering = VectorConvertToLLVMPattern<DivFOp, LLVM::FDivOp>;
 using ExpOpLowering = VectorConvertToLLVMPattern<ExpOp, LLVM::ExpOp>;
+using Exp2OpLowering = VectorConvertToLLVMPattern<Exp2Op, LLVM::Exp2Op>;
 using Log10OpLowering = VectorConvertToLLVMPattern<Log10Op, LLVM::Log10Op>;
 using Log2OpLowering = VectorConvertToLLVMPattern<Log2Op, LLVM::Log2Op>;
 using LogOpLowering = VectorConvertToLLVMPattern<LogOp, LLVM::LogOp>;
@@ -1718,7 +1698,7 @@ struct MemRefCastOpLowering : public ConvertOpToLLVMPattern<MemRefCastOp> {
       auto loadOp = rewriter.create<LLVM::LoadOp>(loc, castPtr);
       rewriter.replaceOp(op, loadOp.getResult());
     } else {
-      llvm_unreachable("Unsuppored unranked memref to unranked memref cast");
+      llvm_unreachable("Unsupported unranked memref to unranked memref cast");
     }
   }
 };
@@ -2305,7 +2285,7 @@ struct SubViewOpLowering : public ConvertOpToLLVMPattern<SubViewOp> {
   }
 };
 
-/// Conversion pattern that transforms a op into:
+/// Conversion pattern that transforms an op into:
 ///   1. An `llvm.mlir.undef` operation to create a memref descriptor
 ///   2. Updates to the descriptor to introduce the data ptr, offset, size
 ///      and stride.
@@ -2649,6 +2629,7 @@ void mlir::populateStdToLLVMNonMemoryConversionPatterns(
       DialectCastOpLowering,
       DivFOpLowering,
       ExpOpLowering,
+      Exp2OpLowering,
       LogOpLowering,
       Log10OpLowering,
       Log2OpLowering,
@@ -2796,6 +2777,10 @@ LLVMTypeConverter::promoteMemRefDescriptors(Location loc, ValueRange opOperands,
 namespace {
 /// A pass converting MLIR operations into the LLVM IR dialect.
 struct LLVMLoweringPass : public ModulePass<LLVMLoweringPass> {
+/// Include the generated pass utilities.
+#define GEN_PASS_ConvertStandardToLLVM
+#include "mlir/Conversion/Passes.h.inc"
+
   /// Creates an LLVM lowering pass.
   LLVMLoweringPass(bool useAlloca, bool useBarePtrCallConv, bool emitCWrappers,
                    unsigned indexBitwidth) {
@@ -2837,32 +2822,6 @@ struct LLVMLoweringPass : public ModulePass<LLVMLoweringPass> {
     if (failed(applyPartialConversion(m, target, patterns, &typeConverter)))
       signalPassFailure();
   }
-
-  /// Use `alloca` instead of `call @malloc` for converting std.alloc.
-  Option<bool> useAlloca{
-      *this, "use-alloca",
-      llvm::cl::desc("Replace emission of malloc/free by alloca"),
-      llvm::cl::init(false)};
-
-  /// Convert memrefs to bare pointers in function signatures.
-  Option<bool> useBarePtrCallConv{
-      *this, "use-bare-ptr-memref-call-conv",
-      llvm::cl::desc("Replace FuncOp's MemRef arguments with "
-                     "bare pointers to the MemRef element types"),
-      llvm::cl::init(false)};
-
-  /// Emit wrappers for C-compatible pointer-to-struct memref descriptors.
-  Option<bool> emitCWrappers{
-      *this, "emit-c-wrappers",
-      llvm::cl::desc("Emit C-compatible wrapper functions"),
-      llvm::cl::init(false)};
-
-  /// Configure the bitwidth of the index type when lowered to LLVM.
-  Option<unsigned> indexBitwidth{
-      *this, "index-bitwidth",
-      llvm::cl::desc(
-          "Bitwidth of the index type, 0 to use size of machine word"),
-      llvm::cl::init(kDeriveIndexBitwidthFromDataLayout)};
 };
 } // end namespace
 
@@ -2879,7 +2838,3 @@ mlir::createLowerToLLVMPass(bool useAlloca, bool useBarePtrCallConv,
   return std::make_unique<LLVMLoweringPass>(useAlloca, useBarePtrCallConv,
                                             emitCWrappers, indexBitwidth);
 }
-
-static PassRegistration<LLVMLoweringPass>
-    pass(PASS_NAME, "Convert scalar and vector operations from the "
-                    "Standard to the LLVM dialect");

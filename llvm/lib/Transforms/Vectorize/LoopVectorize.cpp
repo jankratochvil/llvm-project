@@ -2583,7 +2583,7 @@ Value *InnerLoopVectorizer::getOrCreateTripCount(Loop *L) {
   // compare. The only way that we get a backedge taken count is that the
   // induction variable was signed and as such will not overflow. In such a case
   // truncation is legal.
-  if (BackedgeTakenCount->getType()->getPrimitiveSizeInBits() >
+  if (SE->getTypeSizeInBits(BackedgeTakenCount->getType()) >
       IdxTy->getPrimitiveSizeInBits())
     BackedgeTakenCount = SE->getTruncateOrNoop(BackedgeTakenCount, IdxTy);
   BackedgeTakenCount = SE->getNoopOrZeroExtend(BackedgeTakenCount, IdxTy);
@@ -3405,7 +3405,7 @@ void InnerLoopVectorizer::truncateToMinimalBitwidths() {
         auto *O1 = B.CreateZExtOrTrunc(
             SI->getOperand(1), VectorType::get(ScalarTruncatedTy, Elements1));
 
-        NewI = B.CreateShuffleVector(O0, O1, SI->getMask());
+        NewI = B.CreateShuffleVector(O0, O1, SI->getShuffleMask());
       } else if (isa<LoadInst>(I) || isa<PHINode>(I)) {
         // Don't do anything with the operands, just extend the result.
         continue;
@@ -6884,14 +6884,13 @@ VPBlendRecipe *VPRecipeBuilder::tryToBlend(Instruction *I, VPlanPtr &Plan) {
   return new VPBlendRecipe(Phi, Masks);
 }
 
-bool VPRecipeBuilder::tryToWiden(Instruction *I, VPBasicBlock *VPBB,
-                                 VFRange &Range) {
+VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I, VFRange &Range) {
 
   bool IsPredicated = LoopVectorizationPlanner::getDecisionAndClampRange(
       [&](unsigned VF) { return CM.isScalarWithPredication(I, VF); }, Range);
 
   if (IsPredicated)
-    return false;
+    return nullptr;
 
   auto IsVectorizableOpcode = [](unsigned Opcode) {
     switch (Opcode) {
@@ -6940,13 +6939,13 @@ bool VPRecipeBuilder::tryToWiden(Instruction *I, VPBasicBlock *VPBB,
   };
 
   if (!IsVectorizableOpcode(I->getOpcode()))
-    return false;
+    return nullptr;
 
   if (CallInst *CI = dyn_cast<CallInst>(I)) {
     Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
     if (ID && (ID == Intrinsic::assume || ID == Intrinsic::lifetime_end ||
                ID == Intrinsic::lifetime_start || ID == Intrinsic::sideeffect))
-      return false;
+      return nullptr;
   }
 
   auto willWiden = [&](unsigned VF) -> bool {
@@ -6975,25 +6974,10 @@ bool VPRecipeBuilder::tryToWiden(Instruction *I, VPBasicBlock *VPBB,
   };
 
   if (!LoopVectorizationPlanner::getDecisionAndClampRange(willWiden, Range))
-    return false;
-  // If this ingredient's recipe is to be recorded, keep its recipe a singleton
-  // to avoid having to split recipes later.
-  bool IsSingleton = Ingredient2Recipe.count(I);
+    return nullptr;
 
   // Success: widen this instruction.
-
-  // Use the default widening recipe. We optimize the common case where
-  // consecutive instructions can be represented by a single recipe.
-  if (!IsSingleton && !VPBB->empty() && LastExtensibleRecipe == &VPBB->back() &&
-      LastExtensibleRecipe->appendInstruction(I))
-    return true;
-
-  VPWidenRecipe *WidenRecipe = new VPWidenRecipe(I);
-  if (!IsSingleton)
-    LastExtensibleRecipe = WidenRecipe;
-  setRecipe(I, WidenRecipe);
-  VPBB->appendRecipe(WidenRecipe);
-  return true;
+  return new VPWidenRecipe(*I);
 }
 
 VPBasicBlock *VPRecipeBuilder::handleReplication(
@@ -7097,8 +7081,11 @@ bool VPRecipeBuilder::tryToCreateRecipe(Instruction *Instr, VFRange &Range,
 
   // Check if Instr is to be widened by a general VPWidenRecipe, after
   // having first checked for specific widening recipes.
-  if (tryToWiden(Instr, VPBB, Range))
+  if ((Recipe = tryToWiden(Instr, Range))) {
+    setRecipe(Instr, Recipe);
+    VPBB->appendRecipe(Recipe);
     return true;
+  }
 
   return false;
 }
@@ -7385,8 +7372,7 @@ void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 
 void VPWidenRecipe::execute(VPTransformState &State) {
-  for (auto &Instr : make_range(Begin, End))
-    State.ILV->widenInstruction(Instr);
+  State.ILV->widenInstruction(Ingredient);
 }
 
 void VPWidenGEPRecipe::execute(VPTransformState &State) {

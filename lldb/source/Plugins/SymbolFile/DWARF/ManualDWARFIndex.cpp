@@ -429,8 +429,9 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
       DWARFDIE die = dwarf.GetDIEUnlocked(uid, &main_unit);
       if (!die)
         continue;
-      if (SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, main_unit, die))
-        dies.push_back(die.MainCUtoDWARFDIEPair(main_unit));
+      if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, main_unit, die))
+        continue;
+      dies.push_back(die.MainCUtoDWARFDIEPair(main_unit));
     }
   }
   if (name_type_mask & eFunctionNameTypeBase) {
@@ -441,10 +442,10 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
       DWARFDIE die = dwarf.GetDIEUnlocked(uid, &main_unit);
       if (!die)
         continue;
-      if (SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, main_unit, die))
-        dies.push_back(die.MainCUtoDWARFDIEPair(main_unit));
+      if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, main_unit, die))
+        continue;
+      dies.push_back(die.MainCUtoDWARFDIEPair(main_unit));
     }
-    offsets.clear();
   }
 
   if (name_type_mask & eFunctionNameTypeMethod && !parent_decl_ctx.IsValid()) {
@@ -452,8 +453,10 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
     m_set.function_methods.Find(name, offsets);
     for (user_id_t uid : offsets) {
       DWARFCompileUnit *main_unit;
-      if (DWARFDIE die = dwarf.GetDIEUnlocked(uid, &main_unit))
-        dies.push_back(die.MainCUtoDWARFDIEPair(main_unit));
+      DWARFDIE die = dwarf.GetDIEUnlocked(uid, &main_unit);
+      if (!die)
+        continue;
+      dies.push_back(die.MainCUtoDWARFDIEPair(main_unit));
     }
   }
 
@@ -463,8 +466,10 @@ void ManualDWARFIndex::GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
     m_set.function_selectors.Find(name, offsets);
     for (user_id_t uid : offsets) {
       DWARFCompileUnit *main_unit;
-      if (DWARFDIE die = dwarf.GetDIEUnlocked(uid, &main_unit))
-        dies.push_back(die.MainCUtoDWARFDIEPair(main_unit));
+      DWARFDIE die = dwarf.GetDIEUnlocked(uid, &main_unit);
+      if (!die)
+        continue;
+      dies.push_back(die.MainCUtoDWARFDIEPair(main_unit));
     }
   }
 }

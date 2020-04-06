@@ -1653,8 +1653,6 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
                                    Type::eEncodingIsUID, &attrs.decl,
                                    clang_type, Type::ResolveState::Forward);
 
-  type_sp->SetIsCompleteObjCClass(attrs.is_complete_objc_class);
-
   // Add our type to the unique type map so we don't end up creating many
   // copies of the same type over and over in the ASTContext for our
   // module

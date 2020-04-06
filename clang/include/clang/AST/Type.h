@@ -1650,11 +1650,8 @@ protected:
     /// The kind of vector, either a generic vector type or some
     /// target-specific vector type such as for AltiVec or Neon.
     unsigned VecKind : 3;
-
     /// The number of elements in the vector.
-    unsigned NumElements : 29 - NumTypeBits;
-
-    enum { MaxNumElements = (1 << (29 - NumTypeBits)) - 1 };
+    uint32_t NumElements;
   };
 
   class AttributedTypeBitfields {
@@ -2137,6 +2134,11 @@ public:
 
   TypeDependence getDependence() const {
     return static_cast<TypeDependence>(TypeBits.Dependence);
+  }
+
+  /// Whether this type is an error type.
+  bool containsErrors() const {
+    return getDependence() & TypeDependence::Error;
   }
 
   /// Whether this type is a dependent type, meaning that its definition
@@ -3243,10 +3245,6 @@ protected:
 public:
   QualType getElementType() const { return ElementType; }
   unsigned getNumElements() const { return VectorTypeBits.NumElements; }
-
-  static bool isVectorSizeTooLarge(unsigned NumElements) {
-    return NumElements > VectorTypeBitfields::MaxNumElements;
-  }
 
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }

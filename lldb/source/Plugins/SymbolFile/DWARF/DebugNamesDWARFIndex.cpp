@@ -168,9 +168,8 @@ void DebugNamesDWARFIndex::GetCompleteObjCClass(ConstString class_name,
       // FIXME: DWZ
       offsets.push_back(m_debug_info.GetUID(nullptr/*main_unit*/,*ref));
       return;
-    } else {
-      incomplete_types.push_back(*ref);
     }
+    incomplete_types.push_back(*ref);
   }
 
   offsets.reserve(offsets.size() + incomplete_types.size());

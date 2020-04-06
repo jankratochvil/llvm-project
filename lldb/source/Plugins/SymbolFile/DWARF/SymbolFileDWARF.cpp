@@ -2208,25 +2208,23 @@ void SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
   assert(sc.module_sp);
 
   const size_t num_matches = die_offsets.size();
-  if (num_matches) {
-    for (size_t i = 0; i < num_matches; ++i) {
-      user_id_t uid = die_offsets[i];
-      DWARFDIE die = GetDIE(uid);
-
-      if (die) {
-        DWARFCompileUnit *dwarf_cu =
-            llvm::dyn_cast<DWARFCompileUnit>(die.GetCU());
-        if (!dwarf_cu)
-          continue;
-        sc.comp_unit = GetCompUnitForDWARFCompUnit(*dwarf_cu);
-
-        ParseVariables(sc, die, LLDB_INVALID_ADDRESS, false, false, &variables);
-
-        if (variables.GetSize() - original_size >= max_matches)
-          break;
-      } else
-        m_index->ReportInvalidDIEID(uid, regex.GetText());
+  for (size_t i = 0; i < num_matches; ++i) {
+    user_id_t uid = die_offsets[i];
+    DWARFDIE die = GetDIE(uid);
+    if (!die) {
+      m_index->ReportInvalidDIEID(uid, regex.GetText());
+      continue;
     }
+
+    DWARFCompileUnit *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(die.GetCU());
+    if (!dwarf_cu)
+      continue;
+    sc.comp_unit = GetCompUnitForDWARFCompUnit(*dwarf_cu);
+
+    ParseVariables(sc, die, LLDB_INVALID_ADDRESS, false, false, &variables);
+
+    if (variables.GetSize() - original_size >= max_matches)
+      break;
   }
 }
 
@@ -2340,7 +2338,6 @@ void SymbolFileDWARF::FindFunctions(ConstString name,
   const uint32_t original_size = sc_list.GetSize();
 
   llvm::DenseSet<std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>> resolved_dies;
-  DIEArray offsets;
 
   std::vector<std::pair<DWARFCompileUnit *, DWARFDIE>> dies;
   m_index->GetFunctions(name, *this, parent_decl_ctx, name_type_mask, dies);
@@ -2455,27 +2452,29 @@ void SymbolFileDWARF::FindTypes(
     user_id_t uid = die_offsets[i];
     DWARFCompileUnit *main_unit;
     DWARFDIE die = GetDIEUnlocked(uid, &main_unit);
-    if (die) {
-      if (!DIEInDeclContext(parent_decl_ctx, main_unit, die))
-        continue; // The containing decl contexts don't match
-
-      Type *matching_type = ResolveType(main_unit, die, true, true);
-      if (matching_type) {
-        // We found a type pointer, now find the shared pointer form our type
-        // list
-        types.InsertUnique(matching_type->shared_from_this());
-        if (types.GetSize() >= max_matches)
-          break;
-      }
-    } else {
+    if (!die) {
       m_index->ReportInvalidDIEID(uid, name.GetStringRef());
+      continue;
     }
+
+    if (!DIEInDeclContext(parent_decl_ctx, die))
+      continue; // The containing decl contexts don't match
+
+    Type *matching_type = ResolveType(die, true, true);
+    if (!matching_type)
+      continue;
+
+    // We found a type pointer, now find the shared pointer form our type
+    // list
+    types.InsertUnique(matching_type->shared_from_this());
+    if (types.GetSize() >= max_matches)
+      break;
   }
 
   // Next search through the reachable Clang modules. This only applies for
   // DWARF objects compiled with -gmodules that haven't been processed by
   // dsymutil.
-  if (num_die_matches < max_matches) {
+  if (types.GetSize() < max_matches) {
     UpdateExternalModuleListIfNeeded();
 
     for (const auto &pair : m_external_type_modules)
@@ -2528,11 +2527,11 @@ void SymbolFileDWARF::FindTypes(
     user_id_t uid = die_offsets[i];
     DWARFCompileUnit *main_unit;
     DWARFDIE die = GetDIEUnlocked(uid, &main_unit);
-
     if (!die) {
       m_index->ReportInvalidDIEID(uid, name.GetStringRef());
       continue;
     }
+
     if (!languages[GetLanguage(*die.GetCU())])
       continue;
 
@@ -2579,25 +2578,25 @@ SymbolFileDWARF::FindNamespace(ConstString name,
   std::vector<lldb::user_id_t> die_offsets;
   m_index->GetNamespaces(name, die_offsets);
   const size_t num_matches = die_offsets.size();
-  if (num_matches) {
-    for (size_t i = 0; i < num_matches; ++i) {
-      user_id_t uid = die_offsets[i];
-      DWARFCompileUnit *main_unit;
-      DWARFDIE die = GetDIEUnlocked(uid, &main_unit);
-
-      if (die) {
-        if (!DIEInDeclContext(parent_decl_ctx, main_unit, die))
-          continue; // The containing decl contexts don't match
-
-        if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.MainDWARFUnit(main_unit))) {
-          namespace_decl_ctx = dwarf_ast->GetDeclContextForUIDFromDWARF(main_unit, die);
-          if (namespace_decl_ctx)
-            break;
-        }
-      } else {
-        m_index->ReportInvalidDIEID(uid, name.GetStringRef());
-      }
+  for (size_t i = 0; i < num_matches; ++i) {
+    user_id_t uid = die_offsets[i];
+    DWARFCompileUnit *main_unit;
+    DWARFDIE die = GetDIEUnlocked(uid, &main_unit);
+    if (!die) {
+      m_index->ReportInvalidDIEID(uid, name.GetStringRef());
+      continue;
     }
+
+    if (!DIEInDeclContext(parent_decl_ctx, main_unit, die))
+      continue; // The containing decl contexts don't match
+
+    DWARFASTParser *dwarf_ast = GetDWARFParser(*die.MainDWARFUnit(main_unit));
+    if (!dwarf_ast)
+      continue;
+
+    namespace_decl_ctx = dwarf_ast->GetDeclContextForUIDFromDWARF(main_unit, die);
+    if (namespace_decl_ctx)
+      break;
   }
   if (log && namespace_decl_ctx) {
     GetObjectFile()->GetModule()->LogMessage(
@@ -3176,19 +3175,17 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
         m_index->GetGlobalVariables(dwarf_cu->GetNonSkeletonUnit(),
                                     die_offsets);
         const size_t num_matches = die_offsets.size();
-        if (num_matches) {
-          for (size_t i = 0; i < num_matches; ++i) {
-            user_id_t uid = die_offsets[i];
-            DWARFDIE die = GetDIE(uid);
-            if (die) {
-              VariableSP var_sp(
-                  ParseVariableDIE(sc, die, LLDB_INVALID_ADDRESS));
-              if (var_sp) {
-                variables->AddVariableIfUnique(var_sp);
-                ++vars_added;
-              }
-            } else
-              m_index->ReportInvalidDIEID(uid, "");
+        for (size_t i = 0; i < num_matches; ++i) {
+          user_id_t uid = die_offsets[i];
+          DWARFDIE die = GetDIE(uid);
+          if (!die) {
+            m_index->ReportInvalidDIEID(uid, "");
+            continue;
+          }
+          VariableSP var_sp(ParseVariableDIE(sc, die, LLDB_INVALID_ADDRESS));
+          if (var_sp) {
+            variables->AddVariableIfUnique(var_sp);
+            ++vars_added;
           }
         }
       }
