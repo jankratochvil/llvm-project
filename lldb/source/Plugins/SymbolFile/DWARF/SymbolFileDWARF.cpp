@@ -2457,10 +2457,10 @@ void SymbolFileDWARF::FindTypes(
       continue;
     }
 
-    if (!DIEInDeclContext(parent_decl_ctx, die))
+    if (!DIEInDeclContext(parent_decl_ctx, main_unit, die))
       continue; // The containing decl contexts don't match
 
-    Type *matching_type = ResolveType(die, true, true);
+    Type *matching_type = ResolveType(main_unit, die, true, true);
     if (!matching_type)
       continue;
 
