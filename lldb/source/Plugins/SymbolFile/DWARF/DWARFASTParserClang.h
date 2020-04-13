@@ -78,7 +78,7 @@ protected:
       DIEToDeclContextMap;
   typedef std::multimap<const clang::DeclContext *, std::pair<DWARFCompileUnit *, const DWARFDIE>>
       DeclContextToDIEMap;
-  typedef llvm::DenseMap<std::pair<const DWARFDebugInfoEntry *, const DWARFDebugInfoEntry *>, lldb_private::OptionalClangModuleID> DIEToModuleMap;
+  typedef llvm::DenseMap<std::pair<const DWARFCompileUnit *, const DWARFDebugInfoEntry *>, lldb_private::OptionalClangModuleID> DIEToModuleMap;
   typedef llvm::DenseMap<std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>, clang::Decl *>
       DIEToDeclMap;
   typedef llvm::DenseMap<const clang::Decl *, DIEPointerSet> DeclToDIEMap;
@@ -142,7 +142,7 @@ protected:
 
   clang::DeclContext *GetClangDeclContextContainingDIE(DWARFCompileUnit *main_unit, const DWARFDIE &die,
                                                        DWARFDIE *decl_ctx_die);
-  lldb_private::OptionalClangModuleID GetOwningClangModule(const DWARFDIE &die);
+  lldb_private::OptionalClangModuleID GetOwningClangModule(DWARFCompileUnit *main_unit, const DWARFDIE &die);
 
   bool CopyUniqueClassMethodTypes(DWARFCompileUnit *main_unit, const DWARFDIE &src_class_die,
                                   const DWARFDIE &dst_class_die,

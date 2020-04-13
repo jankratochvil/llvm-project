@@ -2754,7 +2754,7 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
   for (size_t i = 0; i < num_matches; ++i) {
     DWARFCompileUnit *main_unit;
     user_id_t uid = die_offsets[i];
-    DWARFDIE type_die = GetDIE(die_ref);
+    DWARFDIE type_die = GetDIEUnlocked(uid, &main_unit);
     if (!type_die) {
       m_index->ReportInvalidDIEID(uid, type_name.GetStringRef());
       continue;
