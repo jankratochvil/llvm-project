@@ -2790,7 +2790,7 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
       break;
     case Intrinsic::experimental_patchpoint_void:
     case Intrinsic::experimental_patchpoint_i64:
-      visitPatchpoint(&I, EHPadBB);
+      visitPatchpoint(I, EHPadBB);
       break;
     case Intrinsic::experimental_gc_statepoint:
       LowerStatepoint(ImmutableStatepoint(&I), EHPadBB);
@@ -2817,7 +2817,7 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
     // with deopt state.
     LowerCallSiteWithDeoptBundle(&I, getValue(Callee), EHPadBB);
   } else {
-    LowerCallTo(&I, getValue(Callee), false, EHPadBB);
+    LowerCallTo(I, getValue(Callee), false, EHPadBB);
   }
 
   // If the value of the invoke is used outside of its defining block, make it
@@ -5622,7 +5622,7 @@ void SelectionDAGBuilder::lowerCallToExternalSymbol(const CallInst &I,
   SDValue Callee = DAG.getExternalSymbol(
       FunctionName,
       DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout()));
-  LowerCallTo(&I, Callee, I.isTailCall());
+  LowerCallTo(I, Callee, I.isTailCall());
 }
 
 /// Lower the call to the specified intrinsic function.
@@ -6609,7 +6609,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   case Intrinsic::experimental_patchpoint_void:
   case Intrinsic::experimental_patchpoint_i64:
-    visitPatchpoint(&I);
+    visitPatchpoint(I);
     return;
   case Intrinsic::experimental_gc_statepoint:
     LowerStatepoint(ImmutableStatepoint(&I));
@@ -7039,10 +7039,9 @@ SelectionDAGBuilder::lowerInvokable(TargetLowering::CallLoweringInfo &CLI,
     // There is a platform (e.g. wasm) that uses funclet style IR but does not
     // actually use outlined funclets and their LSDA info style.
     if (MF.hasEHFunclets() && isFuncletEHPersonality(Pers)) {
-      assert(CLI.CS);
+      assert(CLI.CB);
       WinEHFuncInfo *EHInfo = DAG.getMachineFunction().getWinEHFuncInfo();
-      EHInfo->addIPToStateRange(cast<InvokeInst>(CLI.CS.getInstruction()),
-                                BeginLabel, EndLabel);
+      EHInfo->addIPToStateRange(cast<InvokeInst>(CLI.CB), BeginLabel, EndLabel);
     } else if (!isScopedEHPersonality(Pers)) {
       MF.addInvoke(FuncInfo.MBBMap[EHPadBB], BeginLabel, EndLabel);
     }
@@ -7051,15 +7050,15 @@ SelectionDAGBuilder::lowerInvokable(TargetLowering::CallLoweringInfo &CLI,
   return Result;
 }
 
-void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
+void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
                                       bool isTailCall,
                                       const BasicBlock *EHPadBB) {
   auto &DL = DAG.getDataLayout();
-  FunctionType *FTy = CS.getFunctionType();
-  Type *RetTy = CS.getType();
+  FunctionType *FTy = CB.getFunctionType();
+  Type *RetTy = CB.getType();
 
   TargetLowering::ArgListTy Args;
-  Args.reserve(CS.arg_size());
+  Args.reserve(CB.arg_size());
 
   const Value *SwiftErrorVal = nullptr;
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -7067,7 +7066,7 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
   if (isTailCall) {
     // Avoid emitting tail calls in functions with the disable-tail-calls
     // attribute.
-    auto *Caller = CS.getInstruction()->getParent()->getParent();
+    auto *Caller = CB.getParent()->getParent();
     if (Caller->getFnAttribute("disable-tail-calls").getValueAsString() ==
         "true")
       isTailCall = false;
@@ -7080,10 +7079,9 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
       isTailCall = false;
   }
 
-  for (ImmutableCallSite::arg_iterator i = CS.arg_begin(), e = CS.arg_end();
-       i != e; ++i) {
+  for (auto I = CB.arg_begin(), E = CB.arg_end(); I != E; ++I) {
     TargetLowering::ArgListEntry Entry;
-    const Value *V = *i;
+    const Value *V = *I;
 
     // Skip empty types
     if (V->getType()->isEmptyTy())
@@ -7092,16 +7090,16 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
     SDValue ArgNode = getValue(V);
     Entry.Node = ArgNode; Entry.Ty = V->getType();
 
-    Entry.setAttributes(&CS, i - CS.arg_begin());
+    Entry.setAttributes(&CB, I - CB.arg_begin());
 
     // Use swifterror virtual register as input to the call.
     if (Entry.IsSwiftError && TLI.supportSwiftError()) {
       SwiftErrorVal = V;
       // We find the virtual register for the actual swifterror argument.
       // Instead of using the Value, we use the virtual register instead.
-      Entry.Node = DAG.getRegister(
-          SwiftError.getOrCreateVRegUseAt(CS.getInstruction(), FuncInfo.MBB, V),
-          EVT(TLI.getPointerTy(DL)));
+      Entry.Node =
+          DAG.getRegister(SwiftError.getOrCreateVRegUseAt(&CB, FuncInfo.MBB, V),
+                          EVT(TLI.getPointerTy(DL)));
     }
 
     Args.push_back(Entry);
@@ -7114,7 +7112,7 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
 
   // If call site has a cfguardtarget operand bundle, create and add an
   // additional ArgListEntry.
-  if (auto Bundle = CS.getOperandBundle(LLVMContext::OB_cfguardtarget)) {
+  if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_cfguardtarget)) {
     TargetLowering::ArgListEntry Entry;
     Value *V = Bundle->Inputs[0];
     SDValue ArgNode = getValue(V);
@@ -7126,7 +7124,8 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
 
   // Check if target-independent constraints permit a tail call here.
   // Target-dependent constraints are checked within TLI->LowerCallTo.
-  if (isTailCall && !isInTailCallPosition(CS, DAG.getTarget()))
+  if (isTailCall &&
+      !isInTailCallPosition(ImmutableCallSite(&CB), DAG.getTarget()))
     isTailCall = false;
 
   // Disable tail calls if there is an swifterror argument. Targets have not
@@ -7137,15 +7136,14 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(getCurSDLoc())
       .setChain(getRoot())
-      .setCallee(RetTy, FTy, Callee, std::move(Args), CS)
+      .setCallee(RetTy, FTy, Callee, std::move(Args), CB)
       .setTailCall(isTailCall)
-      .setConvergent(CS.isConvergent());
+      .setConvergent(CB.isConvergent());
   std::pair<SDValue, SDValue> Result = lowerInvokable(CLI, EHPadBB);
 
   if (Result.first.getNode()) {
-    const Instruction *Inst = CS.getInstruction();
-    Result.first = lowerRangeToAssertZExt(DAG, *Inst, Result.first);
-    setValue(Inst, Result.first);
+    Result.first = lowerRangeToAssertZExt(DAG, CB, Result.first);
+    setValue(&CB, Result.first);
   }
 
   // The last element of CLI.InVals has the SDValue for swifterror return.
@@ -7154,8 +7152,8 @@ void SelectionDAGBuilder::LowerCallTo(ImmutableCallSite CS, SDValue Callee,
   if (SwiftErrorVal && TLI.supportSwiftError()) {
     // Get the last element of InVals.
     SDValue Src = CLI.InVals.back();
-    Register VReg = SwiftError.getOrCreateVRegDefAt(
-        CS.getInstruction(), FuncInfo.MBB, SwiftErrorVal);
+    Register VReg =
+        SwiftError.getOrCreateVRegDefAt(&CB, FuncInfo.MBB, SwiftErrorVal);
     SDValue CopyNode = CLI.DAG.getCopyToReg(Result.second, CLI.DL, VReg, Src);
     DAG.setRoot(CopyNode);
   }
@@ -7679,7 +7677,7 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
     // Check if we can potentially perform a tail call. More detailed checking
     // is be done within LowerCallTo, after more information about the call is
     // known.
-    LowerCallTo(&I, Callee, I.isTailCall());
+    LowerCallTo(I, Callee, I.isTailCall());
 }
 
 namespace {
@@ -8012,8 +8010,7 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call) {
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   TargetLowering::AsmOperandInfoVector TargetConstraints = TLI.ParseConstraints(
-      DAG.getDataLayout(), DAG.getSubtarget().getRegisterInfo(),
-      ImmutableCallSite(&Call));
+      DAG.getDataLayout(), DAG.getSubtarget().getRegisterInfo(), Call);
 
   // First Pass: Calculate HasSideEffects and ExtraFlags (AlignStack,
   // AsmDialect, MayLoad, MayStore).
@@ -8629,11 +8626,11 @@ void SelectionDAGBuilder::populateCallLoweringInfo(
 /// assumption made by the llvm.gcroot intrinsic). If the alloca's location were
 /// only available in a register, then the runtime would need to trap when
 /// execution reaches the StackMap in order to read the alloca's location.
-static void addStackMapLiveVars(ImmutableCallSite CS, unsigned StartIdx,
+static void addStackMapLiveVars(const CallBase &Call, unsigned StartIdx,
                                 const SDLoc &DL, SmallVectorImpl<SDValue> &Ops,
                                 SelectionDAGBuilder &Builder) {
-  for (unsigned i = StartIdx, e = CS.arg_size(); i != e; ++i) {
-    SDValue OpVal = Builder.getValue(CS.getArgument(i));
+  for (unsigned i = StartIdx, e = Call.arg_size(); i != e; ++i) {
+    SDValue OpVal = Builder.getValue(Call.getArgOperand(i));
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(OpVal)) {
       Ops.push_back(
         Builder.DAG.getTargetConstant(StackMaps::ConstantOp, DL, MVT::i64));
@@ -8685,7 +8682,7 @@ void SelectionDAGBuilder::visitStackmap(const CallInst &CI) {
                   MVT::i32));
 
   // Push live variables for the stack map.
-  addStackMapLiveVars(&CI, 2, DL, Ops, *this);
+  addStackMapLiveVars(CI, 2, DL, Ops, *this);
 
   // We are not pushing any register mask info here on the operands list,
   // because the stackmap doesn't clobber anything.
@@ -8712,7 +8709,7 @@ void SelectionDAGBuilder::visitStackmap(const CallInst &CI) {
 }
 
 /// Lower llvm.experimental.patchpoint directly to its target opcode.
-void SelectionDAGBuilder::visitPatchpoint(ImmutableCallSite CS,
+void SelectionDAGBuilder::visitPatchpoint(const CallBase &CB,
                                           const BasicBlock *EHPadBB) {
   // void|i64 @llvm.experimental.patchpoint.void|i64(i64 <id>,
   //                                                 i32 <numBytes>,
@@ -8721,11 +8718,11 @@ void SelectionDAGBuilder::visitPatchpoint(ImmutableCallSite CS,
   //                                                 [Args...],
   //                                                 [live variables...])
 
-  CallingConv::ID CC = CS.getCallingConv();
+  CallingConv::ID CC = CB.getCallingConv();
   bool IsAnyRegCC = CC == CallingConv::AnyReg;
-  bool HasDef = !CS->getType()->isVoidTy();
+  bool HasDef = !CB.getType()->isVoidTy();
   SDLoc dl = getCurSDLoc();
-  SDValue Callee = getValue(CS->getOperand(PatchPointOpers::TargetPos));
+  SDValue Callee = getValue(CB.getArgOperand(PatchPointOpers::TargetPos));
 
   // Handle immediate and symbolic callees.
   if (auto* ConstCallee = dyn_cast<ConstantSDNode>(Callee))
@@ -8737,23 +8734,23 @@ void SelectionDAGBuilder::visitPatchpoint(ImmutableCallSite CS,
                                          SymbolicCallee->getValueType(0));
 
   // Get the real number of arguments participating in the call <numArgs>
-  SDValue NArgVal = getValue(CS.getArgument(PatchPointOpers::NArgPos));
+  SDValue NArgVal = getValue(CB.getArgOperand(PatchPointOpers::NArgPos));
   unsigned NumArgs = cast<ConstantSDNode>(NArgVal)->getZExtValue();
 
   // Skip the four meta args: <id>, <numNopBytes>, <target>, <numArgs>
   // Intrinsics include all meta-operands up to but not including CC.
   unsigned NumMetaOpers = PatchPointOpers::CCPos;
-  assert(CS.arg_size() >= NumMetaOpers + NumArgs &&
+  assert(CB.arg_size() >= NumMetaOpers + NumArgs &&
          "Not enough arguments provided to the patchpoint intrinsic");
 
   // For AnyRegCC the arguments are lowered later on manually.
   unsigned NumCallArgs = IsAnyRegCC ? 0 : NumArgs;
   Type *ReturnTy =
-    IsAnyRegCC ? Type::getVoidTy(*DAG.getContext()) : CS->getType();
+      IsAnyRegCC ? Type::getVoidTy(*DAG.getContext()) : CB.getType();
 
   TargetLowering::CallLoweringInfo CLI(DAG);
-  populateCallLoweringInfo(CLI, cast<CallBase>(CS.getInstruction()),
-                           NumMetaOpers, NumCallArgs, Callee, ReturnTy, true);
+  populateCallLoweringInfo(CLI, &CB, NumMetaOpers, NumCallArgs, Callee,
+                           ReturnTy, true);
   std::pair<SDValue, SDValue> Result = lowerInvokable(CLI, EHPadBB);
 
   SDNode *CallEnd = Result.second.getNode();
@@ -8771,10 +8768,10 @@ void SelectionDAGBuilder::visitPatchpoint(ImmutableCallSite CS,
   SmallVector<SDValue, 8> Ops;
 
   // Add the <id> and <numBytes> constants.
-  SDValue IDVal = getValue(CS->getOperand(PatchPointOpers::IDPos));
+  SDValue IDVal = getValue(CB.getArgOperand(PatchPointOpers::IDPos));
   Ops.push_back(DAG.getTargetConstant(
                   cast<ConstantSDNode>(IDVal)->getZExtValue(), dl, MVT::i64));
-  SDValue NBytesVal = getValue(CS->getOperand(PatchPointOpers::NBytesPos));
+  SDValue NBytesVal = getValue(CB.getArgOperand(PatchPointOpers::NBytesPos));
   Ops.push_back(DAG.getTargetConstant(
                   cast<ConstantSDNode>(NBytesVal)->getZExtValue(), dl,
                   MVT::i32));
@@ -8796,14 +8793,14 @@ void SelectionDAGBuilder::visitPatchpoint(ImmutableCallSite CS,
   // place these in any free register.
   if (IsAnyRegCC)
     for (unsigned i = NumMetaOpers, e = NumMetaOpers + NumArgs; i != e; ++i)
-      Ops.push_back(getValue(CS.getArgument(i)));
+      Ops.push_back(getValue(CB.getArgOperand(i)));
 
   // Push the arguments from the call instruction up to the register mask.
   SDNode::op_iterator e = HasGlue ? Call->op_end()-2 : Call->op_end()-1;
   Ops.append(Call->op_begin() + 2, e);
 
   // Push live variables for the stack map.
-  addStackMapLiveVars(CS, NumMetaOpers + NumArgs, dl, Ops, *this);
+  addStackMapLiveVars(CB, NumMetaOpers + NumArgs, dl, Ops, *this);
 
   // Push the register mask info.
   if (HasGlue)
@@ -8824,7 +8821,7 @@ void SelectionDAGBuilder::visitPatchpoint(ImmutableCallSite CS,
     // Create the return types based on the intrinsic definition
     const TargetLowering &TLI = DAG.getTargetLoweringInfo();
     SmallVector<EVT, 3> ValueVTs;
-    ComputeValueVTs(TLI, DAG.getDataLayout(), CS->getType(), ValueVTs);
+    ComputeValueVTs(TLI, DAG.getDataLayout(), CB.getType(), ValueVTs);
     assert(ValueVTs.size() == 1 && "Expected only one return value type.");
 
     // There is always a chain and a glue type at the end
@@ -8841,9 +8838,9 @@ void SelectionDAGBuilder::visitPatchpoint(ImmutableCallSite CS,
   // Update the NodeMap.
   if (HasDef) {
     if (IsAnyRegCC)
-      setValue(CS.getInstruction(), SDValue(MN, 0));
+      setValue(&CB, SDValue(MN, 0));
     else
-      setValue(CS.getInstruction(), Result.first);
+      setValue(&CB, Result.first);
   }
 
   // Fixup the consumers of the intrinsic. The chain and glue may be used in the
@@ -9197,8 +9194,8 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
           Flags.setReturned();
       }
 
-      getCopyToParts(CLI.DAG, CLI.DL, Op, &Parts[0], NumParts, PartVT,
-                     CLI.CS.getInstruction(), CLI.CallConv, ExtendKind);
+      getCopyToParts(CLI.DAG, CLI.DL, Op, &Parts[0], NumParts, PartVT, CLI.CB,
+                     CLI.CallConv, ExtendKind);
 
       for (unsigned j = 0; j != NumParts; ++j) {
         // if it isn't first piece, alignment must be 1
