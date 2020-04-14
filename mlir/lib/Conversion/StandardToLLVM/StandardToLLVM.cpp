@@ -23,7 +23,6 @@
 #include "mlir/IR/Module.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Support/Functional.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
@@ -1803,10 +1802,10 @@ struct RsqrtOpLowering : public ConvertOpToLLVMPattern<RsqrtOp> {
         op, operands, typeConverter,
         [&](LLVM::LLVMType llvmVectorTy, ValueRange operands) {
           auto splatAttr = SplatElementsAttr::get(
-              mlir::VectorType::get({(unsigned)cast<llvm::VectorType>(
-                                         llvmVectorTy.getUnderlyingType())
-                                         ->getNumElements()},
-                                    floatType),
+              mlir::VectorType::get(
+                  {cast<llvm::VectorType>(llvmVectorTy.getUnderlyingType())
+                       ->getNumElements()},
+                  floatType),
               floatOne);
           auto one =
               rewriter.create<LLVM::ConstantOp>(loc, llvmVectorTy, splatAttr);
