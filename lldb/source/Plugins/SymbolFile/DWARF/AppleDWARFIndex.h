@@ -28,7 +28,7 @@ public:
       std::unique_ptr<DWARFMappedHash::MemoryTable> apple_namespaces,
       std::unique_ptr<DWARFMappedHash::MemoryTable> apple_types,
       std::unique_ptr<DWARFMappedHash::MemoryTable> apple_objc)
-      : DWARFIndex(*dwarf.GetObjectFile()->GetModule()), m_dwarf(dwarf),
+      : DWARFIndex(*dwarf.GetObjectFile()->GetModule()),
         m_apple_names_up(std::move(apple_names)),
         m_apple_namespaces_up(std::move(apple_namespaces)),
         m_apple_types_up(std::move(apple_types)),
@@ -81,7 +81,6 @@ public:
   void Dump(Stream &s) override;
 
 private:
-  SymbolFileDWARF &m_dwarf;
   std::unique_ptr<DWARFMappedHash::MemoryTable> m_apple_names_up;
   std::unique_ptr<DWARFMappedHash::MemoryTable> m_apple_namespaces_up;
   std::unique_ptr<DWARFMappedHash::MemoryTable> m_apple_types_up;

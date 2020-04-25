@@ -102,6 +102,6 @@ void DWARFIndex::ReportInvalidDIEUID(user_id_t uid,
                                      llvm::StringRef name) const {
   m_module.ReportErrorIfModifyDetected(
       "the DWARF debug information has been modified (accelerator table had "
-      "bad user_id_t 0x%8.8x for '%s')\n",
+      "bad user_id_t 0x%8.8lx for '%s')\n",
       uid, name.str().c_str());
 }
