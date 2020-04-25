@@ -38,7 +38,8 @@ public:
   lldb_private::Type *ResolveType(DWARFCompileUnit *main_unit) const;
 
   // Resolve a type by UID using this DIE's DWARF file
-  lldb_private::Type *ResolveTypeUID(DWARFCompileUnit *main_unit, const DWARFDIE &die) const;
+  lldb_private::Type *ResolveTypeUID(DWARFCompileUnit *main_unit,
+                                     const DWARFDIE &die) const;
 
   // Functions for obtaining DIE relations and references
 
@@ -91,11 +92,14 @@ public:
 
   DWARFCompileUnit *MainDWARFCompileUnit(DWARFCompileUnit *main_unit) const;
   DWARFUnit *MainDWARFUnit(DWARFCompileUnit *main_unit) const;
-  std::pair<DWARFCompileUnit *, DWARFDIE> MainCUtoDWARFDIEPair(DWARFCompileUnit *main_unit) const;
-  std::pair<DWARFCompileUnit *, DWARFDebugInfoEntry *> MainCUtoDIEPair(DWARFCompileUnit *main_unit) const;
+  std::pair<DWARFCompileUnit *, DWARFDIE>
+  MainCUtoDWARFDIEPair(DWARFCompileUnit *main_unit) const;
+  std::pair<DWARFCompileUnit *, DWARFDebugInfoEntry *>
+  MainCUtoDIEPair(DWARFCompileUnit *main_unit) const;
 
 protected:
-  DWARFCompileUnit *MainDWARFCompileUnitOrNull(DWARFCompileUnit *main_unit) const;
+  DWARFCompileUnit *
+  MainDWARFCompileUnitOrNull(DWARFCompileUnit *main_unit) const;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDIE_H

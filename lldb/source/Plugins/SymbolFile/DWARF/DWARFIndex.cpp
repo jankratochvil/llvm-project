@@ -8,9 +8,9 @@
 
 #include "Plugins/SymbolFile/DWARF/DWARFIndex.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
+#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDIE.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
-#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 
 #include "lldb/Core/Module.h"
 
@@ -20,9 +20,11 @@ using namespace lldb;
 DWARFIndex::~DWARFIndex() = default;
 
 bool DWARFIndex::ProcessFunctionDIE(
-    llvm::StringRef name, DWARFCompileUnit *main_unit, DIERef ref, SymbolFileDWARF &dwarf,
-    const CompilerDeclContext &parent_decl_ctx, uint32_t name_type_mask,
-    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) {
+    llvm::StringRef name, DWARFCompileUnit *main_unit, DIERef ref,
+    SymbolFileDWARF &dwarf, const CompilerDeclContext &parent_decl_ctx,
+    uint32_t name_type_mask,
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+        callback) {
   DWARFDIE die = dwarf.GetDIE(ref);
   if (!die) {
     ReportInvalidDIERef(ref, name);
@@ -66,7 +68,9 @@ bool DWARFIndex::ProcessFunctionDIE(
 }
 
 DWARFIndex::DIECallbackImpl::DIECallbackImpl(
-    const DWARFIndex &index, llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback,
+    const DWARFIndex &index,
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+        callback,
     llvm::StringRef name)
     : m_index(index),
       m_dwarf(*llvm::cast<SymbolFileDWARF>(index.m_module.GetSymbolFile())),
@@ -94,7 +98,8 @@ void DWARFIndex::ReportInvalidDIERef(DIERef ref, llvm::StringRef name) const {
       ref.die_offset(), name.str().c_str());
 }
 
-void DWARFIndex::ReportInvalidDIEUID(user_id_t uid, llvm::StringRef name) const {
+void DWARFIndex::ReportInvalidDIEUID(user_id_t uid,
+                                     llvm::StringRef name) const {
   m_module.ReportErrorIfModifyDetected(
       "the DWARF debug information has been modified (accelerator table had "
       "bad user_id_t 0x%8.8x for '%s')\n",

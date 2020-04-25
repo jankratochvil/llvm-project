@@ -55,9 +55,8 @@ public:
   }
 
   bool operator==(DIERef other) const {
-    if (m_dwo_num_valid != other.m_dwo_num_valid
-      || m_section != other.m_section
-      || m_die_offset != other.m_die_offset)
+    if (m_dwo_num_valid != other.m_dwo_num_valid ||
+        m_section != other.m_section || m_die_offset != other.m_die_offset)
       return false;
     if (m_dwo_num_valid && m_dwo_num != other.m_dwo_num)
       return false;

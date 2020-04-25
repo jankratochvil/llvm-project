@@ -37,14 +37,12 @@ public:
   bool Find(const lldb_private::RegularExpression &regex,
             llvm::function_ref<bool(lldb::user_id_t uid)> callback) const;
 
-  void
-  FindAllEntriesForUnit(const DWARFUnit &unit,
-                        llvm::function_ref<bool(lldb::user_id_t uid)> callback) const;
+  void FindAllEntriesForUnit(
+      const DWARFUnit &unit,
+      llvm::function_ref<bool(lldb::user_id_t uid)> callback) const;
 
-  void
-  ForEach(std::function<bool(lldb_private::ConstString name,
-                             lldb::user_id_t uid)> const
-              &callback) const;
+  void ForEach(std::function<bool(lldb_private::ConstString name,
+                                  lldb::user_id_t uid)> const &callback) const;
 
 protected:
   lldb_private::UniqueCStringMap<lldb::user_id_t> m_map;

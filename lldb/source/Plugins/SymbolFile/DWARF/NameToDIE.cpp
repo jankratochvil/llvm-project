@@ -50,7 +50,8 @@ void NameToDIE::FindAllEntriesForUnit(
   const uint32_t size = m_map.GetSize();
   for (uint32_t i = 0; i < size; ++i) {
     user_id_t uid = m_map.GetValueAtIndexUnchecked(i);
-    llvm::Optional<DIERef> die_ref_opt = unit.GetSymbolFileDWARF().GetDIERef(uid);
+    llvm::Optional<DIERef> die_ref_opt =
+        unit.GetSymbolFileDWARF().GetDIERef(uid);
     if (!die_ref_opt)
       continue;
     DIERef die_ref = *die_ref_opt;
@@ -77,13 +78,14 @@ void NameToDIE::Dump(Stream *s) {
       OS << "/DWZCOMMON";
     else if (uid & (1ULL << 62))
       OS << "/DWZ";
-    OS << "/" << llvm::format_hex_no_prefix(uid & 0xffffffff, 8) << " \"" << m_map.GetCStringAtIndexUnchecked(i).GetStringRef() << "\"\n";
+    OS << "/" << llvm::format_hex_no_prefix(uid & 0xffffffff, 8) << " \""
+       << m_map.GetCStringAtIndexUnchecked(i).GetStringRef() << "\"\n";
   }
 }
 
 void NameToDIE::ForEach(
-    std::function<bool(ConstString name, user_id_t uid)> const
-        &callback) const {
+    std::function<bool(ConstString name, user_id_t uid)> const &callback)
+    const {
   const uint32_t size = m_map.GetSize();
   for (uint32_t i = 0; i < size; ++i) {
     if (!callback(m_map.GetCStringAtIndexUnchecked(i),

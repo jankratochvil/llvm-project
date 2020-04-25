@@ -56,7 +56,9 @@ public:
 
   llvm::Expected<DWARFDebugAranges &> GetCompileUnitAranges();
 
-  lldb::user_id_t GetUID(DWARFCompileUnit *main_unit, DIERef ref) const { return m_dwarf.GetUID(main_unit, ref); }
+  lldb::user_id_t GetUID(DWARFCompileUnit *main_unit, DIERef ref) const {
+    return m_dwarf.GetUID(main_unit, ref);
+  }
 
 protected:
   typedef std::vector<DWARFUnitSP> UnitColl;

@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
-#include "Plugins/SymbolFile/DWARF/DWARFDIE.h"
 #include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
+#include "Plugins/SymbolFile/DWARF/DWARFDIE.h"
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"

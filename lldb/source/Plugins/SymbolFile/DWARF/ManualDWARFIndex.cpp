@@ -8,11 +8,11 @@
 
 #include "Plugins/SymbolFile/DWARF/ManualDWARFIndex.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
+#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDwo.h"
-#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/Stream.h"
@@ -141,7 +141,8 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
   }
 }
 
-void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit, DWARFCompileUnit *main_unit,
+void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
+                                     DWARFCompileUnit *main_unit,
                                      const LanguageType cu_language,
                                      IndexSet &set) {
   for (const DWARFDebugInfoEntry &die : unit.dies()) {
@@ -331,7 +332,9 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit, DWARFCompileUnit *main_uni
 }
 
 void ManualDWARFIndex::GetGlobalVariables(
-    ConstString basename, llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) {
+    ConstString basename,
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+        callback) {
   Index();
   m_set.globals.Find(basename,
                      DIEUIDCallback(callback, basename.GetStringRef()));
@@ -339,19 +342,24 @@ void ManualDWARFIndex::GetGlobalVariables(
 
 void ManualDWARFIndex::GetGlobalVariables(
     const RegularExpression &regex,
-    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) {
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+        callback) {
   Index();
   m_set.globals.Find(regex, DIEUIDCallback(callback, regex.GetText()));
 }
 
 void ManualDWARFIndex::GetGlobalVariables(
-    const DWARFUnit &unit, llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) {
+    const DWARFUnit &unit,
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+        callback) {
   Index();
   m_set.globals.FindAllEntriesForUnit(unit, DIEUIDCallback(callback));
 }
 
 void ManualDWARFIndex::GetObjCMethods(
-    ConstString class_name, llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) {
+    ConstString class_name,
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+        callback) {
   Index();
   m_set.objc_class_selectors.Find(
       class_name, DIEUIDCallback(callback, class_name.GetStringRef()));
@@ -359,21 +367,25 @@ void ManualDWARFIndex::GetObjCMethods(
 
 void ManualDWARFIndex::GetCompleteObjCClass(
     ConstString class_name, bool must_be_implementation,
-    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) {
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+        callback) {
   Index();
   m_set.types.Find(class_name,
                    DIEUIDCallback(callback, class_name.GetStringRef()));
 }
 
 void ManualDWARFIndex::GetTypes(
-    ConstString name, llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) {
+    ConstString name,
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+        callback) {
   Index();
   m_set.types.Find(name, DIEUIDCallback(callback, name.GetStringRef()));
 }
 
 void ManualDWARFIndex::GetTypes(
     const DWARFDeclContext &context,
-    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) {
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+        callback) {
   Index();
   auto name = context[0].name;
   m_set.types.Find(ConstString(name),
@@ -381,7 +393,9 @@ void ManualDWARFIndex::GetTypes(
 }
 
 void ManualDWARFIndex::GetNamespaces(
-    ConstString name, llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) {
+    ConstString name,
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+        callback) {
   Index();
   m_set.namespaces.Find(name, DIEUIDCallback(callback, name.GetStringRef()));
 }
@@ -389,15 +403,16 @@ void ManualDWARFIndex::GetNamespaces(
 void ManualDWARFIndex::GetFunctions(
     ConstString name, SymbolFileDWARF &dwarf,
     const CompilerDeclContext &parent_decl_ctx, uint32_t name_type_mask,
-    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) {
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+        callback) {
   Index();
 
   if (name_type_mask & eFunctionNameTypeFull) {
     if (!m_set.function_fullnames.Find(
             name, DIEUIDCallback(
                       [&](DWARFCompileUnit *main_unit, DWARFDIE die) {
-                        if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, main_unit,
-                                                               die))
+                        if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx,
+                                                               main_unit, die))
                           return true;
                         return callback(main_unit, die);
                       },
@@ -408,8 +423,8 @@ void ManualDWARFIndex::GetFunctions(
     if (!m_set.function_basenames.Find(
             name, DIEUIDCallback(
                       [&](DWARFCompileUnit *main_unit, DWARFDIE die) {
-                        if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, main_unit,
-                                                               die))
+                        if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx,
+                                                               main_unit, die))
                           return true;
                         return callback(main_unit, die);
                       },
@@ -433,7 +448,8 @@ void ManualDWARFIndex::GetFunctions(
 
 void ManualDWARFIndex::GetFunctions(
     const RegularExpression &regex,
-    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) {
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+        callback) {
   Index();
 
   if (!m_set.function_basenames.Find(regex,

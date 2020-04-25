@@ -97,7 +97,8 @@ SymbolFileDWARFDwo::GetForwardDeclClangTypeToDie() {
 
 void SymbolFileDWARFDwo::GetObjCMethods(
     lldb_private::ConstString class_name,
-    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) {
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+        callback) {
   GetBaseSymbolFile().GetObjCMethods(class_name, callback);
 }
 

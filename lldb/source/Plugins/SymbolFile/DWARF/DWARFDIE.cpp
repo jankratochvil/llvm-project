@@ -9,10 +9,10 @@
 #include "DWARFDIE.h"
 
 #include "DWARFASTParser.h"
+#include "DWARFCompileUnit.h"
 #include "DWARFDebugInfo.h"
 #include "DWARFDebugInfoEntry.h"
 #include "DWARFDeclContext.h"
-#include "DWARFCompileUnit.h"
 #include "SymbolFileDWARFDwo.h"
 
 using namespace lldb_private;
@@ -348,12 +348,14 @@ void DWARFDIE::AppendTypeName(Stream &s) const {
 
 lldb_private::Type *DWARFDIE::ResolveType(DWARFCompileUnit *main_unit) const {
   if (IsValid())
-    return MainDWARFUnit(main_unit)->GetSymbolFileDWARF().ResolveType(main_unit, *this, true);
+    return MainDWARFUnit(main_unit)->GetSymbolFileDWARF().ResolveType(
+        main_unit, *this, true);
   else
     return nullptr;
 }
 
-lldb_private::Type *DWARFDIE::ResolveTypeUID(DWARFCompileUnit *main_unit, const DWARFDIE &die) const {
+lldb_private::Type *DWARFDIE::ResolveTypeUID(DWARFCompileUnit *main_unit,
+                                             const DWARFDIE &die) const {
   if (SymbolFileDWARF *dwarf = &MainDWARFUnit(main_unit)->GetSymbolFileDWARF())
     return dwarf->ResolveTypeUID(main_unit, die, true);
   return nullptr;
@@ -450,7 +452,8 @@ bool DWARFDIE::GetDIENamesAndRanges(
     return false;
 }
 
-DWARFCompileUnit *DWARFDIE::MainDWARFCompileUnit(DWARFCompileUnit *main_unit) const {
+DWARFCompileUnit *
+DWARFDIE::MainDWARFCompileUnit(DWARFCompileUnit *main_unit) const {
   if (llvm::isa<DWARFTypeUnit>(GetCU()))
     return nullptr;
   if (!main_unit)
@@ -471,7 +474,8 @@ DWARFUnit *DWARFDIE::MainDWARFUnit(DWARFCompileUnit *main_unit) const {
 }
 
 // FIXME: Is it possible to unify it with MainDWARFCompileUnit()?
-DWARFCompileUnit *DWARFDIE::MainDWARFCompileUnitOrNull(DWARFCompileUnit *main_unit) const {
+DWARFCompileUnit *
+DWARFDIE::MainDWARFCompileUnitOrNull(DWARFCompileUnit *main_unit) const {
   if (GetCU()->GetDwoSymbolFile())
     return nullptr;
   if (llvm::isa<SymbolFileDWARFDwo>(&GetCU()->GetSymbolFileDWARF()))
@@ -479,10 +483,12 @@ DWARFCompileUnit *DWARFDIE::MainDWARFCompileUnitOrNull(DWARFCompileUnit *main_un
   return MainDWARFCompileUnit(main_unit);
 }
 
-std::pair<DWARFCompileUnit *, DWARFDIE> DWARFDIE::MainCUtoDWARFDIEPair(DWARFCompileUnit *main_unit) const {
+std::pair<DWARFCompileUnit *, DWARFDIE>
+DWARFDIE::MainCUtoDWARFDIEPair(DWARFCompileUnit *main_unit) const {
   return std::make_pair(MainDWARFCompileUnitOrNull(main_unit), *this);
 }
 
-std::pair<DWARFCompileUnit *, DWARFDebugInfoEntry *> DWARFDIE::MainCUtoDIEPair(DWARFCompileUnit *main_unit) const {
+std::pair<DWARFCompileUnit *, DWARFDebugInfoEntry *>
+DWARFDIE::MainCUtoDIEPair(DWARFCompileUnit *main_unit) const {
   return std::make_pair(MainDWARFCompileUnitOrNull(main_unit), GetDIE());
 }
