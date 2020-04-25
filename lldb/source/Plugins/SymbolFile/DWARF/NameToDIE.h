@@ -31,14 +31,15 @@ public:
 
   void Finalize();
 
-  size_t Find(lldb_private::ConstString name,
-              std::vector<lldb::user_id_t> &info_array) const;
+  bool Find(lldb_private::ConstString name,
+            llvm::function_ref<bool(lldb::user_id_t uid)> callback) const;
 
-  size_t Find(const lldb_private::RegularExpression &regex,
-              std::vector<lldb::user_id_t> &info_array) const;
+  bool Find(const lldb_private::RegularExpression &regex,
+            llvm::function_ref<bool(lldb::user_id_t uid)> callback) const;
 
-  size_t FindAllEntriesForUnit(const DWARFUnit &unit,
-                               std::vector<lldb::user_id_t> &info_array) const;
+  void
+  FindAllEntriesForUnit(const DWARFUnit &unit,
+                        llvm::function_ref<bool(lldb::user_id_t uid)> callback) const;
 
   void
   ForEach(std::function<bool(lldb_private::ConstString name,

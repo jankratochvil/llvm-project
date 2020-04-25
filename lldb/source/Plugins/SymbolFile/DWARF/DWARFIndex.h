@@ -27,26 +27,38 @@ public:
   /// Finds global variables with the given base name. Any additional filtering
   /// (e.g., to only retrieve variables from a given context) should be done by
   /// the consumer.
-  virtual void GetGlobalVariables(ConstString basename, std::vector<lldb::user_id_t> &offsets) = 0;
+  virtual void
+  GetGlobalVariables(ConstString basename,
+                     llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) = 0;
 
-  virtual void GetGlobalVariables(const RegularExpression &regex,
-                                  std::vector<lldb::user_id_t> &offsets) = 0;
-  virtual void GetGlobalVariables(const DWARFUnit &cu, std::vector<lldb::user_id_t> &offsets) = 0;
-  virtual void GetObjCMethods(ConstString class_name, std::vector<lldb::user_id_t> &offsets) = 0;
-  virtual void GetCompleteObjCClass(ConstString class_name,
-                                    bool must_be_implementation,
-                                    std::vector<lldb::user_id_t> &offsets) = 0;
-  virtual void GetTypes(ConstString name, std::vector<lldb::user_id_t> &offsets) = 0;
-  virtual void GetTypes(const DWARFDeclContext &context, std::vector<lldb::user_id_t> &offsets) = 0;
-  virtual void GetNamespaces(ConstString name, std::vector<lldb::user_id_t> &offsets) = 0;
-  virtual void GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
-                            const CompilerDeclContext &parent_decl_ctx,
-                            uint32_t name_type_mask,
-                            std::vector<std::pair<DWARFCompileUnit *, DWARFDIE>> &dies) = 0;
-  virtual void GetFunctions(const RegularExpression &regex,
-                            std::vector<lldb::user_id_t> &offsets) = 0;
+  virtual void
+  GetGlobalVariables(const RegularExpression &regex,
+                     llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) = 0;
+  virtual void
+  GetGlobalVariables(const DWARFUnit &cu,
+                     llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) = 0;
+  virtual void
+  GetObjCMethods(ConstString class_name,
+                 llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) = 0;
+  virtual void
+  GetCompleteObjCClass(ConstString class_name, bool must_be_implementation,
+                       llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) = 0;
+  virtual void GetTypes(ConstString name,
+                        llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) = 0;
+  virtual void GetTypes(const DWARFDeclContext &context,
+                        llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) = 0;
+  virtual void
+  GetNamespaces(ConstString name,
+                llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) = 0;
+  virtual void
+  GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
+               const CompilerDeclContext &parent_decl_ctx,
+               uint32_t name_type_mask,
+               llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) = 0;
+  virtual void
+  GetFunctions(const RegularExpression &regex,
+               llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) = 0;
 
-  virtual void ReportInvalidDIEID(lldb::user_id_t uid, llvm::StringRef name) = 0;
   virtual void Dump(Stream &s) = 0;
 
 protected:
@@ -56,10 +68,47 @@ protected:
   /// the function given by "ref" matches search criteria given by
   /// "parent_decl_ctx" and "name_type_mask", it is inserted into the "dies"
   /// vector.
-  void ProcessFunctionDIE(llvm::StringRef name, lldb::user_id_t uid,
+  bool ProcessFunctionDIE(llvm::StringRef name, DWARFCompileUnit *main_unit, DIERef ref,
                           SymbolFileDWARF &dwarf,
                           const CompilerDeclContext &parent_decl_ctx,
-                          uint32_t name_type_mask, std::vector<std::pair<DWARFCompileUnit *, DWARFDIE>> &dies);
+                          uint32_t name_type_mask,
+                          llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback);
+
+  class DIECallbackImpl {
+  public:
+    DIECallbackImpl(const DWARFIndex &index,
+                       llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback,
+                       llvm::StringRef name);
+
+  protected:
+    const DWARFIndex &m_index;
+    SymbolFileDWARF &m_dwarf;
+    const llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> m_callback;
+    const llvm::StringRef m_name;
+  };
+  class DIERefCallbackImpl : protected DIECallbackImpl {
+  public:
+    using DIECallbackImpl::DIECallbackImpl;
+    bool operator()(DIERef ref) const;
+  };
+  class DIEUIDCallbackImpl : protected DIECallbackImpl {
+  public:
+    using DIECallbackImpl::DIECallbackImpl;
+    bool operator()(lldb::user_id_t uid) const;
+  };
+  DIERefCallbackImpl
+  DIERefCallback(llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback,
+                 llvm::StringRef name = {}) const {
+    return DIERefCallbackImpl(*this, callback, name);
+  }
+  DIEUIDCallbackImpl
+  DIEUIDCallback(llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback,
+                 llvm::StringRef name = {}) const {
+    return DIEUIDCallbackImpl(*this, callback, name);
+  }
+
+  void ReportInvalidDIERef(DIERef ref, llvm::StringRef name) const;
+  void ReportInvalidDIEUID(lldb::user_id_t, llvm::StringRef name) const;
 };
 } // namespace lldb_private
 

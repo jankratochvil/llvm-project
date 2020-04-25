@@ -25,24 +25,34 @@ public:
 
   void Preload() override { m_fallback.Preload(); }
 
-  void GetGlobalVariables(ConstString basename, std::vector<lldb::user_id_t> &offsets) override;
-  void GetGlobalVariables(const RegularExpression &regex,
-                          std::vector<lldb::user_id_t> &offsets) override;
-  void GetGlobalVariables(const DWARFUnit &cu, std::vector<lldb::user_id_t> &offsets) override;
-  void GetObjCMethods(ConstString class_name, std::vector<lldb::user_id_t> &offsets) override {}
-  void GetCompleteObjCClass(ConstString class_name, bool must_be_implementation,
-                            std::vector<lldb::user_id_t> &offsets) override;
-  void GetTypes(ConstString name, std::vector<lldb::user_id_t> &offsets) override;
-  void GetTypes(const DWARFDeclContext &context, std::vector<lldb::user_id_t> &offsets) override;
-  void GetNamespaces(ConstString name, std::vector<lldb::user_id_t> &offsets) override;
+  void
+  GetGlobalVariables(ConstString basename,
+                     llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) override;
+  void
+  GetGlobalVariables(const RegularExpression &regex,
+                     llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) override;
+  void
+  GetGlobalVariables(const DWARFUnit &cu,
+                     llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) override;
+  void
+  GetObjCMethods(ConstString class_name,
+                 llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) override {}
+  void GetCompleteObjCClass(
+      ConstString class_name, bool must_be_implementation,
+      llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) override;
+  void GetTypes(ConstString name,
+                llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) override;
+  void GetTypes(const DWARFDeclContext &context,
+                llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) override;
+  void GetNamespaces(ConstString name,
+                     llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) override;
   void GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
                     const CompilerDeclContext &parent_decl_ctx,
                     uint32_t name_type_mask,
-                    std::vector<std::pair<DWARFCompileUnit *, DWARFDIE>> &dies) override;
+                    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) override;
   void GetFunctions(const RegularExpression &regex,
-                    std::vector<lldb::user_id_t> &offsets) override;
+                    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) override;
 
-  void ReportInvalidDIEID(lldb::user_id_t uid, llvm::StringRef name) override {}
   void Dump(Stream &s) override;
 
 private:
@@ -68,7 +78,9 @@ private:
   ManualDWARFIndex m_fallback;
 
   llvm::Optional<DIERef> ToDIERef(const DebugNames::Entry &entry);
-  void Append(const DebugNames::Entry &entry, std::vector<lldb::user_id_t> &offsets);
+  bool ProcessEntry(const DebugNames::Entry &entry,
+                    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback,
+                    llvm::StringRef name);
 
   static void MaybeLogLookupError(llvm::Error error,
                                   const DebugNames::NameIndex &ni,

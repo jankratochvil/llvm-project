@@ -2029,17 +2029,10 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
     if (class_language == eLanguageTypeObjC) {
       ConstString class_name(clang_type.GetTypeName());
       if (class_name) {
-        std::vector<lldb::user_id_t> method_die_offsets;
-        dwarf->GetObjCMethodDIEOffsets(class_name, method_die_offsets);
-
-        const size_t num_matches = method_die_offsets.size();
-        for (size_t i = 0; i < num_matches; ++i) {
-          user_id_t uid = method_die_offsets[i];
-          DWARFDIE method_die = dwarf->GetDIEUnlocked(uid);
-
-          if (method_die)
-            method_die.ResolveType(main_unit);
-        }
+        dwarf->GetObjCMethods(class_name, [&](DWARFCompileUnit *main_unit, DWARFDIE method_die) {
+          method_die.ResolveType(main_unit);
+          return true;
+        });
 
         for (DelayedPropertyList::iterator pi = delayed_properties.begin(),
                                            pe = delayed_properties.end();

@@ -10,6 +10,7 @@
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDwo.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
 
@@ -57,11 +58,19 @@ DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) {
   return llvm::None;
 }
 
-void DebugNamesDWARFIndex::Append(const DebugNames::Entry &entry,
-                                  std::vector<lldb::user_id_t> &offsets) {
-  if (llvm::Optional<DIERef> ref = ToDIERef(entry))
-    // FIXME: DWZ
-    offsets.push_back(m_debug_info.GetUID(nullptr/*main_unit*/,*ref));
+bool DebugNamesDWARFIndex::ProcessEntry(
+    const DebugNames::Entry &entry,
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback, llvm::StringRef name) {
+  llvm::Optional<DIERef> ref = ToDIERef(entry);
+  if (!ref)
+    return true;
+  SymbolFileDWARF &dwarf =
+      *llvm::cast<SymbolFileDWARF>(m_module.GetSymbolFile());
+  DWARFDIE die = dwarf.GetDIE(*ref);
+  if (!die)
+    return true;
+  // FIXME: DWZ
+  return callback(nullptr /* main_unit */, die);
 }
 
 void DebugNamesDWARFIndex::MaybeLogLookupError(llvm::Error error,
@@ -75,23 +84,23 @@ void DebugNamesDWARFIndex::MaybeLogLookupError(llvm::Error error,
       ni.getUnitOffset(), name);
 }
 
-void DebugNamesDWARFIndex::GetGlobalVariables(ConstString basename,
-                                              std::vector<lldb::user_id_t> &offsets) {
-  m_fallback.GetGlobalVariables(basename, offsets);
-
+void DebugNamesDWARFIndex::GetGlobalVariables(
+    ConstString basename, llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) {
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(basename.GetStringRef())) {
     if (entry.tag() != DW_TAG_variable)
       continue;
 
-    Append(entry, offsets);
+    if (!ProcessEntry(entry, callback, basename.GetStringRef()))
+      return;
   }
+
+  m_fallback.GetGlobalVariables(basename, callback);
 }
 
-void DebugNamesDWARFIndex::GetGlobalVariables(const RegularExpression &regex,
-                                              std::vector<lldb::user_id_t> &offsets) {
-  m_fallback.GetGlobalVariables(regex, offsets);
-
+void DebugNamesDWARFIndex::GetGlobalVariables(
+    const RegularExpression &regex,
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) {
   for (const DebugNames::NameIndex &ni: *m_debug_names_up) {
     for (DebugNames::NameTableEntry nte: ni) {
       if (!regex.Execute(nte.getString()))
@@ -103,17 +112,19 @@ void DebugNamesDWARFIndex::GetGlobalVariables(const RegularExpression &regex,
         if (entry_or->tag() != DW_TAG_variable)
           continue;
 
-        Append(*entry_or, offsets);
+        if (!ProcessEntry(*entry_or, callback,
+                          llvm::StringRef(nte.getString())))
+          return;
       }
       MaybeLogLookupError(entry_or.takeError(), ni, nte.getString());
     }
   }
+
+  m_fallback.GetGlobalVariables(regex, callback);
 }
 
-void DebugNamesDWARFIndex::GetGlobalVariables(const DWARFUnit &cu,
-                                              std::vector<lldb::user_id_t> &offsets) {
-  m_fallback.GetGlobalVariables(cu, offsets);
-
+void DebugNamesDWARFIndex::GetGlobalVariables(
+    const DWARFUnit &cu, llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) {
   uint64_t cu_offset = cu.GetOffset();
   for (const DebugNames::NameIndex &ni: *m_debug_names_up) {
     for (DebugNames::NameTableEntry nte: ni) {
@@ -125,18 +136,20 @@ void DebugNamesDWARFIndex::GetGlobalVariables(const DWARFUnit &cu,
         if (entry_or->getCUOffset() != cu_offset)
           continue;
 
-        Append(*entry_or, offsets);
+        if (!ProcessEntry(*entry_or, callback,
+                          llvm::StringRef(nte.getString())))
+          return;
       }
       MaybeLogLookupError(entry_or.takeError(), ni, nte.getString());
     }
   }
+
+  m_fallback.GetGlobalVariables(cu, callback);
 }
 
-void DebugNamesDWARFIndex::GetCompleteObjCClass(ConstString class_name,
-                                                bool must_be_implementation,
-                                                std::vector<lldb::user_id_t> &offsets) {
-  m_fallback.GetCompleteObjCClass(class_name, must_be_implementation, offsets);
-
+void DebugNamesDWARFIndex::GetCompleteObjCClass(
+    ConstString class_name, bool must_be_implementation,
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) {
   // Keep a list of incomplete types as fallback for when we don't find the
   // complete type.
   // FIXME: DWZ
@@ -158,88 +171,104 @@ void DebugNamesDWARFIndex::GetCompleteObjCClass(ConstString class_name,
       continue;
     }
 
-    // FIXME: We should return DWARFDIEs so we don't have to resolve it twice.
     DWARFDIE die = m_debug_info.GetDIE(*ref);
-    if (!die)
+    if (!die) {
+      ReportInvalidDIERef(*ref, class_name.GetStringRef());
       continue;
+    }
 
     if (die.GetAttributeValueAsUnsigned(DW_AT_APPLE_objc_complete_type, 0)) {
       // If we find the complete version we're done.
       // FIXME: DWZ
-      offsets.push_back(m_debug_info.GetUID(nullptr/*main_unit*/,*ref));
+      callback(nullptr /* main_unit */, die);
       return;
     }
     incomplete_types.push_back(*ref);
   }
 
-  offsets.reserve(offsets.size() + incomplete_types.size());
-  for (const auto ref : incomplete_types)
-    // FIXME: DWZ
-    offsets.push_back(m_debug_info.GetUID(nullptr/*main_unit*/,ref));
+  // FIXME: DWZ
+  auto dierefcallback = DIERefCallback(callback, class_name.GetStringRef());
+  for (DIERef ref : incomplete_types)
+    if (!dierefcallback(ref))
+      return;
+
+  m_fallback.GetCompleteObjCClass(class_name, must_be_implementation, callback);
 }
 
-void DebugNamesDWARFIndex::GetTypes(ConstString name, std::vector<lldb::user_id_t> &offsets) {
-  m_fallback.GetTypes(name, offsets);
-
+void DebugNamesDWARFIndex::GetTypes(
+    ConstString name, llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) {
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(name.GetStringRef())) {
-    if (isType(entry.tag()))
-      Append(entry, offsets);
+    if (isType(entry.tag())) {
+      if (!ProcessEntry(entry, callback, name.GetStringRef()))
+        return;
+    }
   }
+
+  m_fallback.GetTypes(name, callback);
 }
 
-void DebugNamesDWARFIndex::GetTypes(const DWARFDeclContext &context,
-                                    std::vector<lldb::user_id_t> &offsets) {
-  m_fallback.GetTypes(context, offsets);
-
-  for (const DebugNames::Entry &entry :
-       m_debug_names_up->equal_range(context[0].name)) {
-    if (entry.tag() == context[0].tag)
-      Append(entry, offsets);
+void DebugNamesDWARFIndex::GetTypes(
+    const DWARFDeclContext &context,
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) {
+  auto name = context[0].name;
+  for (const DebugNames::Entry &entry : m_debug_names_up->equal_range(name)) {
+    if (entry.tag() == context[0].tag) {
+      if (!ProcessEntry(entry, callback, name))
+        return;
+    }
   }
+
+  m_fallback.GetTypes(context, callback);
 }
 
-void DebugNamesDWARFIndex::GetNamespaces(ConstString name, std::vector<lldb::user_id_t> &offsets) {
-  m_fallback.GetNamespaces(name, offsets);
-
+void DebugNamesDWARFIndex::GetNamespaces(
+    ConstString name, llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) {
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(name.GetStringRef())) {
-    if (entry.tag() == DW_TAG_namespace)
-      Append(entry, offsets);
+    if (entry.tag() == DW_TAG_namespace) {
+      if (!ProcessEntry(entry, callback, name.GetStringRef()))
+        return;
+    }
   }
+
+  m_fallback.GetNamespaces(name, callback);
 }
 
 void DebugNamesDWARFIndex::GetFunctions(
     ConstString name, SymbolFileDWARF &dwarf,
     const CompilerDeclContext &parent_decl_ctx, uint32_t name_type_mask,
-    std::vector<std::pair<DWARFCompileUnit *, DWARFDIE>> &dies) {
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) {
 
-  std::vector<std::pair<DWARFCompileUnit *, DWARFDIE>> v;
-  m_fallback.GetFunctions(name, dwarf, parent_decl_ctx, name_type_mask, v);
-
+  // FIXME: DWZ
+  std::set<DWARFDebugInfoEntry *> seen;
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(name.GetStringRef())) {
     Tag tag = entry.tag();
     if (tag != DW_TAG_subprogram && tag != DW_TAG_inlined_subroutine)
       continue;
 
-    if (llvm::Optional<DIERef> ref = ToDIERef(entry))
+    if (llvm::Optional<DIERef> ref = ToDIERef(entry)) {
       // FIXME: DWZ
-      ProcessFunctionDIE(name.GetStringRef(), dwarf.GetUID(nullptr/*main_unit*/, *ref), dwarf, parent_decl_ctx,
-                         name_type_mask, v);
+      if (!ProcessFunctionDIE(name.GetStringRef(), nullptr /* main_unit */, *ref, dwarf, parent_decl_ctx,
+                              name_type_mask, [&](DWARFCompileUnit *main_unit, DWARFDIE die) {
+                                // FIXME: DWZ
+                                lldbassert(!main_unit);
+                                if (!seen.insert(die.GetDIE()).second)
+                                  return true;
+                                return callback(main_unit, die);
+                              }))
+        return;
+    }
   }
 
-  std::set<std::pair<DWARFCompileUnit *, DWARFDebugInfoEntry *>> seen;
-  for (const auto &diepair : v)
-    if (seen.insert(std::make_pair(diepair.first, diepair.second.GetDIE())).second)
-      // FIXME: DWZ
-      dies.push_back(std::make_pair(diepair.first, diepair.second));
+  m_fallback.GetFunctions(name, dwarf, parent_decl_ctx, name_type_mask,
+                          callback);
 }
 
-void DebugNamesDWARFIndex::GetFunctions(const RegularExpression &regex,
-                                        std::vector<lldb::user_id_t> &offsets) {
-  m_fallback.GetFunctions(regex, offsets);
-
+void DebugNamesDWARFIndex::GetFunctions(
+    const RegularExpression &regex,
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) {
   for (const DebugNames::NameIndex &ni: *m_debug_names_up) {
     for (DebugNames::NameTableEntry nte: ni) {
       if (!regex.Execute(nte.getString()))
@@ -252,11 +281,15 @@ void DebugNamesDWARFIndex::GetFunctions(const RegularExpression &regex,
         if (tag != DW_TAG_subprogram && tag != DW_TAG_inlined_subroutine)
           continue;
 
-        Append(*entry_or, offsets);
+        if (!ProcessEntry(*entry_or, callback,
+                          llvm::StringRef(nte.getString())))
+          return;
       }
       MaybeLogLookupError(entry_or.takeError(), ni, nte.getString());
     }
   }
+
+  m_fallback.GetFunctions(regex, callback);
 }
 
 void DebugNamesDWARFIndex::Dump(Stream &s) {

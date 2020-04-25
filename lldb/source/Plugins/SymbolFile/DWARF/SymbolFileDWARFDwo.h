@@ -31,8 +31,8 @@ public:
 
   DWARFCompileUnit *GetDWOCompileUnitForHash(uint64_t hash);
 
-  size_t GetObjCMethodDIEOffsets(lldb_private::ConstString class_name,
-                                 std::vector<lldb::user_id_t> &method_die_offsets) override;
+  void GetObjCMethods(lldb_private::ConstString class_name,
+                      llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) override;
 
   llvm::Expected<lldb_private::TypeSystem &>
   GetTypeSystemForLanguage(lldb::LanguageType language) override;

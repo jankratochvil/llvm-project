@@ -1528,11 +1528,9 @@ SymbolFileDWARF::GetCompUnitForDWARFCompUnit(DWARFCompileUnit &dwarf_cu) {
   return static_cast<CompileUnit *>(non_dwo_cu->GetUserData());
 }
 
-size_t SymbolFileDWARF::GetObjCMethodDIEOffsets(ConstString class_name,
-                                                std::vector<lldb::user_id_t> &method_die_offsets) {
-  method_die_offsets.clear();
-  m_index->GetObjCMethods(class_name, method_die_offsets);
-  return method_die_offsets.size();
+void SymbolFileDWARF::GetObjCMethods(
+    ConstString class_name, llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)> callback) {
+  m_index->GetObjCMethods(class_name, callback);
 }
 
 bool SymbolFileDWARF::GetFunction(DWARFCompileUnit *main_unit, const DWARFDIE &die, SymbolContext &sc) {
@@ -2113,33 +2111,22 @@ void SymbolFileDWARF::FindGlobalVariables(
                                                       context, basename))
     basename = name.GetStringRef();
 
-  std::vector<lldb::user_id_t> die_offsets;
-  m_index->GetGlobalVariables(ConstString(basename), die_offsets);
-  const size_t num_die_matches = die_offsets.size();
-
-  SymbolContext sc;
-  sc.module_sp = m_objfile_sp->GetModule();
-  assert(sc.module_sp);
-
   // Loop invariant: Variables up to this index have been checked for context
   // matches.
   uint32_t pruned_idx = original_size;
 
-  for (size_t i = 0; i < num_die_matches; ++i) {
-    user_id_t uid = die_offsets[i];
-    DWARFCompileUnit *main_unit;
-    DWARFDIE die = GetDIEUnlocked(uid, &main_unit);
-    if (!die) {
-      m_index->ReportInvalidDIEID(uid, name.GetStringRef());
-      continue;
-    }
+  SymbolContext sc;
+  m_index->GetGlobalVariables(ConstString(basename), [&](DWARFCompileUnit *main_unit, DWARFDIE die) {
+    if (!sc.module_sp)
+      sc.module_sp = m_objfile_sp->GetModule();
+    assert(sc.module_sp);
 
     if (die.Tag() != DW_TAG_variable)
-      continue;
+      return true;
 
-    auto *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(die.GetCU());
+    DWARFCompileUnit *dwarf_cu = die.MainDWARFCompileUnit(main_unit);
     if (!dwarf_cu)
-      continue;
+      return true;
     sc.comp_unit = GetCompUnitForDWARFCompUnit(*dwarf_cu);
 
     if (parent_decl_ctx) {
@@ -2148,7 +2135,7 @@ void SymbolFileDWARF::FindGlobalVariables(
             dwarf_ast->GetDeclContextContainingUIDFromDWARF(main_unit, die);
         if (!actual_parent_decl_ctx ||
             actual_parent_decl_ctx != parent_decl_ctx)
-          continue;
+          return true;
       }
     }
 
@@ -2162,9 +2149,8 @@ void SymbolFileDWARF::FindGlobalVariables(
         variables.RemoveVariableAtIndex(pruned_idx);
     }
 
-    if (variables.GetSize() - original_size >= max_matches)
-      break;
-  }
+    return variables.GetSize() - original_size < max_matches;
+  });
 
   // Return the number of variable that were appended to the list
   const uint32_t num_matches = variables.GetSize() - original_size;
@@ -2195,32 +2181,21 @@ void SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
   // Remember how many variables are in the list before we search.
   const uint32_t original_size = variables.GetSize();
 
-  std::vector<lldb::user_id_t> die_offsets;
-  m_index->GetGlobalVariables(regex, die_offsets);
-
   SymbolContext sc;
-  sc.module_sp = m_objfile_sp->GetModule();
-  assert(sc.module_sp);
+  m_index->GetGlobalVariables(regex, [&](DWARFCompileUnit *main_unit, DWARFDIE die) {
+    if (!sc.module_sp)
+      sc.module_sp = m_objfile_sp->GetModule();
+    assert(sc.module_sp);
 
-  const size_t num_matches = die_offsets.size();
-  for (size_t i = 0; i < num_matches; ++i) {
-    user_id_t uid = die_offsets[i];
-    DWARFDIE die = GetDIE(uid);
-    if (!die) {
-      m_index->ReportInvalidDIEID(uid, regex.GetText());
-      continue;
-    }
-
-    DWARFCompileUnit *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(die.GetCU());
+    DWARFCompileUnit *dwarf_cu = die.MainDWARFCompileUnit(main_unit);
     if (!dwarf_cu)
-      continue;
+      return true;
     sc.comp_unit = GetCompUnitForDWARFCompUnit(*dwarf_cu);
 
     ParseVariables(sc, die, LLDB_INVALID_ADDRESS, false, false, &variables);
 
-    if (variables.GetSize() - original_size >= max_matches)
-      break;
-  }
+    return variables.GetSize() - original_size < max_matches;
+  });
 }
 
 bool SymbolFileDWARF::ResolveFunction(DWARFCompileUnit *main_unit, const DWARFDIE &orig_die,
@@ -2334,12 +2309,12 @@ void SymbolFileDWARF::FindFunctions(ConstString name,
 
   llvm::DenseSet<std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>> resolved_dies;
 
-  std::vector<std::pair<DWARFCompileUnit *, DWARFDIE>> dies;
-  m_index->GetFunctions(name, *this, parent_decl_ctx, name_type_mask, dies);
-  for (const auto &diepair : dies) {
-    if (resolved_dies.insert(std::make_pair(diepair.first,diepair.second.GetDIE())).second)
-      ResolveFunction(diepair.first, diepair.second, include_inlines, sc_list);
-  }
+  m_index->GetFunctions(name, *this, parent_decl_ctx, name_type_mask,
+                        [&](DWARFCompileUnit *main_unit, DWARFDIE die) {
+                          if (resolved_dies.insert(std::make_pair(main_unit, die.GetDIE())).second)
+                            ResolveFunction(main_unit, die, include_inlines, sc_list);
+                          return true;
+                        });
 
   // Return the number of variable that were appended to the list
   const uint32_t num_matches = sc_list.GetSize() - original_size;
@@ -2370,20 +2345,12 @@ void SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
         regex.GetText().str().c_str());
   }
 
-  std::vector<lldb::user_id_t> offsets;
-  m_index->GetFunctions(regex, offsets);
-
   llvm::DenseSet<std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>> resolved_dies;
-  for (user_id_t uid : offsets) {
-    DWARFCompileUnit *main_unit;
-    DWARFDIE die = GetDIEUnlocked(uid, &main_unit);
-    if (!die) {
-      m_index->ReportInvalidDIEID(uid, regex.GetText());
-      continue;
-    }
-    if (resolved_dies.insert(die.MainCUtoDIEPair(main_unit)).second)
+  m_index->GetFunctions(regex, [&](DWARFCompileUnit *main_unit, DWARFDIE die) {
+    if (resolved_dies.insert(std::make_pair(main_unit, die.GetDIE())).second)
       ResolveFunction(main_unit, die, include_inlines, sc_list);
-  }
+    return true;
+  });
 }
 
 void SymbolFileDWARF::GetMangledNamesForFunction(
@@ -2439,32 +2406,19 @@ void SymbolFileDWARF::FindTypes(
   if (!DeclContextMatchesThisSymbolFile(parent_decl_ctx))
     return;
 
-  std::vector<lldb::user_id_t> die_offsets;
-  m_index->GetTypes(name, die_offsets);
-  const size_t num_die_matches = die_offsets.size();
-
-  for (size_t i = 0; i < num_die_matches; ++i) {
-    user_id_t uid = die_offsets[i];
-    DWARFCompileUnit *main_unit;
-    DWARFDIE die = GetDIEUnlocked(uid, &main_unit);
-    if (!die) {
-      m_index->ReportInvalidDIEID(uid, name.GetStringRef());
-      continue;
-    }
-
+  m_index->GetTypes(name, [&](DWARFCompileUnit *main_unit, DWARFDIE die) {
     if (!DIEInDeclContext(parent_decl_ctx, main_unit, die))
-      continue; // The containing decl contexts don't match
+      return true; // The containing decl contexts don't match
 
     Type *matching_type = ResolveType(main_unit, die, true, true);
     if (!matching_type)
-      continue;
+      return true;
 
     // We found a type pointer, now find the shared pointer form our type
     // list
     types.InsertUnique(matching_type->shared_from_this());
-    if (types.GetSize() >= max_matches)
-      break;
-  }
+    return types.GetSize() < max_matches;
+  });
 
   // Next search through the reachable Clang modules. This only applies for
   // DWARF objects compiled with -gmodules that haven't been processed by
@@ -2514,33 +2468,22 @@ void SymbolFileDWARF::FindTypes(
   if (!name)
     return;
 
-  std::vector<lldb::user_id_t> die_offsets;
-  m_index->GetTypes(name, die_offsets);
-  const size_t num_die_matches = die_offsets.size();
-
-  for (size_t i = 0; i < num_die_matches; ++i) {
-    user_id_t uid = die_offsets[i];
-    DWARFCompileUnit *main_unit;
-    DWARFDIE die = GetDIEUnlocked(uid, &main_unit);
-    if (!die) {
-      m_index->ReportInvalidDIEID(uid, name.GetStringRef());
-      continue;
-    }
-
+  m_index->GetTypes(name, [&](DWARFCompileUnit *main_unit, DWARFDIE die) {
     if (!languages[GetLanguage(*die.GetCU())])
-      continue;
+      return true;
 
     llvm::SmallVector<CompilerContext, 4> die_context;
     die.GetDeclContext(die_context);
     if (!contextMatches(die_context, pattern))
-      continue;
+      return true;
 
     if (Type *matching_type = ResolveType(main_unit, die, true, true)) {
       // We found a type pointer, now find the shared pointer form our type
       // list.
       types.InsertUnique(matching_type->shared_from_this());
     }
-  }
+    return true;
+  });
 
   // Next search through the reachable Clang modules. This only applies for
   // DWARF objects compiled with -gmodules that haven't been processed by
@@ -2570,29 +2513,18 @@ SymbolFileDWARF::FindNamespace(ConstString name,
   if (!DeclContextMatchesThisSymbolFile(parent_decl_ctx))
     return namespace_decl_ctx;
 
-  std::vector<lldb::user_id_t> die_offsets;
-  m_index->GetNamespaces(name, die_offsets);
-  const size_t num_matches = die_offsets.size();
-  for (size_t i = 0; i < num_matches; ++i) {
-    user_id_t uid = die_offsets[i];
-    DWARFCompileUnit *main_unit;
-    DWARFDIE die = GetDIEUnlocked(uid, &main_unit);
-    if (!die) {
-      m_index->ReportInvalidDIEID(uid, name.GetStringRef());
-      continue;
-    }
-
+  m_index->GetNamespaces(name, [&](DWARFCompileUnit *main_unit, DWARFDIE die) {
     if (!DIEInDeclContext(parent_decl_ctx, main_unit, die))
-      continue; // The containing decl contexts don't match
+      return true; // The containing decl contexts don't match
 
     DWARFASTParser *dwarf_ast = GetDWARFParser(*die.MainDWARFUnit(main_unit));
     if (!dwarf_ast)
-      continue;
+      return true;
 
     namespace_decl_ctx = dwarf_ast->GetDeclContextForUIDFromDWARF(main_unit, die);
-    if (namespace_decl_ctx)
-      break;
-  }
+    return !namespace_decl_ctx.IsValid();
+  });
+
   if (log && namespace_decl_ctx) {
     GetObjectFile()->GetModule()->LogMessage(
         log,
@@ -2746,60 +2678,48 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
   if (!type_name || (must_be_implementation && !GetObjCClassSymbol(type_name)))
     return type_sp;
 
-  std::vector<lldb::user_id_t> die_offsets;
-  m_index->GetCompleteObjCClass(type_name, must_be_implementation, die_offsets);
+  m_index->GetCompleteObjCClass(
+      type_name, must_be_implementation, [&](DWARFCompileUnit *main_unit, DWARFDIE type_die) {
+        bool try_resolving_type = false;
 
-  const size_t num_matches = die_offsets.size();
+        // Don't try and resolve the DIE we are looking for with the DIE
+        // itself!
+        if (type_die != die) {
+          switch (type_die.Tag()) {
+          case DW_TAG_class_type:
+          case DW_TAG_structure_type:
+            try_resolving_type = true;
+            break;
+          default:
+            break;
+          }
+        }
+        if (!try_resolving_type)
+          return true;
 
-  for (size_t i = 0; i < num_matches; ++i) {
-    DWARFCompileUnit *main_unit;
-    user_id_t uid = die_offsets[i];
-    DWARFDIE type_die = GetDIEUnlocked(uid, &main_unit);
-    if (!type_die) {
-      m_index->ReportInvalidDIEID(uid, type_name.GetStringRef());
-      continue;
-    }
+        if (must_be_implementation &&
+            type_die.Supports_DW_AT_APPLE_objc_complete_type())
+          try_resolving_type = type_die.GetAttributeValueAsUnsigned(
+              DW_AT_APPLE_objc_complete_type, 0);
+        if (!try_resolving_type)
+          return true;
 
-    bool try_resolving_type = false;
+        Type *resolved_type = ResolveType(main_unit, type_die, false, true);
+        if (!resolved_type || resolved_type == DIE_IS_BEING_PARSED)
+          return true;
 
-    // Don't try and resolve the DIE we are looking for with the DIE
-    // itself!
-    if (type_die != die) {
-      switch (type_die.Tag()) {
-      case DW_TAG_class_type:
-      case DW_TAG_structure_type:
-        try_resolving_type = true;
-        break;
-      default:
-        break;
-      }
-    }
-    if (!try_resolving_type)
-      continue;
+        DEBUG_PRINTF(
+            "resolved 0x%8.8" PRIx64 " from %s to 0x%8.8" PRIx64
+            " (cu 0x%8.8" PRIx64 ")\n",
+            die.GetID(),
+            m_objfile_sp->GetFileSpec().GetFilename().AsCString("<Unknown>"),
+            type_die.GetID(), type_cu->GetID());
 
-    if (must_be_implementation &&
-        type_die.Supports_DW_AT_APPLE_objc_complete_type())
-      try_resolving_type = type_die.GetAttributeValueAsUnsigned(
-          DW_AT_APPLE_objc_complete_type, 0);
-    if (!try_resolving_type)
-      continue;
-
-    Type *resolved_type = ResolveType(main_unit, type_die, false, true);
-    if (!resolved_type || resolved_type == DIE_IS_BEING_PARSED)
-      continue;
-
-    DEBUG_PRINTF(
-        "resolved 0x%8.8" PRIx64 " from %s to 0x%8.8" PRIx64
-        " (cu 0x%8.8" PRIx64 ")\n",
-        die.GetID(),
-        m_objfile_sp->GetFileSpec().GetFilename().AsCString("<Unknown>"),
-        type_die.GetID(), type_cu->GetID());
-
-    if (die)
-      GetDIEToType()[die.MainCUtoDIEPair(main_unit)] = resolved_type;
-    type_sp = resolved_type->shared_from_this();
-    break;
-  }
+        if (die)
+          GetDIEToType()[die.MainCUtoDIEPair(main_unit)] = resolved_type;
+        type_sp = resolved_type->shared_from_this();
+        return false;
+      });
   return type_sp;
 }
 
@@ -2913,10 +2833,6 @@ TypeSP SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(
             dwarf_decl_ctx.GetQualifiedName());
       }
 
-      std::vector<lldb::user_id_t> die_offsets;
-      m_index->GetTypes(dwarf_decl_ctx, die_offsets);
-      const size_t num_matches = die_offsets.size();
-
       // Get the type system that we are looking to find a type for. We will
       // use this to ensure any matches we find are in a language that this
       // type system supports
@@ -2933,21 +2849,14 @@ TypeSP SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(
           type_system = &type_system_or_err.get();
         }
       }
-      for (size_t i = 0; i < num_matches; ++i) {
-        DWARFCompileUnit *main_unit;
-        user_id_t uid = die_offsets[i];
-        DWARFDIE type_die = GetDIEUnlocked(uid, &main_unit);
-        if (!type_die) {
-          m_index->ReportInvalidDIEID(uid, type_name.GetStringRef());
-          continue;
-        }
 
+      m_index->GetTypes(dwarf_decl_ctx, [&](DWARFCompileUnit *main_unit, DWARFDIE type_die) {
         // Make sure type_die's langauge matches the type system we are
         // looking for. We don't want to find a "Foo" type from Java if we
         // are looking for a "Foo" type for C, C++, ObjC, or ObjC++.
         if (type_system &&
             !type_system->SupportsLanguage(GetLanguage(*type_die.GetCU())))
-          continue;
+          return true;
         bool try_resolving_type = false;
 
         // Don't try and resolve the DIE we are looking for with the DIE
@@ -2992,7 +2901,7 @@ TypeSP SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(
                 dwarf_decl_ctx.GetQualifiedName(), type_die.GetOffset(),
                 qualified_name.c_str());
           }
-          continue;
+          return true;
         }
 
         DWARFDeclContext type_dwarf_decl_ctx = GetDWARFDeclContext(type_die);
@@ -3010,15 +2919,15 @@ TypeSP SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(
 
         // Make sure the decl contexts match all the way up
         if (dwarf_decl_ctx != type_dwarf_decl_ctx)
-          continue;
+          return true;
 
         Type *resolved_type = ResolveType(main_unit, type_die, false);
         if (!resolved_type || resolved_type == DIE_IS_BEING_PARSED)
-          continue;
+          return true;
 
         type_sp = resolved_type->shared_from_this();
-        break;
-      }
+        return false;
+      });
     }
   }
   return type_sp;
@@ -3165,23 +3074,16 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
         variables = std::make_shared<VariableList>();
         sc.comp_unit->SetVariableList(variables);
 
-        std::vector<lldb::user_id_t> die_offsets;
-        m_index->GetGlobalVariables(dwarf_cu->GetNonSkeletonUnit(),
-                                    die_offsets);
-        const size_t num_matches = die_offsets.size();
-        for (size_t i = 0; i < num_matches; ++i) {
-          user_id_t uid = die_offsets[i];
-          DWARFDIE die = GetDIE(uid);
-          if (!die) {
-            m_index->ReportInvalidDIEID(uid, "");
-            continue;
-          }
-          VariableSP var_sp(ParseVariableDIE(sc, die, LLDB_INVALID_ADDRESS));
-          if (var_sp) {
-            variables->AddVariableIfUnique(var_sp);
-            ++vars_added;
-          }
-        }
+        m_index->GetGlobalVariables(
+            dwarf_cu->GetNonSkeletonUnit(), [&](DWARFCompileUnit *main_unit, DWARFDIE die) {
+              VariableSP var_sp(
+                  ParseVariableDIE(sc, die, LLDB_INVALID_ADDRESS));
+              if (var_sp) {
+                variables->AddVariableIfUnique(var_sp);
+                ++vars_added;
+              }
+              return true;
+            });
       }
       return vars_added;
     }
@@ -3505,7 +3407,8 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
             }
           }
         } else {
-          if (location_is_const_value_data && die.GetDIE()->IsGlobalOrStaticVariable())
+          if (location_is_const_value_data &&
+              die.GetDIE()->IsGlobalOrStaticScopeVariable())
             scope = eValueTypeVariableStatic;
           else {
             scope = eValueTypeVariableLocal;
