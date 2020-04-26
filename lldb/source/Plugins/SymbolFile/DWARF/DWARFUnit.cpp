@@ -89,34 +89,29 @@ void DWARFUnit::ExtractDIEsIfNeeded() {
 // no other ScopedExtractDIEs instance is running for this compile unit
 // and no ExtractDIEsIfNeeded() has been executed during this ScopedExtractDIEs
 // lifetime.
-DWARFUnit::ScopedExtractDIEs DWARFUnit::ExtractDIEsScoped() {
-  ScopedExtractDIEs scoped(*this);
-
+void DWARFUnit::ExtractDIEsScoped(ScopedExtractDIEs &scoped) {
   {
     llvm::sys::ScopedReader lock(m_die_array_mutex);
     if (!m_die_array.empty())
-      return scoped; // Already parsed
+      return; // Already parsed
   }
   llvm::sys::ScopedWriter lock(m_die_array_mutex);
   if (!m_die_array.empty())
-    return scoped; // Already parsed
-
-  // Otherwise m_die_array would be already populated.
-  lldbassert(!m_cancel_scopes);
+    return; // Already parsed
 
   ExtractDIEsRWLocked();
-  scoped.m_clear_dies = true;
-  return scoped;
+  scoped.ClearDIEs();
 }
 
 DWARFUnit::ScopedExtractDIEs::ScopedExtractDIEs(DWARFUnit &cu) : m_cu(&cu) {
   m_cu->m_die_array_scoped_mutex.lock_shared();
+  m_unlock = true;
+  m_cu->ExtractDIEsScoped(*this);
 }
 
 DWARFUnit::ScopedExtractDIEs::~ScopedExtractDIEs() {
-  if (!m_cu)
-    return;
-  m_cu->m_die_array_scoped_mutex.unlock_shared();
+  if (m_unlock)
+    m_cu->m_die_array_scoped_mutex.unlock_shared();
   if (!m_clear_dies || m_cu->m_cancel_scopes)
     return;
   // Be sure no other ScopedExtractDIEs is running anymore.
@@ -128,15 +123,16 @@ DWARFUnit::ScopedExtractDIEs::~ScopedExtractDIEs() {
 }
 
 DWARFUnit::ScopedExtractDIEs::ScopedExtractDIEs(ScopedExtractDIEs &&rhs)
-    : m_cu(rhs.m_cu), m_clear_dies(rhs.m_clear_dies) {
-  rhs.m_cu = nullptr;
+    : m_cu(rhs.m_cu), m_clear_dies(rhs.m_clear_dies), m_unlock(rhs.m_unlock) {
+  rhs.Disable();
 }
 
 DWARFUnit::ScopedExtractDIEs &DWARFUnit::ScopedExtractDIEs::operator=(
     DWARFUnit::ScopedExtractDIEs &&rhs) {
   m_cu = rhs.m_cu;
-  rhs.m_cu = nullptr;
   m_clear_dies = rhs.m_clear_dies;
+  m_unlock = rhs.m_unlock;
+  rhs.Disable();
   return *this;
 }
 
@@ -551,6 +547,9 @@ DWARFUnit::GetDIE(dw_offset_t die_offset) {
           "GetDIE for DIE 0x%" PRIx32 " is outside of its CU 0x%" PRIx32,
           die_offset, GetOffset());
   }
+  m_dwarf.GetObjectFile()->GetModule()->ReportError(
+      "CU 0x%8.8" PRIx32 " does not contain DIE 0x%8.8" PRIx32, GetOffset(),
+      die_offset);
   return DWARFDIE(); // Not found
 }
 
