@@ -68,7 +68,8 @@ void ManualDWARFIndex::Index() {
   };
 
   auto extract_fn = [&units_to_index, &clear_cu_dies](size_t cu_idx) {
-    clear_cu_dies[cu_idx] = units_to_index[cu_idx]->ExtractDIEsScoped();
+    clear_cu_dies[cu_idx] =
+        DWARFUnit::ScopedExtractDIEs(*units_to_index[cu_idx]);
   };
 
   // Share one thread pool across operations to avoid the overhead of
