@@ -96,6 +96,13 @@ SymbolFileDWARF *DWARFBaseDIE::GetDWARF() const {
     return nullptr;
 }
 
+SymbolFileDWARF *DWARFBaseDIE::GetMainDWARF() const {
+  if (m_cu)
+    return &m_cu->GetMainCU()->GetSymbolFileDWARF();
+  else
+    return nullptr;
+}
+
 bool DWARFBaseDIE::HasChildren() const {
   return m_die && m_die->HasChildren();
 }

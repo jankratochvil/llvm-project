@@ -51,6 +51,9 @@ public:
   // Accessors
   SymbolFileDWARF *GetDWARF() const;
 
+  // File which referenced DWZCommonFile (where this DIE may be located).
+  SymbolFileDWARF *GetMainDWARF() const;
+
   DWARFUnit *GetCU() const { return m_cu; }
 
   DWARFDebugInfoEntry *GetDIE() const { return m_die; }

@@ -208,7 +208,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
   if (pcm_type.IsDefined())
     GetClangASTImporter().RequireCompleteType(ClangUtil::GetQualType(type));
 
-  SymbolFileDWARF *dwarf = die.GetDWARF();
+  SymbolFileDWARF *dwarf = die.GetMainDWARF();
   TypeSP type_sp(new Type(
       die.GetID(), dwarf, pcm_type_sp->GetName(), pcm_type_sp->GetByteSize(),
       nullptr, LLDB_INVALID_UID, Type::eEncodingInvalid,
@@ -402,7 +402,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
   Log *log(LogChannelDWARF::GetLogIfAny(DWARF_LOG_TYPE_COMPLETION |
                                         DWARF_LOG_LOOKUPS));
 
-  SymbolFileDWARF *dwarf = die.GetDWARF();
+  SymbolFileDWARF *dwarf = die.GetMainDWARF();
   if (log) {
     DWARFDIE context_die;
     clang::DeclContext *context =
@@ -506,7 +506,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
                                        ParsedDWARFTypeAttributes &attrs) {
   Log *log(LogChannelDWARF::GetLogIfAny(DWARF_LOG_TYPE_COMPLETION |
                                         DWARF_LOG_LOOKUPS));
-  SymbolFileDWARF *dwarf = die.GetDWARF();
+  SymbolFileDWARF *dwarf = die.GetMainDWARF();
   const dw_tag_t tag = die.Tag();
   LanguageType cu_language = SymbolFileDWARF::GetLanguage(*die.GetCU());
   Type::ResolveState resolve_state = Type::ResolveState::Unresolved;
@@ -721,7 +721,7 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
                                       ParsedDWARFTypeAttributes &attrs) {
   Log *log(LogChannelDWARF::GetLogIfAny(DWARF_LOG_TYPE_COMPLETION |
                                         DWARF_LOG_LOOKUPS));
-  SymbolFileDWARF *dwarf = die.GetDWARF();
+  SymbolFileDWARF *dwarf = die.GetMainDWARF();
   const dw_tag_t tag = die.Tag();
   TypeSP type_sp;
 
@@ -829,7 +829,7 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
   Log *log(LogChannelDWARF::GetLogIfAny(DWARF_LOG_TYPE_COMPLETION |
                                         DWARF_LOG_LOOKUPS));
 
-  SymbolFileDWARF *dwarf = die.GetDWARF();
+  SymbolFileDWARF *dwarf = die.GetMainDWARF();
   const dw_tag_t tag = die.Tag();
 
   bool is_variadic = false;
@@ -1245,7 +1245,7 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
 
 TypeSP DWARFASTParserClang::ParseArrayType(const DWARFDIE &die,
                                            ParsedDWARFTypeAttributes &attrs) {
-  SymbolFileDWARF *dwarf = die.GetDWARF();
+  SymbolFileDWARF *dwarf = die.GetMainDWARF();
 
   DEBUG_PRINTF("0x%8.8" PRIx64 ": %s (\"%s\")\n", die.GetID(),
                DW_TAG_value_to_name(tag), type_name_cstr);
@@ -1335,7 +1335,7 @@ TypeSP DWARFASTParserClang::ParseArrayType(const DWARFDIE &die,
 
 TypeSP DWARFASTParserClang::ParsePointerToMemberType(
     const DWARFDIE &die, const ParsedDWARFTypeAttributes &attrs) {
-  SymbolFileDWARF *dwarf = die.GetDWARF();
+  SymbolFileDWARF *dwarf = die.GetMainDWARF();
   Type *pointee_type = dwarf->ResolveTypeUID(attrs.type.Reference(), true);
   Type *class_type =
       dwarf->ResolveTypeUID(attrs.containing_type.Reference(), true);
@@ -1361,7 +1361,7 @@ TypeSP DWARFASTParserClang::UpdateSymbolContextScopeForType(
   if (!type_sp)
     return type_sp;
 
-  SymbolFileDWARF *dwarf = die.GetDWARF();
+  SymbolFileDWARF *dwarf = die.GetMainDWARF();
   TypeList &type_list = dwarf->GetTypeList();
   DWARFDIE sc_parent_die = SymbolFileDWARF::GetParentSymbolContextDIE(die);
   dw_tag_t sc_parent_tag = sc_parent_die.Tag();
@@ -1397,7 +1397,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   TypeSP type_sp;
   CompilerType clang_type;
   const dw_tag_t tag = die.Tag();
-  SymbolFileDWARF *dwarf = die.GetDWARF();
+  SymbolFileDWARF *dwarf = die.GetMainDWARF();
   LanguageType cu_language = SymbolFileDWARF::GetLanguage(*die.GetCU());
   Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_TYPE_COMPLETION |
                                           DWARF_LOG_LOOKUPS);
@@ -1969,7 +1969,7 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
                                              lldb_private::Type *type,
                                              CompilerType &clang_type) {
   const dw_tag_t tag = die.Tag();
-  SymbolFileDWARF *dwarf = die.GetDWARF();
+  SymbolFileDWARF *dwarf = die.GetMainDWARF();
 
   ClangASTImporter::LayoutInfo layout_info;
 
@@ -2131,7 +2131,7 @@ bool DWARFASTParserClang::CompleteEnumType(const DWARFDIE &die,
 bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
                                                 lldb_private::Type *type,
                                                 CompilerType &clang_type) {
-  SymbolFileDWARF *dwarf = die.GetDWARF();
+  SymbolFileDWARF *dwarf = die.GetMainDWARF();
 
   std::lock_guard<std::recursive_mutex> guard(
       dwarf->GetObjectFile()->GetModule()->GetMutex());
@@ -2358,7 +2358,7 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
         decl_up.reset(new Declaration(die.GetCU()->GetFile(decl_file),
                                       decl_line, decl_column));
 
-      SymbolFileDWARF *dwarf = die.GetDWARF();
+      SymbolFileDWARF *dwarf = die.GetMainDWARF();
       // Supply the type _only_ if it has already been parsed
       Type *func_type = dwarf->GetDIEToType().lookup(die.GetDIE());
 
@@ -3211,7 +3211,7 @@ DWARFASTParser::ParseChildArrayInfo(const DWARFDIE &parent_die,
 
 Type *DWARFASTParserClang::GetTypeForDIE(const DWARFDIE &die) {
   if (die) {
-    SymbolFileDWARF *dwarf = die.GetDWARF();
+    SymbolFileDWARF *dwarf = die.GetMainDWARF();
     DWARFAttributes attributes;
     const size_t num_attributes = die.GetAttributes(attributes);
     if (num_attributes > 0) {
@@ -3269,7 +3269,7 @@ clang::Decl *DWARFASTParserClang::GetClangDeclForDIE(const DWARFDIE &die) {
   case DW_TAG_variable:
   case DW_TAG_constant:
   case DW_TAG_formal_parameter: {
-    SymbolFileDWARF *dwarf = die.GetDWARF();
+    SymbolFileDWARF *dwarf = die.GetMainDWARF();
     Type *type = GetTypeForDIE(die);
     if (dwarf && type) {
       const char *name = die.GetName();
@@ -3283,7 +3283,7 @@ clang::Decl *DWARFASTParserClang::GetClangDeclForDIE(const DWARFDIE &die) {
     break;
   }
   case DW_TAG_imported_declaration: {
-    SymbolFileDWARF *dwarf = die.GetDWARF();
+    SymbolFileDWARF *dwarf = die.GetMainDWARF();
     DWARFDIE imported_uid = die.GetAttributeValueAsReferenceDIE(DW_AT_import);
     if (imported_uid) {
       CompilerDecl imported_decl = SymbolFileDWARF::GetDecl(imported_uid);
@@ -3301,7 +3301,7 @@ clang::Decl *DWARFASTParserClang::GetClangDeclForDIE(const DWARFDIE &die) {
     break;
   }
   case DW_TAG_imported_module: {
-    SymbolFileDWARF *dwarf = die.GetDWARF();
+    SymbolFileDWARF *dwarf = die.GetMainDWARF();
     DWARFDIE imported_uid = die.GetAttributeValueAsReferenceDIE(DW_AT_import);
 
     if (imported_uid) {
@@ -3360,7 +3360,7 @@ DWARFASTParserClang::GetClangDeclContextForDIE(const DWARFDIE &die) {
     }
 
     if (decl_ctx == nullptr && try_parsing_type) {
-      Type *type = die.GetDWARF()->ResolveType(die);
+      Type *type = die.GetMainDWARF()->ResolveType(die);
       if (type)
         decl_ctx = GetCachedClangDeclContextForDIE(die);
     }
@@ -3505,7 +3505,7 @@ DWARFASTParserClang::ResolveNamespaceDIE(const DWARFDIE &die) {
       Log *log =
           nullptr; // (LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO));
       if (log) {
-        SymbolFileDWARF *dwarf = die.GetDWARF();
+        SymbolFileDWARF *dwarf = die.GetMainDWARF();
         if (namespace_name) {
           dwarf->GetObjectFile()->GetModule()->LogMessage(
               log,
@@ -3537,7 +3537,7 @@ DWARFASTParserClang::ResolveNamespaceDIE(const DWARFDIE &die) {
 
 clang::DeclContext *DWARFASTParserClang::GetClangDeclContextContainingDIE(
     const DWARFDIE &die, DWARFDIE *decl_ctx_die_copy) {
-  SymbolFileDWARF *dwarf = die.GetDWARF();
+  SymbolFileDWARF *dwarf = die.GetMainDWARF();
 
   DWARFDIE decl_ctx_die = dwarf->GetDeclContextDIEContainingDIE(die);
 

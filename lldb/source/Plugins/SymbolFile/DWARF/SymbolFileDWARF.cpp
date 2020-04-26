@@ -611,6 +611,8 @@ SymbolFileDWARF::GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) {
 
   // The compile unit ID is the index of the DWARF unit.
   DWARFUnit *dwarf_cu = DebugInfo().GetUnitAtIndex(comp_unit->GetID());
+//  if (dwarf_cu)
+//    dwarf_cu = dwarf_cu->GetMainCU();
   if (dwarf_cu && dwarf_cu->GetUserData() == nullptr)
     dwarf_cu->SetUserData(comp_unit);
   return dwarf_cu;
@@ -1322,6 +1324,9 @@ Type *SymbolFileDWARF::ResolveTypeUID(const DIERef &die_ref) {
 
 Type *SymbolFileDWARF::ResolveTypeUID(const DWARFDIE &die,
                                       bool assert_not_being_parsed) {
+  // this can be neither die.GetDWARF() nor die.GetMainDWARF().
+  if (die.GetMainDWARF() != this)
+    return die.GetMainDWARF()->ResolveTypeUID(die, assert_not_being_parsed);
   if (die) {
     Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO));
     if (log)
@@ -1431,6 +1436,10 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
 Type *SymbolFileDWARF::ResolveType(const DWARFDIE &die,
                                    bool assert_not_being_parsed,
                                    bool resolve_function_context) {
+  // this can be neither die.GetDWARF() nor die.GetMainDWARF().
+  if (die.GetMainDWARF() != this)
+    return die.GetMainDWARF()->ResolveType(die, assert_not_being_parsed,
+                                           resolve_function_context);
   if (die) {
     Type *type = GetTypeForDIE(die, resolve_function_context).get();
 
@@ -2873,7 +2882,7 @@ TypeSP SymbolFileDWARF::ParseType(const SymbolContext &sc, const DWARFDIE &die,
   if (!die)
     return {};
 
-  auto type_system_or_err = GetTypeSystemForLanguage(GetLanguage(*die.GetCU()));
+  auto type_system_or_err = die.GetMainDWARF()->GetTypeSystemForLanguage(GetLanguage(*die.GetCU()));
   if (auto err = type_system_or_err.takeError()) {
     LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
                    std::move(err), "Unable to parse type");
@@ -3026,8 +3035,8 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
 VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                                              const DWARFDIE &die,
                                              const lldb::addr_t func_low_pc) {
-  if (die.GetDWARF() != this)
-    return die.GetDWARF()->ParseVariableDIE(sc, die, func_low_pc);
+  if (die.GetMainDWARF() != this)
+    return die.GetMainDWARF()->ParseVariableDIE(sc, die, func_low_pc);
 
   VariableSP var_sp;
   if (!die)

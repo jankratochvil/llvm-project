@@ -269,6 +269,9 @@ public:
 
   lldb_private::DWARFDataExtractor GetLocationData() const;
 
+  // DW_TAG_compile_unit with DW_TAG_imported_unit for this DW_TAG_partial_unit.
+  DWARFUnit *GetMainCU() const { return const_cast<DWARFUnit *>(this); }
+
 protected:
   DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
             const DWARFUnitHeader &header,

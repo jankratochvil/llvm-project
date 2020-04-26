@@ -656,6 +656,9 @@ uint32_t DWARFUnit::GetProducerVersionUpdate() {
 }
 
 uint64_t DWARFUnit::GetDWARFLanguageType() {
+//  if (GetMainCU() != this)
+//    return GetMainCU()->GetDWARFLanguageType();
+
   if (m_language_type)
     return *m_language_type;
 
