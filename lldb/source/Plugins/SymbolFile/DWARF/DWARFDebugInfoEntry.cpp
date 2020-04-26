@@ -539,7 +539,7 @@ void DWARFDebugInfoEntry::DumpAttribute(
 // results. Any duplicate attributes will have the first instance take
 // precedence (this can happen for declaration attributes).
 size_t DWARFDebugInfoEntry::GetAttributes(
-    const DWARFUnit *cu, DWARFAttributes &attributes,
+    DWARFUnit *cu, DWARFAttributes &attributes,
     uint32_t curr_depth) const {
   const auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu);
   if (abbrevDecl) {
