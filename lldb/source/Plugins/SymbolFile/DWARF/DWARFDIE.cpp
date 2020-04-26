@@ -190,6 +190,11 @@ DWARFDIE::LookupDeepestBlock(lldb::addr_t address) const {
     } else {
       check_children = false;
     }
+#if 0
+    cu->GetSymbolFileDWARF()->GetObjectFile()->GetModule()->ReportError(
+       "CU 0x%8.8" PRIx32 " LookupDeepestBlock fail for addr 0x%16.16" PRIx64,
+       cu->GetOffset(), file_addr);
+#endif
   }
 
   if (check_children) {

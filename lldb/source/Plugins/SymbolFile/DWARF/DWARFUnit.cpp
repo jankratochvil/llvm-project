@@ -547,6 +547,9 @@ DWARFUnit::GetDIE(dw_offset_t die_offset) {
           "GetDIE for DIE 0x%" PRIx32 " is outside of its CU 0x%" PRIx32,
           die_offset, GetOffset());
   }
+  m_dwarf.GetObjectFile()->GetModule()->ReportError(
+      "CU 0x%8.8" PRIx32 " does not contain DIE 0x%8.8" PRIx32, GetOffset(),
+      die_offset);
   return DWARFDIE(); // Not found
 }
 

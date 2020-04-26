@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <set>
 
+#include "lldb/Core/Module.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/RegularExpression.h"
@@ -150,6 +151,9 @@ DWARFUnit *DWARFDebugInfo::GetUnitAtOffset(DIERef::Section section,
   }
   if (idx_ptr)
     *idx_ptr = idx;
+  if (idx == DW_INVALID_INDEX)
+    m_dwarf.GetObjectFile()->GetModule()->ReportError(
+        "CU 0x%8.8" PRIx32 " cannot be found", cu_offset);
   return result;
 }
 
@@ -162,8 +166,14 @@ DWARFDebugInfo::GetUnitContainingDIEOffset(DIERef::Section section,
                                            dw_offset_t die_offset) {
   uint32_t idx = FindUnitIndex(section, die_offset);
   DWARFUnit *result = GetUnitAtIndex(idx);
-  if (result && !result->ContainsDIEOffset(die_offset))
+  if (result && !result->ContainsDIEOffset(die_offset)) {
+    m_dwarf.GetObjectFile()->GetModule()->ReportError(
+        "File does not contain DIE 0x%8.8" PRIx32, die_offset);
     return nullptr;
+  }
+  if (!result)
+    m_dwarf.GetObjectFile()->GetModule()->ReportError(
+        "File does not contain DIE 0x%8.8" PRIx32, die_offset);
   return result;
 }
 
