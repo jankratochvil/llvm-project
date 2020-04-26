@@ -47,7 +47,7 @@ public:
   bool Extract(const lldb_private::DWARFDataExtractor &data,
                const DWARFUnit *cu, lldb::offset_t *offset_ptr);
 
-  size_t GetAttributes(const DWARFUnit *cu,
+  size_t GetAttributes(DWARFUnit *cu,
                        DWARFAttributes &attrs,
                        uint32_t curr_depth = 0)
       const; // "curr_depth" for internal use only, don't set this yourself!!!
