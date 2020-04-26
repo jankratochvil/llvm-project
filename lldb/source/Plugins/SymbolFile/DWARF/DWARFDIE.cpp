@@ -454,6 +454,8 @@ bool DWARFDIE::GetDIENamesAndRanges(
 
 DWARFCompileUnit *
 DWARFDIE::MainDWARFCompileUnit(DWARFCompileUnit *main_unit) const {
+  if (!IsValid())
+    return nullptr;
   if (llvm::isa<DWARFTypeUnit>(GetCU()))
     return nullptr;
   if (!main_unit)
@@ -476,6 +478,7 @@ DWARFUnit *DWARFDIE::MainDWARFUnit(DWARFCompileUnit *main_unit) const {
 // FIXME: Is it possible to unify it with MainDWARFCompileUnit()?
 DWARFCompileUnit *
 DWARFDIE::MainDWARFCompileUnitOrNull(DWARFCompileUnit *main_unit) const {
+  lldbassert(IsValid());
   if (GetCU()->GetDwoSymbolFile())
     return nullptr;
   if (llvm::isa<SymbolFileDWARFDwo>(&GetCU()->GetSymbolFileDWARF()))
@@ -491,4 +494,24 @@ DWARFDIE::MainCUtoDWARFDIEPair(DWARFCompileUnit *main_unit) const {
 std::pair<DWARFCompileUnit *, DWARFDebugInfoEntry *>
 DWARFDIE::MainCUtoDIEPair(DWARFCompileUnit *main_unit) const {
   return std::make_pair(MainDWARFCompileUnitOrNull(main_unit), GetDIE());
+}
+
+bool DWARFDIE::MainUnitIsValid(DWARFCompileUnit *main_unit) const {
+  DWARFDIE parent = GetParent();
+  if (parent)
+    return parent.MainUnitIsValid(main_unit);
+  switch (Tag()) {
+    case DW_TAG_compile_unit:
+      lldbassert(main_unit == GetCU());
+      return false;
+//      return main_unit == GetCU();
+    case DW_TAG_partial_unit:
+lldbassert(0); // FIXME:DWZ
+//      lldbassert(main_unit->GetSymbolFileDWARF().GetDWZCommonFileFIXME() == GetDWARF());
+      return main_unit != nullptr;
+    default:
+      lldbassert(main_unit == nullptr);
+      return false;
+//      return true;
+  }
 }

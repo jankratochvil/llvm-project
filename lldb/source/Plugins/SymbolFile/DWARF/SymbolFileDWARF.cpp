@@ -1217,10 +1217,7 @@ void SymbolFileDWARF::ParseDeclsForContext(CompilerDeclContext decl_ctx) {
 
 user_id_t SymbolFileDWARF::GetUID(DWARFCompileUnit *main_unit,
                                   const DWARFBaseDIE &die) {
-  return GetUID(die.IsValid() && llvm::isa<DWARFCompileUnit>(die.GetCU())
-                    ? main_unit
-                    : nullptr,
-                die.GetDIERef());
+  return GetUID(die.MainDWARFCompileUnit(main_unit), die.GetDIERef());
 }
 
 user_id_t SymbolFileDWARF::GetUID(DWARFCompileUnit *main_unit, DIERef ref) {
@@ -1272,7 +1269,6 @@ SymbolFileDWARF::DecodeUIDUnlocked(lldb::user_id_t uid) {
         debug_map->GetOSOIndexFromUserID(uid));
     return DecodedUID{
         *dwarf,
-        0xffffffff /*main_cu*/,
         {llvm::None, DIERef::Section::DebugInfo, dw_offset_t(uid)}};
   }
   dw_offset_t die_offset = uid;
@@ -1290,13 +1286,13 @@ SymbolFileDWARF::DecodeUIDUnlocked(lldb::user_id_t uid) {
   if (*dwo_num == 0x1fffffff || is_dwz)
     dwo_num = llvm::None;
 
-  llvm::Optional<uint32_t> main_cu = uid >> 32 & 0x1fffffff;
-  if (*main_cu == 0x1fffffff || !is_dwz)
-    main_cu = llvm::None;
+  uint32_t main_cu = uid >> 32 & 0x1fffffff;
+  if (main_cu == 0x1fffffff || !is_dwz)
+    main_cu = 0xffffffff;
 
   return DecodedUID{*this,
-                    main_cu.hasValue() ? *main_cu : 0xffffffff,
                     {dwo_num, section, die_offset}};
+  // FIXME: DWZ: main_cu
 }
 
 llvm::Optional<SymbolFileDWARF::DecodedUID>
@@ -1316,12 +1312,8 @@ SymbolFileDWARF::GetDIEUnlocked(lldb::user_id_t uid,
   if (decoded) {
     DWARFDIE die = decoded->dwarf.GetDIE(decoded->ref);
     if (main_unit_return) {
-      // FIXME: DWZ
-      *main_unit_return =
-          decoded->main_cu == 0xffffffff
-              ? nullptr
-              : llvm::cast<DWARFCompileUnit>(
-                    DebugInfo().GetUnitAtIndex(decoded->main_cu));
+      *main_unit_return = nullptr;
+      // FIXME: DWZ: *main_unit_return = decoded->main_cu == 0xffffffff ? nullptr : llvm::cast<DWARFCompileUnit>(DebugInfo().GetUnitAtIndex(decoded->main_cu));
     }
     return die;
   }

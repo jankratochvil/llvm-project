@@ -11,6 +11,8 @@
 #include "DWARFUnit.h"
 #include "DWARFDebugInfoEntry.h"
 #include "SymbolFileDWARF.h"
+#include "DWARFTypeUnit.h"
+#include "DWARFCompileUnit.h"
 
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/ObjectFile.h"

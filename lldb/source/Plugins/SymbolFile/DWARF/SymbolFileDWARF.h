@@ -323,13 +323,12 @@ public:
 
   static lldb::LanguageType GetLanguage(DWARFUnit &unit);
 
-  llvm::Optional<DIERef> GetDIERef(lldb::user_id_t uid) {
-    llvm::Optional<DecodedUID> decoded = DecodeUID(uid);
-    if (!decoded)
-      return {};
-    lldbassert(&decoded->dwarf == this); // FIXME:DWZ
-    return decoded->ref;
-  }
+  struct DecodedUID {
+    SymbolFileDWARF &dwarf;
+    DIERef ref;
+    // FIXME: DWZ: uint32_t main_cu = 0xffffffff
+  };
+  llvm::Optional<DecodedUID> DecodeUIDUnlocked(lldb::user_id_t uid);
 
 protected:
   typedef llvm::DenseMap<
@@ -492,13 +491,6 @@ protected:
   void BuildCuTranslationTable();
   llvm::Optional<uint32_t> GetDWARFUnitIndex(uint32_t cu_idx);
 
-  struct DecodedUID {
-    SymbolFileDWARF &dwarf;
-    // FIXME: DWZ
-    uint32_t main_cu;
-    DIERef ref;
-  };
-  llvm::Optional<DecodedUID> DecodeUIDUnlocked(lldb::user_id_t uid);
   llvm::Optional<DecodedUID> DecodeUID(lldb::user_id_t uid);
 
   void FindDwpSymbolFile();

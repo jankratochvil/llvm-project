@@ -50,15 +50,7 @@ void NameToDIE::FindAllEntriesForUnit(
   const uint32_t size = m_map.GetSize();
   for (uint32_t i = 0; i < size; ++i) {
     user_id_t uid = m_map.GetValueAtIndexUnchecked(i);
-    llvm::Optional<DIERef> die_ref_opt =
-        unit.GetSymbolFileDWARF().GetDIERef(uid);
-    if (!die_ref_opt)
-      continue;
-    DIERef die_ref = *die_ref_opt;
-    if (unit.GetSymbolFileDWARF().GetDwoNum() == die_ref.dwo_num() &&
-        unit.GetDebugSection() == die_ref.section() &&
-        unit.GetOffset() <= die_ref.die_offset() &&
-        die_ref.die_offset() < unit.GetNextUnitOffset()) {
+    if (unit.ContainsUID(uid)) {
       if (!callback(uid))
         return;
     }
