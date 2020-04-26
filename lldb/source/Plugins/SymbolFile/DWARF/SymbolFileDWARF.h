@@ -266,7 +266,7 @@ public:
   DWARFDIE GetDIEUnlocked(lldb::user_id_t uid,
                           DWARFCompileUnit **main_unit_return = nullptr);
 
-  lldb::user_id_t GetUID(DWARFCompileUnit *main_unit, const DWARFBaseDIE &die);
+  lldb::user_id_t GetUID(DWARFCompileUnit *main_unit, const DWARFDIE &die);
 
   lldb::user_id_t GetUID(DWARFCompileUnit *main_unit,
                          const llvm::Optional<DIERef> &ref) {

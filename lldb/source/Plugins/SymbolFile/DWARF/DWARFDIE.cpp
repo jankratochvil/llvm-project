@@ -479,6 +479,8 @@ DWARFUnit *DWARFDIE::MainDWARFUnit(DWARFCompileUnit *main_unit) const {
 DWARFCompileUnit *
 DWARFDIE::MainDWARFCompileUnitOrNull(DWARFCompileUnit *main_unit) const {
   lldbassert(IsValid());
+  if (!MainUnitIsValid(main_unit))
+    return nullptr;
   if (GetCU()->GetDwoSymbolFile())
     return nullptr;
   if (llvm::isa<SymbolFileDWARFDwo>(&GetCU()->GetSymbolFileDWARF()))
@@ -502,7 +504,7 @@ bool DWARFDIE::MainUnitIsValid(DWARFCompileUnit *main_unit) const {
     return parent.MainUnitIsValid(main_unit);
   switch (Tag()) {
     case DW_TAG_compile_unit:
-      lldbassert(main_unit == GetCU());
+//      lldbassert(main_unit == GetCU());
       return false;
 //      return main_unit == GetCU();
     case DW_TAG_partial_unit:
@@ -510,8 +512,15 @@ lldbassert(0); // FIXME:DWZ
 //      lldbassert(main_unit->GetSymbolFileDWARF().GetDWZCommonFileFIXME() == GetDWARF());
       return main_unit != nullptr;
     default:
-      lldbassert(main_unit == nullptr);
+//      lldbassert(main_unit == nullptr);
       return false;
 //      return true;
   }
 }
+
+lldb::user_id_t DWARFDIE::GetID(DWARFCompileUnit *main_unit) const {
+  if (IsValid())
+    return GetDWARF()->GetUID(main_unit, *this);
+  return LLDB_INVALID_UID;
+}
+

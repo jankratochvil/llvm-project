@@ -98,6 +98,12 @@ public:
   MainCUtoDIEPair(DWARFCompileUnit *main_unit) const;
   bool MainUnitIsValid(DWARFCompileUnit *main_unit) const;
 
+  // Get the LLDB user ID for this DIE. This is often just the DIE offset,
+  // but it might have a SymbolFileDWARF::GetID() in the high 32 bits if
+  // we are doing Darwin DWARF in .o file, or DWARF stand alone debug
+  // info.
+  lldb::user_id_t GetID(DWARFCompileUnit *main_unit) const;
+
 protected:
   DWARFCompileUnit *
   MainDWARFCompileUnitOrNull(DWARFCompileUnit *main_unit) const;

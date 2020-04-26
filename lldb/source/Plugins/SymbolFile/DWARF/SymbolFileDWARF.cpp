@@ -1216,7 +1216,9 @@ void SymbolFileDWARF::ParseDeclsForContext(CompilerDeclContext decl_ctx) {
 }
 
 user_id_t SymbolFileDWARF::GetUID(DWARFCompileUnit *main_unit,
-                                  const DWARFBaseDIE &die) {
+                                  const DWARFDIE &die) {
+  if (!die.MainUnitIsValid(main_unit))
+    main_unit = nullptr;
   return GetUID(die.MainDWARFCompileUnit(main_unit), die.GetDIERef());
 }
 
