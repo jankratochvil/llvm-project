@@ -992,6 +992,6 @@ bool DWARFUnit::ContainsUID(user_id_t uid) const {
     return false;
   if (&decoded->dwarf != &m_dwarf)
     return false;
-  // main_cu: FIXME: DWZ
+  // FIXME: DWZ: main_cu
   return ContainsDIERef(decoded->ref);
 }

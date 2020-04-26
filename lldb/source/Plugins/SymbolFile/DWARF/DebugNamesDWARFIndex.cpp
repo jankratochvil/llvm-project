@@ -264,11 +264,11 @@ void DebugNamesDWARFIndex::GetFunctions(
 
     if (llvm::Optional<DIERef> ref = ToDIERef(entry)) {
       // FIXME: DWZ
-      if (!ProcessFunctionDIE(name.GetStringRef(), nullptr /* main_unit */,
+      DWARFCompileUnit *main_unit = nullptr;
+      if (!ProcessFunctionDIE(name.GetStringRef(), main_unit,
                               *ref, dwarf, parent_decl_ctx, name_type_mask,
-                              [&](DWARFCompileUnit *main_unit, DWARFDIE die) {
-                                // FIXME: DWZ
-                                lldbassert(!main_unit);
+                              [&](DWARFCompileUnit *main_unit_check, DWARFDIE die) {
+                                lldbassert(main_unit_check == main_unit);
                                 if (!seen.insert(die.GetDIE()).second)
                                   return true;
                                 return callback(main_unit, die);

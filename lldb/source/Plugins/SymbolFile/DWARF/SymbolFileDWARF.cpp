@@ -1280,17 +1280,11 @@ SymbolFileDWARF::DecodeUIDUnlocked(lldb::user_id_t uid) {
   DIERef::Section section =
       uid >> 63 ? DIERef::Section::DebugTypes : DIERef::Section::DebugInfo;
 
-  bool is_dwz = (uid >> 62) & 1;
   // FIXME: DWZ
-  __attribute__((unused)) bool is_dwz_common = (uid >> 61) & 1;
 
   llvm::Optional<uint32_t> dwo_num = uid >> 32 & 0x1fffffff;
-  if (*dwo_num == 0x1fffffff || is_dwz)
+  if (*dwo_num == 0x1fffffff)
     dwo_num = llvm::None;
-
-  uint32_t main_cu = uid >> 32 & 0x1fffffff;
-  if (main_cu == 0x1fffffff || !is_dwz)
-    main_cu = 0xffffffff;
 
   return DecodedUID{*this,
                     {dwo_num, section, die_offset}};
@@ -1314,8 +1308,8 @@ SymbolFileDWARF::GetDIEUnlocked(lldb::user_id_t uid,
   if (decoded) {
     DWARFDIE die = decoded->dwarf.GetDIE(decoded->ref);
     if (main_unit_return) {
+      // FIXME: DWZ
       *main_unit_return = nullptr;
-      // FIXME: DWZ: *main_unit_return = decoded->main_cu == 0xffffffff ? nullptr : llvm::cast<DWARFCompileUnit>(DebugInfo().GetUnitAtIndex(decoded->main_cu));
     }
     return die;
   }

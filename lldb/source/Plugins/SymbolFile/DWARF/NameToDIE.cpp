@@ -66,10 +66,7 @@ void NameToDIE::Dump(Stream *s) {
     if (upper != 0x1fffffff)
       OS << llvm::format_hex_no_prefix(upper, 8) << "/";
     OS << (uid & (1ULL << 63) ? "TYPE" : "INFO");
-    if (uid & (1ULL << 61))
-      OS << "/DWZCOMMON";
-    else if (uid & (1ULL << 62))
-      OS << "/DWZ";
+    // FIXME: DWZ
     OS << "/" << llvm::format_hex_no_prefix(uid & 0xffffffff, 8) << " \""
        << m_map.GetCStringAtIndexUnchecked(i).GetStringRef() << "\"\n";
   }

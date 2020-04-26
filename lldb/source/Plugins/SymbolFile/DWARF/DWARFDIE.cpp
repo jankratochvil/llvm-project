@@ -201,6 +201,12 @@ DWARFDIE::LookupDeepestBlock(lldb::addr_t address) const {
   return result;
 }
 
+lldb::user_id_t DWARFDIE::GetID(DWARFCompileUnit *main_unit) const {
+  if (IsValid())
+    return GetDWARF()->GetUID(main_unit, *this);
+  return LLDB_INVALID_UID;
+}
+
 const char *DWARFDIE::GetMangledName() const {
   if (IsValid())
     return m_die->GetMangledName(m_cu);
@@ -475,15 +481,10 @@ DWARFUnit *DWARFDIE::MainDWARFUnit(DWARFCompileUnit *main_unit) const {
   return GetCU();
 }
 
-// FIXME: Is it possible to unify it with MainDWARFCompileUnit()?
 DWARFCompileUnit *
 DWARFDIE::MainDWARFCompileUnitOrNull(DWARFCompileUnit *main_unit) const {
   lldbassert(IsValid());
   if (!MainUnitIsValid(main_unit))
-    return nullptr;
-  if (GetCU()->GetDwoSymbolFile())
-    return nullptr;
-  if (llvm::isa<SymbolFileDWARFDwo>(&GetCU()->GetSymbolFileDWARF()))
     return nullptr;
   return MainDWARFCompileUnit(main_unit);
 }
@@ -504,23 +505,12 @@ bool DWARFDIE::MainUnitIsValid(DWARFCompileUnit *main_unit) const {
     return parent.MainUnitIsValid(main_unit);
   switch (Tag()) {
     case DW_TAG_compile_unit:
-//      lldbassert(main_unit == GetCU());
       return false;
-//      return main_unit == GetCU();
     case DW_TAG_partial_unit:
-lldbassert(0); // FIXME:DWZ
-//      lldbassert(main_unit->GetSymbolFileDWARF().GetDWZCommonFileFIXME() == GetDWARF());
-      return main_unit != nullptr;
+      // FIXME: DWZ
+      lldbassert(0);
+      return true;
     default:
-//      lldbassert(main_unit == nullptr);
       return false;
-//      return true;
   }
 }
-
-lldb::user_id_t DWARFDIE::GetID(DWARFCompileUnit *main_unit) const {
-  if (IsValid())
-    return GetDWARF()->GetUID(main_unit, *this);
-  return LLDB_INVALID_UID;
-}
-
