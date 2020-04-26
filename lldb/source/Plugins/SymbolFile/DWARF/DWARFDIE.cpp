@@ -504,13 +504,13 @@ bool DWARFDIE::MainUnitIsValid(DWARFCompileUnit *main_unit) const {
   if (parent)
     return parent.MainUnitIsValid(main_unit);
   switch (Tag()) {
-    case DW_TAG_compile_unit:
-      return false;
-    case DW_TAG_partial_unit:
-      // FIXME: DWZ
-      lldbassert(0);
-      return true;
-    default:
-      return false;
+  case DW_TAG_compile_unit:
+    return false;
+  case DW_TAG_partial_unit:
+    // FIXME: DWZ
+    lldbassert(0);
+    return true;
+  default:
+    return false;
   }
 }

@@ -1270,8 +1270,7 @@ SymbolFileDWARF::DecodeUIDUnlocked(lldb::user_id_t uid) {
     SymbolFileDWARF *dwarf = debug_map->GetSymbolFileByOSOIndex(
         debug_map->GetOSOIndexFromUserID(uid));
     return DecodedUID{
-        *dwarf,
-        {llvm::None, DIERef::Section::DebugInfo, dw_offset_t(uid)}};
+        *dwarf, {llvm::None, DIERef::Section::DebugInfo, dw_offset_t(uid)}};
   }
   dw_offset_t die_offset = uid;
   if (die_offset == DW_INVALID_OFFSET)
@@ -1286,8 +1285,7 @@ SymbolFileDWARF::DecodeUIDUnlocked(lldb::user_id_t uid) {
   if (*dwo_num == 0x1fffffff)
     dwo_num = llvm::None;
 
-  return DecodedUID{*this,
-                    {dwo_num, section, die_offset}};
+  return DecodedUID{*this, {dwo_num, section, die_offset}};
   // FIXME: DWZ: main_cu
 }
 

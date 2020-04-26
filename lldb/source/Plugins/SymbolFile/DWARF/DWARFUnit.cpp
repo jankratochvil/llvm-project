@@ -982,12 +982,15 @@ bool DWARFUnit::ContainsDIERef(DIERef die_ref) const {
     return false;
   if (m_section != die_ref.section())
     return false;
-  lldbassert(ContainsDIEOffset(die_ref.die_offset())== (GetOffset() <= die_ref.die_offset() && die_ref.die_offset() < GetNextUnitOffset()));
+  lldbassert(ContainsDIEOffset(die_ref.die_offset()) ==
+             (GetOffset() <= die_ref.die_offset() &&
+              die_ref.die_offset() < GetNextUnitOffset()));
   return ContainsDIEOffset(die_ref.die_offset());
 }
 
 bool DWARFUnit::ContainsUID(user_id_t uid) const {
-  llvm::Optional<SymbolFileDWARF::DecodedUID> decoded = m_dwarf.DecodeUIDUnlocked(uid);
+  llvm::Optional<SymbolFileDWARF::DecodedUID> decoded =
+      m_dwarf.DecodeUIDUnlocked(uid);
   if (!decoded)
     return false;
   if (&decoded->dwarf != &m_dwarf)
