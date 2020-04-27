@@ -1393,6 +1393,10 @@ Type *SymbolFileDWARF::ResolveTypeUID(DWARFCompileUnit *main_unit,
 Type *SymbolFileDWARF::ResolveTypeUID(DWARFCompileUnit *main_unit,
                                       const DWARFDIE &die,
                                       bool assert_not_being_parsed) {
+  { SymbolFileDWARF *dwarf = &die.MainDWARFUnit(main_unit)->GetSymbolFileDWARF();
+    if (dwarf != this)
+      return dwarf->ResolveTypeUID(main_unit, die, assert_not_being_parsed);
+  }
   if (die) {
     Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO));
     if (log)
@@ -1505,6 +1509,10 @@ Type *SymbolFileDWARF::ResolveType(DWARFCompileUnit *main_unit,
                                    const DWARFDIE &die,
                                    bool assert_not_being_parsed,
                                    bool resolve_function_context) {
+  { SymbolFileDWARF *dwarf = &die.MainDWARFUnit(main_unit)->GetSymbolFileDWARF();
+    if (dwarf != this)
+      return dwarf->ResolveType(main_unit, die, assert_not_being_parsed, resolve_function_context);
+  }
   if (die) {
     Type *type = GetTypeForDIE(main_unit, die, resolve_function_context).get();
 
@@ -2965,7 +2973,10 @@ TypeSP SymbolFileDWARF::ParseType(const SymbolContext &sc, const DWARFDIE &die,
   if (!die)
     return {};
 
-  auto type_system_or_err = GetTypeSystemForLanguage(GetLanguage(*die.GetCU()));
+  DWARFCompileUnit *main_unit = GetDWARFCompileUnit(sc.comp_unit);
+  SymbolFileDWARF *dwarf =
+      llvm::cast<SymbolFileDWARF>(sc.module_sp->GetSymbolFile());
+  auto type_system_or_err = dwarf->GetTypeSystemForLanguage(GetLanguage(*die.MainDWARFUnit(main_unit)));
   if (auto err = type_system_or_err.takeError()) {
     LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
                    std::move(err), "Unable to parse type");
@@ -2981,7 +2992,6 @@ TypeSP SymbolFileDWARF::ParseType(const SymbolContext &sc, const DWARFDIE &die,
     GetTypeList().Insert(type_sp);
 
     if (die.Tag() == DW_TAG_subprogram) {
-      DWARFCompileUnit *main_unit = GetDWARFCompileUnit(sc.comp_unit);
       std::string scope_qualified_name(
           GetDeclContextForUID(die.GetID(main_unit))
               .GetScopeQualifiedName()
