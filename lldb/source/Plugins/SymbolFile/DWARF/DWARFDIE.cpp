@@ -505,5 +505,7 @@ DWARFDIE::MainCUtoDIEPair(DWARFCompileUnit *main_unit) const {
 }
 
 bool DWARFDIE::MainUnitIsValid(DWARFCompileUnit *main_unit) const {
+  if (!IsValid())
+    return false;
   return GetCU()->MainUnitIsValid(main_unit);
 }
