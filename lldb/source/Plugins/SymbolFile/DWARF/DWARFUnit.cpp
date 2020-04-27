@@ -994,3 +994,16 @@ bool DWARFUnit::ContainsUID(user_id_t uid) const {
   // FIXME: DWZ: main_cu
   return ContainsDIERef(decoded->ref);
 }
+
+bool DWARFUnit::MainUnitIsValid(DWARFCompileUnit *main_unit) {
+  switch (GetUnitDIEOnly().Tag()) {
+  case DW_TAG_compile_unit:
+    return false;
+  case DW_TAG_partial_unit:
+    // FIXME: DWZ
+    lldbassert(0);
+    return true;
+  default:
+    return false;
+  }
+}

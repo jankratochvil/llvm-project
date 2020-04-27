@@ -271,6 +271,8 @@ public:
 
   lldb_private::DWARFDataExtractor GetLocationData() const;
 
+  bool MainUnitIsValid(DWARFCompileUnit *main_unit);
+
 protected:
   DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
             const DWARFUnitHeader &header,
