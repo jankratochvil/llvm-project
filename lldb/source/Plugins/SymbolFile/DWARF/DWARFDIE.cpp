@@ -462,29 +462,18 @@ DWARFCompileUnit *
 DWARFDIE::MainDWARFCompileUnit(DWARFCompileUnit *main_unit) const {
   if (!IsValid())
     return nullptr;
-  if (llvm::isa<DWARFTypeUnit>(GetCU()))
-    return nullptr;
-  if (!main_unit)
-    main_unit = llvm::dyn_cast<DWARFCompileUnit>(GetCU());
-  lldbassert(main_unit);
-#if 0
-  if (main_unit)
-    main_unit = &main_unit->GetNonSkeletonUnit();
-#endif
-  return main_unit;
+  return GetCU()->MainDWARFCompileUnit(main_unit);
 }
 
 DWARFUnit *DWARFDIE::MainDWARFUnit(DWARFCompileUnit *main_unit) const {
-  main_unit = MainDWARFCompileUnit(main_unit);
-  if (main_unit)
-    return main_unit;
-  return GetCU();
+  lldbassert(IsValid()) ;
+  return GetCU()->MainDWARFUnit(main_unit);
 }
 
 DWARFCompileUnit *
 DWARFDIE::MainDWARFCompileUnitOrNull(DWARFCompileUnit *main_unit) const {
   lldbassert(IsValid());
-  if (!MainUnitIsValid(main_unit))
+  if (!MainUnitIsNeeded(main_unit))
     return nullptr;
   return MainDWARFCompileUnit(main_unit);
 }
@@ -499,8 +488,8 @@ DWARFDIE::MainCUtoDIEPair(DWARFCompileUnit *main_unit) const {
   return std::make_pair(MainDWARFCompileUnitOrNull(main_unit), GetDIE());
 }
 
-bool DWARFDIE::MainUnitIsValid(DWARFCompileUnit *main_unit) const {
+bool DWARFDIE::MainUnitIsNeeded(DWARFCompileUnit *main_unit) const {
   if (!IsValid())
     return false;
-  return GetCU()->MainUnitIsValid(main_unit);
+  return GetCU()->MainUnitIsNeeded(main_unit);
 }
