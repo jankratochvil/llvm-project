@@ -999,7 +999,7 @@ bool DWARFUnit::ContainsUID(user_id_t uid) const {
   return ContainsDIERef(decoded->ref);
 }
 
-bool DWARFUnit::MainUnitIsValid(DWARFCompileUnit *main_unit) {
+bool DWARFUnit::MainUnitIsNeeded(DWARFCompileUnit *main_unit) {
   switch (GetUnitDIEOnly().Tag()) {
   case DW_TAG_compile_unit:
     return false;

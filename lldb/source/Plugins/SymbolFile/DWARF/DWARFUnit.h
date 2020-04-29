@@ -260,7 +260,7 @@ public:
 
   lldb_private::DWARFDataExtractor GetLocationData() const;
 
-  bool MainUnitIsValid(DWARFCompileUnit *main_unit);
+  bool MainUnitIsNeeded(DWARFCompileUnit *main_unit);
 
   DWARFCompileUnit *MainDWARFCompileUnit(DWARFCompileUnit *main_unit) const = 0;
   DWARFUnit *MainDWARFUnit(DWARFCompileUnit *main_unit) const;
