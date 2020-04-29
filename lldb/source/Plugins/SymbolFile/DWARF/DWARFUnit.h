@@ -262,6 +262,9 @@ public:
 
   bool MainUnitIsValid(DWARFCompileUnit *main_unit);
 
+  DWARFCompileUnit *MainDWARFCompileUnit(DWARFCompileUnit *main_unit) const = 0;
+  DWARFUnit *MainDWARFUnit(DWARFCompileUnit *main_unit) const;
+
 protected:
   DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
             const DWARFUnitHeader &header,

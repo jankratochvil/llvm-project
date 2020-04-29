@@ -1011,3 +1011,10 @@ bool DWARFUnit::MainUnitIsValid(DWARFCompileUnit *main_unit) {
     return false;
   }
 }
+
+DWARFUnit *DWARFUnit::MainDWARFUnit(DWARFCompileUnit *main_unit) const {
+  main_unit = MainDWARFCompileUnit(main_unit);
+  if (main_unit)
+    return main_unit;
+  return this;
+}

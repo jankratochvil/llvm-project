@@ -22,6 +22,8 @@ public:
 
   DWARFCompileUnit &GetNonSkeletonUnit();
 
+  DWARFCompileUnit *MainDWARFCompileUnit(DWARFCompileUnit *main_unit) const override;
+
 private:
   DWARFCompileUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
                    const DWARFUnitHeader &header,
