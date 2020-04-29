@@ -13,6 +13,7 @@
 #include "DWARFDebugInfo.h"
 #include "DWARFDeclContext.h"
 #include "DWARFDefines.h"
+#include "DWARFCompileUnit.h"
 #include "SymbolFileDWARF.h"
 #include "SymbolFileDWARFDebugMap.h"
 #include "SymbolFileDWARFDwo.h"
@@ -158,7 +159,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
 
   // The type in the Clang module must have the same language as the current CU.
   LanguageSet languages;
-  languages.Insert(SymbolFileDWARF::GetLanguage(*die.GetCU()));
+  languages.Insert(SymbolFileDWARF::GetLanguage(die.GetCU()));
   llvm::DenseSet<SymbolFile *> searched_symbol_files;
   clang_module_sp->GetSymbolFile()->FindTypes(decl_context, languages,
                                               searched_symbol_files, pcm_types);
@@ -390,7 +391,7 @@ ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
 }
 
 static std::string GetUnitName(const DWARFDIE &die) {
-  if (DWARFUnit *unit = die.GetCU())
+  if (DWARFUnit *unit = die.GetCU().GetCU())
     return unit->GetAbsolutePath().GetPath();
   return "<missing DWARF unit path>";
 }
@@ -2375,9 +2376,9 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
       else if ((die.GetParent().Tag() == DW_TAG_compile_unit ||
                 die.GetParent().Tag() == DW_TAG_partial_unit) &&
                Language::LanguageIsCPlusPlus(
-                   SymbolFileDWARF::GetLanguage(*die.GetCU())) &&
+                   SymbolFileDWARF::GetLanguage(die.GetCU())) &&
                !Language::LanguageIsObjC(
-                   SymbolFileDWARF::GetLanguage(*die.GetCU())) &&
+                   SymbolFileDWARF::GetLanguage(die.GetCU())) &&
                name && strcmp(name, "main") != 0) {
         // If the mangled name is not present in the DWARF, generate the
         // demangled name using the decl context. We skip if the function is
@@ -3794,10 +3795,10 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
 
   DWARFASTParserClang *src_dwarf_ast_parser =
       static_cast<DWARFASTParserClang *>(
-          SymbolFileDWARF::GetDWARFParser(*src_die.GetCU()));
+          SymbolFileDWARF::GetDWARFParser(src_die.GetCU()));
   DWARFASTParserClang *dst_dwarf_ast_parser =
       static_cast<DWARFASTParserClang *>(
-          SymbolFileDWARF::GetDWARFParser(*dst_die.GetCU()));
+          SymbolFileDWARF::GetDWARFParser(dst_die.GetCU()));
 
   // Now do the work of linking the DeclContexts and Types.
   if (fast_path) {

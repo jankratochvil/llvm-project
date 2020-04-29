@@ -26,18 +26,33 @@
 class DIERef {
 public:
   enum Section : uint8_t { DebugInfo, DebugTypes };
+  enum DwzCommon : uint8_t { MainDwz, CommonDwz };
+  enum Kind : uint8_t { NoneKind, DwoKind, MainDwzKind, DwzCommonKind };
 
-  DIERef(llvm::Optional<uint32_t> dwo_num, Section section,
+  DIERef(llvm::Optional<uint32_t> dwo_num, llvm::Optional<uint32_t> main_cu, DwzCommon dwz_common, Section section,
          dw_offset_t die_offset)
-      : m_dwo_num(dwo_num.getValueOr(0)), m_dwo_num_valid(bool(dwo_num)),
+      : m_data(dwo_num.getValueOr(0) | main_cu.getValueOr(0)), m_data_kind(dwo_num ? DwoKind : (main_cu ? (dwz_common == MainDwz ? MainDwzKind : DwzCommonKind ) : NoneKind)),
         m_section(section), m_die_offset(die_offset) {
     assert(this->dwo_num() == dwo_num && "Dwo number out of range?");
+    assert(this->main_cu() == main_cu && "Main Cu number out of range?");
+    assert(dwz_common == MainDwz || main_cu);
   }
 
   llvm::Optional<uint32_t> dwo_num() const {
-    if (m_dwo_num_valid)
-      return m_dwo_num;
+    if (m_data_kind == DwoKind)
+      return m_data;
     return llvm::None;
+  }
+
+  llvm::Optional<uint32_t> main_cu() const {
+    if (m_data_kind == MainDwzKind || m_data_kind == DwzCommonKind )
+      return m_data;
+    return llvm::None;
+  }
+
+  DwzCommon dwz_common() const {
+    assert(m_data_kind == MainDwzKind || m_data_kind == DwzCommonKind );
+    return m_data_kind == MainDwzKind ? MainDwz : CommonDwz;
   }
 
   Section section() const { return static_cast<Section>(m_section); }
@@ -45,10 +60,10 @@ public:
   dw_offset_t die_offset() const { return m_die_offset; }
 
   bool operator<(DIERef other) const {
-    if (m_dwo_num_valid != other.m_dwo_num_valid)
-      return m_dwo_num_valid < other.m_dwo_num_valid;
-    if (m_dwo_num_valid && (m_dwo_num != other.m_dwo_num))
-      return m_dwo_num < other.m_dwo_num;
+    if (m_data_kind != other.m_data_kind)
+      return m_data_kind < other.m_data_kind;
+    if (m_data_kind != NoneKind && (m_data != other.m_data))
+      return m_data < other.m_data;
     if (m_section != other.m_section)
       return m_section < other.m_section;
     return m_die_offset < other.m_die_offset;
@@ -64,8 +79,8 @@ public:
   }
 
 private:
-  uint32_t m_dwo_num : 30;
-  uint32_t m_dwo_num_valid : 1;
+  uint32_t m_data : 29;
+  uint32_t m_data_kind : 2;
   uint32_t m_section : 1;
   dw_offset_t m_die_offset;
 };

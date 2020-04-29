@@ -55,7 +55,7 @@ class DWARFExpressionTester : public YAMLModuleTester {
 public:
   using YAMLModuleTester::YAMLModuleTester;
   llvm::Expected<Scalar> Eval(llvm::ArrayRef<uint8_t> expr) {
-    return ::Evaluate(expr, m_module_sp, m_dwarf_unit.get());
+    return ::Evaluate(expr, m_module_sp, GetDwarfUnit());
   }
 };
 
@@ -219,7 +219,7 @@ TEST(DWARFExpression, DW_OP_convert) {
 
   // No Module.
   EXPECT_THAT_ERROR(Evaluate({DW_OP_const1s, 'X', DW_OP_convert, 0x00}, nullptr,
-                             t.GetDwarfUnit().get())
+                             t.GetDwarfUnit())
                         .takeError(),
                     llvm::Failed());
 

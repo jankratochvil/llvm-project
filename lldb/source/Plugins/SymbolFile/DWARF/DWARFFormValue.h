@@ -14,8 +14,10 @@
 #include "llvm/ADT/Optional.h"
 
 class DWARFUnit;
+class DWARFCompileUnit;
 class SymbolFileDWARF;
 class DWARFDIE;
+class DWARFDebugInfoEntry;
 
 class DWARFFormValue {
 public:

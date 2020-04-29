@@ -9,6 +9,7 @@
 #include "DWARFCompileUnit.h"
 #include "DWARFDebugAranges.h"
 #include "SymbolFileDWARFDebugMap.h"
+#include "SymbolFileDWARFDwo.h"
 
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineTable.h"
@@ -36,9 +37,15 @@ void DWARFCompileUnit::BuildAddressRangeTable(
   // First get the compile unit DIE only and check contains ranges information.
   const DWARFDebugInfoEntry *die = GetUnitDIEPtrOnly();
 
+  // DWZ partial units never contain PC.
+  if (die && die->Tag() == DW_TAG_partial_unit)
+    return;
+
   const dw_offset_t cu_offset = GetOffset();
   if (die) {
     DWARFRangeList ranges;
+    // It does not make sense to build address table for DW_TAG_partial_unit as
+    // those never contain any addresses.
     const size_t num_ranges =
         die->GetAttributeAddressRanges(this, ranges, /*check_hi_lo_pc=*/true);
     if (num_ranges > 0) {
@@ -100,10 +107,6 @@ void DWARFCompileUnit::BuildAddressRangeTable(
   }
 }
 
-DWARFCompileUnit &DWARFCompileUnit::GetNonSkeletonUnit() {
-  return llvm::cast<DWARFCompileUnit>(DWARFUnit::GetNonSkeletonUnit());
-}
-
 DWARFCompileUnit *
 DWARFCompileUnit::MainDWARFCompileUnit(DWARFCompileUnit *main_unit) {
   if (!main_unit)
@@ -112,4 +115,22 @@ DWARFCompileUnit::MainDWARFCompileUnit(DWARFCompileUnit *main_unit) {
   main_unit = &main_unit->GetNonSkeletonUnit();
 #endif
   return main_unit;
+}
+
+DWARFDIE DWARFCompileUnit::LookupAddress(const dw_addr_t address) {
+  if (GetUnitDIEPtrOnly()) {
+    const DWARFDebugAranges &func_aranges = GetFunctionAranges();
+
+    // Re-check the aranges auto pointer contents in case it was created above
+    if (!func_aranges.IsEmpty())
+      return GetDIE(func_aranges.FindAddress(address));
+  }
+  return DWARFDIE();
+}
+
+DWARFCompileUnit &DWARFCompileUnit::GetNonSkeletonUnit() {
+  ExtractUnitDIEIfNeeded();
+  if (m_dwo)
+    return *m_dwo;
+  return *this;
 }

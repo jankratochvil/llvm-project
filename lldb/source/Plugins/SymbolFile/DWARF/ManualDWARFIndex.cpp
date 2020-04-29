@@ -13,6 +13,7 @@
 #include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDwo.h"
+#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/Stream.h"
@@ -123,6 +124,14 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
         unit.GetOffset());
   }
 
+  // DWZ DW_TAG_partial_unit will get indexed by DW_AT_import
+  // from its DW_TAG_compile_unit (possibly transitively).
+  // Try to prevent GetUnitDIEOnly() which is expensive.
+  if (unit.GetSymbolFileDWARF().GetIsDwz())
+    return;
+  if (unit.GetUnitDIEOnly().Tag() == DW_TAG_partial_unit)
+    return;
+
   const LanguageType cu_language = SymbolFileDWARF::GetLanguage(unit);
   DWARFCompileUnit *main_unit = llvm::dyn_cast<DWARFCompileUnit>(&unit);
 
@@ -165,6 +174,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
     case DW_TAG_union_type:
     case DW_TAG_unspecified_type:
     case DW_TAG_variable:
+    case DW_TAG_imported_unit:
       break;
 
     default:
@@ -180,7 +190,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
     bool has_location_or_const_value = false;
     bool is_global_or_static_variable = false;
 
-    DWARFFormValue specification_die_form;
+    DWARFFormValue specification_die_form, import_die_form;
     const size_t num_attributes = die.GetAttributes(&unit, attributes);
     if (num_attributes > 0) {
       for (uint32_t i = 0; i < num_attributes; ++i) {
@@ -224,6 +234,11 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
           if (attributes.ExtractFormValueAtIndex(i, form_value))
             specification_die_form = form_value;
           break;
+
+        case DW_AT_import:
+          if (attributes.ExtractFormValueAtIndex(i, form_value))
+            import_die_form = form_value;
+          break;
         }
       }
     }
@@ -261,7 +276,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
           }
           // If we have a mangled name, then the DW_AT_name attribute is
           // usually the method name without the class or any parameters
-          bool is_method = DWARFDIE(&unit, &die).IsMethod();
+          bool is_method = DWARFDIE(unitpair, &die).IsMethod();
 
           if (is_method)
             set.function_methods.Insert(ConstString(name), uid);
@@ -323,6 +338,41 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
             ((mangled_cstr[0] == '_') || (::strcmp(name, mangled_cstr) != 0))) {
           set.globals.Insert(ConstString(mangled_cstr), uid);
         }
+      }
+      break;
+
+    case DW_TAG_imported_unit:
+      if (import_die_form.IsValid()) {
+        // DWZ is using DW_TAG_imported_unit only at the top level of CUs.
+        // Therefore GetParent() of any top level DIE in partial unit is always
+        // DW_TAG_compile_unit (possibly after multiple import levels).
+        const DWARFDebugInfoEntry *parent_die = die.GetParent();
+        if (!parent_die || (parent_die->Tag() != DW_TAG_compile_unit &&
+                            parent_die->Tag() != DW_TAG_partial_unit)) {
+          unit.GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
+              "CU 0x%8.8" PRIx32 " DIE 0x%8.8" PRIx32
+              " DW_TAG_imported_unit does not have DW_TAG_compile_unit"
+              " as its parent",
+              unit.GetOffset(), die.GetOffset());
+          break;
+        }
+        DWARFDIE import_die = import_die_form.Reference();
+        if (!import_die.IsValid())
+          break;
+        // main_unit may be different from our callers as GetMainCU() returns
+        // only the first unit which DW_TAG_imported this unit.
+        DWARFUnit *import_cu = import_die.GetCU();
+        dw_offset_t import_cu_firstdie_offset = import_cu->GetFirstDIEOffset();
+        if (import_die.GetOffset() != import_cu_firstdie_offset) {
+          unit.GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
+              "CU 0x%8.8" PRIx32 " DIE 0x%8.8" PRIx32
+              " DW_TAG_imported_unit of DIE 0x%16.16" PRIx32
+              " is not the target CU first DIE 0x%8.8" PRIx32,
+              unit.GetOffset(), die.GetOffset(), import_die.GetOffset(),
+              import_cu_firstdie_offset);
+          break;
+        }
+        IndexUnit({import_cu,unitpair.GetMainCU()}, nullptr/*dwp*/, set);
       }
       break;
 

@@ -25,6 +25,7 @@
 #include "DWARFDebugInfoEntry.h"
 #include "DWARFFormValue.h"
 #include "DWARFTypeUnit.h"
+#include "SymbolFileDWARFDwz.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -38,6 +39,8 @@ DWARFDebugInfo::DWARFDebugInfo(SymbolFileDWARF &dwarf,
 llvm::Expected<DWARFDebugAranges &> DWARFDebugInfo::GetCompileUnitAranges() {
   if (m_cu_aranges_up)
     return *m_cu_aranges_up;
+
+  lldbassert(!m_dwarf.GetIsDwz());
 
   m_cu_aranges_up = std::make_unique<DWARFDebugAranges>();
   const DWARFDataExtractor &debug_aranges_data =
@@ -59,6 +62,7 @@ llvm::Expected<DWARFDebugAranges &> DWARFDebugInfo::GetCompileUnitAranges() {
   for (size_t idx = 0; idx < num_units; ++idx) {
     DWARFUnit *cu = GetUnitAtIndex(idx);
 
+    // FIXME - or: if (!llvm::isa<DWARFCompileUnit>(cu))
     if (cu->GetUnitDIEOnly().Tag() == DW_TAG_partial_unit)
       continue;
     dw_offset_t offset = cu->GetOffset();
@@ -160,7 +164,24 @@ DWARFUnit *DWARFDebugInfo::GetUnitAtOffset(DIERef::Section section,
 }
 
 DWARFUnit *DWARFDebugInfo::GetUnit(const DIERef &die_ref) {
+  bool dwz_common = die_ref.main_cu() && die_ref.dwz_common() == DIERef::CommonDwz;
+  if (dwz_common && !m_dwarf.GetIsDwz()) {
+    assert (m_dwarf.GetDwzSymbolFile());
+    return m_dwarf.GetDwzSymbolFile()->DebugInfo().GetUnit(die_ref);
+  }
+  assert(dwz_common == m_dwarf.GetIsDwz());
   return GetUnitContainingDIEOffset(die_ref.section(), die_ref.die_offset());
+}
+
+DWARFCompileUnit *DWARFDebugInfo::GetMainUnit(const DIERef &die_ref) {
+  DWARFUnit *cu;
+  if (!die_ref.main_cu())
+    cu = GetUnit(die_ref);
+  else
+    cu = GetUnitAtIndex(*die_ref.main_cu());
+  if (!cu || cu->IsTypeUnit())
+    return nullptr;
+  return llvm::cast<DWARFCompileUnit>(cu);
 }
 
 DWARFUnit *
@@ -194,10 +215,11 @@ bool DWARFDebugInfo::ContainsTypeUnits() {
 
 DWARFDIE
 DWARFDebugInfo::GetDIEForDIEOffset(DIERef::Section section,
-                                   dw_offset_t die_offset) {
+                                   dw_offset_t die_offset,
+                                   DWARFCompileUnit *main_cu) {
   DWARFUnit *cu = GetUnitContainingDIEOffset(section, die_offset);
   if (cu)
-    return cu->GetDIE(die_offset);
+    return cu->GetDIE(main_cu, die_offset);
   return DWARFDIE();
 }
 
@@ -207,8 +229,12 @@ DWARFDebugInfo::GetDIEForDIEOffset(DIERef::Section section,
 DWARFDIE
 DWARFDebugInfo::GetDIE(const DIERef &die_ref) {
   DWARFUnit *cu = GetUnit(die_ref);
-  if (cu)
-    return cu->GetNonSkeletonUnit().GetDIE(die_ref.die_offset());
+  if (cu) {
+    DWARFCompileUnit *main_cu = GetMainUnit(die_ref);
+    if (main_cu == cu)
+      cu = main_cu = &main_cu->GetNonSkeletonUnit();
+    return cu->GetDIE(main_cu, die_ref.die_offset());
+  }
   return DWARFDIE(); // Not found
 }
 

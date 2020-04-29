@@ -51,6 +51,8 @@ public:
 
   SymbolFileType(SymbolFile &symbol_file, const lldb::TypeSP &type_sp);
 
+  SymbolFile &GetSymbolFile() const { return m_symbol_file; }
+
   ~SymbolFileType() {}
 
   Type *operator->() { return GetType(); }

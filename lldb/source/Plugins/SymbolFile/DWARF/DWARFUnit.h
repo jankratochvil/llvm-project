@@ -115,7 +115,6 @@ public:
     DISALLOW_COPY_AND_ASSIGN(ScopedExtractDIEs);
   };
 
-  DWARFDIE LookupAddress(const dw_addr_t address);
   bool Verify(lldb_private::Stream *s) const;
   virtual void Dump(lldb_private::Stream *s) const = 0;
   /// Get the data that contains the DIE information for this unit.
@@ -179,13 +178,9 @@ public:
 
   void SetBaseAddress(dw_addr_t base_addr);
 
-  DWARFBaseDIE GetUnitDIEOnly() { return DWARFDIE(this, GetUnitDIEPtrOnly()); }
+  const DWARFDebugInfoEntry *GetDIEPtr(dw_offset_t die_offset);
 
-  DWARFDIE DIE() { return DWARFDIE(this, DIEPtr()); }
-
-  DWARFDIE GetDIE(dw_offset_t die_offset);
-
-  DWARFUnit &GetNonSkeletonUnit();
+  DWARFDIE GetDIE(DWARFCompileUnit *main_cu, dw_offset_t die_offset);
 
   static uint8_t GetAddressByteSize(const DWARFUnit *cu);
 
@@ -210,8 +205,6 @@ public:
   uint32_t GetProducerVersionMinor();
 
   uint32_t GetProducerVersionUpdate();
-
-  uint64_t GetDWARFLanguageType();
 
   bool GetIsOptimized();
 
@@ -276,6 +269,13 @@ public:
   virtual DWARFCompileUnit *MainDWARFCompileUnit(DWARFCompileUnit *main_unit) = 0;
   DWARFUnit *MainDWARFUnit(DWARFCompileUnit *main_unit);
 
+  DWARFDebugInfoEntry GetUnitDIEOnly() {
+    const DWARFDebugInfoEntry *dieptr = GetUnitDIEPtrOnly();
+    if (!dieptr)
+      return {};
+    return *dieptr;
+  }
+
 protected:
   DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
             const DWARFUnitHeader &header,
@@ -304,8 +304,11 @@ protected:
     return &m_die_array[0];
   }
 
+  // To be called only as DWARCompileUnit or DWARFTypeUnit.
+  uint64_t GetDWARFLanguageType();
+
   SymbolFileDWARF &m_dwarf;
-  std::shared_ptr<DWARFUnit> m_dwo;
+  std::shared_ptr<DWARFCompileUnit> m_dwo;
   DWARFUnitHeader m_header;
   const DWARFAbbreviationDeclarationSet *m_abbrevs = nullptr;
   void *m_user_data = nullptr;

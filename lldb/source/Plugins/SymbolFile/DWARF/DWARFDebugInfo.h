@@ -41,10 +41,11 @@ public:
   DWARFUnit *GetUnitContainingDIEOffset(DIERef::Section section,
                                         dw_offset_t die_offset);
   DWARFUnit *GetUnit(const DIERef &die_ref);
+  DWARFCompileUnit *GetMainUnit(const DIERef &die_ref);
   DWARFTypeUnit *GetTypeUnitForHash(uint64_t hash);
   bool ContainsTypeUnits();
   DWARFDIE GetDIEForDIEOffset(DIERef::Section section,
-                              dw_offset_t die_offset);
+                              dw_offset_t die_offset,DWARFCompileUnit *main_cu);
   DWARFDIE GetDIE(const DIERef &die_ref);
 
   enum {

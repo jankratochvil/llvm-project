@@ -208,8 +208,11 @@ CompilerDeclContext Variable::GetDeclContext() {
 }
 
 CompilerDecl Variable::GetDecl() {
-  Type *type = GetType();
-  return type ? type->GetSymbolFile()->GetDeclForUID(GetID()) : CompilerDecl();
+  if (!m_symfile_type_sp)
+    return {};
+  // GetType()->GetSymbolFile() may be a different file - the file where type
+  // of this variable is defined but not the file of this variable definition.
+  return m_symfile_type_sp->GetSymbolFile().GetDeclForUID(GetID());
 }
 
 void Variable::CalculateSymbolContext(SymbolContext *sc) {

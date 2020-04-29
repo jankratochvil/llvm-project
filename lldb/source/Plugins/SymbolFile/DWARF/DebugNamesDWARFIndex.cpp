@@ -10,6 +10,7 @@
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDwo.h"
+#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
@@ -46,13 +47,15 @@ DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) {
   if (!cu_offset)
     return llvm::None;
 
-  DWARFUnit *cu = m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo, *cu_offset);
+  // FIXME: .debug_names have no DWZ support yet.
+  DWARFCompileUnit *cu = llvm::dyn_cast_or_null<DWARFCompileUnit>(m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo, *cu_offset));
   if (!cu)
     return llvm::None;
 
   cu = &cu->GetNonSkeletonUnit();
   if (llvm::Optional<uint64_t> die_offset = entry.getDIEUnitOffset())
-    return DIERef(cu->GetSymbolFileDWARF().GetDwoNum(),
+    // FIXME: .debug_names have no DWZ support yet.
+    return DIERef(cu->GetSymbolFileDWARF().GetDwoNum(), llvm::None, DIERef::MainDwz,
                   DIERef::Section::DebugInfo, cu->GetOffset() + *die_offset);
 
   return llvm::None;
@@ -173,6 +176,7 @@ void DebugNamesDWARFIndex::GetCompleteObjCClass(
     if (!ref)
       continue;
 
+    // FIXME: .debug_names have no DWZ support yet.
     DWARFUnit *cu = m_debug_info.GetUnit(*ref);
     if (!cu || !cu->Supports_DW_AT_APPLE_objc_complete_type()) {
       incomplete_types.push_back(*ref);

@@ -269,7 +269,7 @@ bool DWARFMappedHash::Header::Read(const lldb_private::DWARFDataExtractor &data,
     return false;
 
   for (size_t i = 0; i < num_atoms; ++i) {
-    DWARFFormValue form_value(nullptr, header_data.atoms[i].form);
+    DWARFFormValue form_value({}, header_data.atoms[i].form);
 
     if (!form_value.ExtractValue(data, offset_ptr))
       return false;

@@ -34,7 +34,7 @@ DWARFUnit::DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
                      const DWARFAbbreviationDeclarationSet &abbrevs,
                      DIERef::Section section, bool is_dwo)
     : UserID(uid), m_dwarf(dwarf), m_header(header), m_abbrevs(&abbrevs),
-      m_cancel_scopes(false), m_section(section), m_is_dwo(is_dwo) {}
+      m_cancel_scopes(false), m_section(section), m_is_dwo(is_dwo)/*, m_main_cu(this)*/ {}
 
 DWARFUnit::~DWARFUnit() = default;
 
@@ -352,13 +352,14 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
 
   uint64_t main_dwo_id =
       cu_die.GetAttributeValueAsUnsigned(this, DW_AT_GNU_dwo_id, 0);
-  DWARFUnit *dwo_cu = dwo_symbol_file->GetDWOCompileUnitForHash(main_dwo_id);
+  DWARFCompileUnit *dwo_cu = dwo_symbol_file->GetDWOCompileUnitForHash(main_dwo_id);
   if (!dwo_cu)
     return; // Can't fetch the compile unit from the dwo file.
   dwo_cu->SetUserData(this);
 
-  DWARFBaseDIE dwo_cu_die = dwo_cu->GetUnitDIEOnly();
-  if (!dwo_cu_die.IsValid())
+  // 'main_cu' is not used.
+  const DWARFDebugInfoEntry *dwo_cu_die = dwo_cu->GetUnitDIEPtrOnly();
+  if (!dwo_cu_die)
     return; // Can't fetch the compile unit DIE from the dwo file.
 
   // Here for DWO CU we want to use the address base set in the skeleton unit
@@ -385,18 +386,7 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
     dwo_cu->SetLoclistsBase(llvm::DWARFListTableHeader::getHeaderSize(DWARF32));
   dwo_cu->SetBaseAddress(GetBaseAddress());
 
-  m_dwo = std::shared_ptr<DWARFUnit>(std::move(dwo_symbol_file), dwo_cu);
-}
-
-DWARFDIE DWARFUnit::LookupAddress(const dw_addr_t address) {
-  if (DIE()) {
-    const DWARFDebugAranges &func_aranges = GetFunctionAranges();
-
-    // Re-check the aranges auto pointer contents in case it was created above
-    if (!func_aranges.IsEmpty())
-      return GetDIE(func_aranges.FindAddress(address));
-  }
-  return DWARFDIE();
+  m_dwo = std::shared_ptr<DWARFCompileUnit>(std::move(dwo_symbol_file), dwo_cu);
 }
 
 size_t DWARFUnit::GetDebugInfoSize() const {
@@ -525,39 +515,44 @@ static bool CompareDIEOffset(const DWARFDebugInfoEntry &die,
   return die.GetOffset() < die_offset;
 }
 
+const DWARFDebugInfoEntry *DWARFUnit::GetDIEPtr(dw_offset_t die_offset) {
+  if (die_offset == DW_INVALID_OFFSET) {
+    m_dwarf.GetObjectFile()->GetModule()->ReportError(
+        "CU 0x%8.8" PRIx32 " does not contain DIE 0x%8.8" PRIx32, GetOffset(),
+        die_offset);
+    return nullptr;
+  }
+  lldbassert(!GetDwoSymbolFile()); // FIXME: Or maybe just leave it running here now?
+
+  if (!ContainsDIEOffset(die_offset)) {
+    GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
+        "GetDIE for DIE 0x%" PRIx32 " is outside of its CU 0x%" PRIx32,
+        die_offset, GetOffset());
+    return nullptr;
+  }
+
+  ExtractDIEsIfNeeded();
+  DWARFDebugInfoEntry::const_iterator end = m_die_array.cend();
+  DWARFDebugInfoEntry::const_iterator pos =
+      lower_bound(m_die_array.cbegin(), end, die_offset, CompareDIEOffset);
+  if (pos != end) {
+    if (die_offset == (*pos).GetOffset())
+      return &(*pos);
+  }
+  return nullptr;
+}
+
 // GetDIE()
 //
 // Get the DIE (Debug Information Entry) with the specified offset by first
 // checking if the DIE is contained within this compile unit and grabbing the
 // DIE from this compile unit. Otherwise we grab the DIE from the DWARF file.
 DWARFDIE
-DWARFUnit::GetDIE(dw_offset_t die_offset) {
-  if (die_offset != DW_INVALID_OFFSET) {
-    if (ContainsDIEOffset(die_offset)) {
-      ExtractDIEsIfNeeded();
-      DWARFDebugInfoEntry::const_iterator end = m_die_array.cend();
-      DWARFDebugInfoEntry::const_iterator pos =
-          lower_bound(m_die_array.cbegin(), end, die_offset, CompareDIEOffset);
-      if (pos != end) {
-        if (die_offset == (*pos).GetOffset())
-          return DWARFDIE(this, &(*pos));
-      }
-    } else
-      GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-          "GetDIE for DIE 0x%" PRIx32 " is outside of its CU 0x%" PRIx32,
-          die_offset, GetOffset());
-  }
-  m_dwarf.GetObjectFile()->GetModule()->ReportError(
-      "CU 0x%8.8" PRIx32 " does not contain DIE 0x%8.8" PRIx32, GetOffset(),
-      die_offset);
-  return DWARFDIE(); // Not found
-}
-
-DWARFUnit &DWARFUnit::GetNonSkeletonUnit() {
-  ExtractUnitDIEIfNeeded();
-  if (m_dwo)
-    return *m_dwo;
-  return *this;
+DWARFUnit::GetDIE(DWARFCompileUnit *main_cu, dw_offset_t die_offset) {
+  const DWARFDebugInfoEntry *die = GetDIEPtr(die_offset);
+  if (!die)
+    return DWARFDIE();
+  return DWARFDIE({this, main_cu}, die);
 }
 
 uint8_t DWARFUnit::GetAddressByteSize(const DWARFUnit *cu) {
@@ -656,6 +651,8 @@ uint32_t DWARFUnit::GetProducerVersionUpdate() {
 }
 
 uint64_t DWARFUnit::GetDWARFLanguageType() {
+  lldbassert(!GetSymbolFileDWARF().GetIsDwz());
+
   if (m_language_type)
     return *m_language_type;
 
@@ -805,6 +802,9 @@ DWARFUnitHeader::extract(const DWARFDataExtractor &data,
   } else {
     header.m_abbr_offset = data.GetDWARFOffset(offset_ptr);
     header.m_addr_size = data.GetU8(offset_ptr);
+    // For DIERef::Section::DWZDebugInfo it should be DW_UT_partial but there
+    // are DW_UT_partial even in DWARF-4 DIERef::Section::DebugInfo recognized
+    // only by its DW_TAG_partial_unit.
     header.m_unit_type =
         section == DIERef::Section::DebugTypes ? DW_UT_type : DW_UT_compile;
   }

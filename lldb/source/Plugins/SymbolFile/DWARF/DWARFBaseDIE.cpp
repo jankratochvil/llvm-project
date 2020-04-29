@@ -24,7 +24,9 @@ llvm::Optional<DIERef> DWARFBaseDIE::GetDIERef() const {
   if (!IsValid())
     return llvm::None;
 
-  return DIERef(m_cu->GetSymbolFileDWARF().GetDwoNum(), m_cu->GetDebugSection(),
+  return DIERef(m_cu->GetSymbolFileDWARF().GetDwoNum(), (!m_cu.GetMainCUOrNull() ? llvm::None : llvm::Optional<uint32_t>(m_cu.GetMainCU()->GetID())),
+    GetCU()->GetSymbolFileDWARF().GetIsDwz() ? DIERef::CommonDwz : DIERef::MainDwz,
+  m_cu->GetDebugSection(),
                 m_die->GetOffset());
 }
 
@@ -98,15 +100,6 @@ bool DWARFBaseDIE::HasChildren() const {
 
 bool DWARFBaseDIE::Supports_DW_AT_APPLE_objc_complete_type() const {
   return IsValid() && GetDWARF()->Supports_DW_AT_APPLE_objc_complete_type(m_cu);
-}
-
-size_t DWARFBaseDIE::GetAttributes(DWARFAttributes &attributes,
-                               uint32_t depth) const {
-  if (IsValid())
-    return m_die->GetAttributes(m_cu, attributes, depth);
-  if (depth == 0)
-    attributes.Clear();
-  return 0;
 }
 
 bool operator==(const DWARFBaseDIE &lhs, const DWARFBaseDIE &rhs) {

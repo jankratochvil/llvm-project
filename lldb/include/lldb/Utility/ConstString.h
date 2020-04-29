@@ -438,6 +438,18 @@ public:
   ///     in memory.
   static size_t StaticMemorySize();
 
+  class Hasher {
+  public:
+    size_t operator()(const ConstString &key) const {
+      // https://stackoverflow.com/questions/7666509/hash-function-for-string
+      // C++17: std::string_view
+      size_t hash = 5381;
+      for (const char *p = key.m_string; *p; ++p)
+        hash = hash * 33 + static_cast<uint8_t>(*p);
+      return hash;
+    }
+  };
+
 protected:
   template <typename T> friend struct ::llvm::DenseMapInfo;
   /// Only used by DenseMapInfo.

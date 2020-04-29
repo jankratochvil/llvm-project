@@ -50,7 +50,7 @@ DWARFCompileUnit *SymbolFileDWARFDwo::GetDWOCompileUnitForHash(uint64_t hash) {
   if (!cu)
     return nullptr;
   if (hash !=
-      cu->GetUnitDIEOnly().GetAttributeValueAsUnsigned(DW_AT_GNU_dwo_id, 0))
+      cu->GetUnitDIEOnly().GetAttributeValueAsUnsigned(cu, DW_AT_GNU_dwo_id, 0))
     return nullptr;
   return cu;
 }
