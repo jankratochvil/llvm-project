@@ -262,8 +262,8 @@ public:
 
   bool MainUnitIsNeeded(DWARFCompileUnit *main_unit);
 
-  DWARFCompileUnit *MainDWARFCompileUnit(DWARFCompileUnit *main_unit) const = 0;
-  DWARFUnit *MainDWARFUnit(DWARFCompileUnit *main_unit) const;
+  virtual DWARFCompileUnit *MainDWARFCompileUnit(DWARFCompileUnit *main_unit) = 0;
+  DWARFUnit *MainDWARFUnit(DWARFCompileUnit *main_unit);
 
 protected:
   DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,

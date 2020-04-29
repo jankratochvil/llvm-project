@@ -1012,7 +1012,7 @@ bool DWARFUnit::MainUnitIsNeeded(DWARFCompileUnit *main_unit) {
   }
 }
 
-DWARFUnit *DWARFUnit::MainDWARFUnit(DWARFCompileUnit *main_unit) const {
+DWARFUnit *DWARFUnit::MainDWARFUnit(DWARFCompileUnit *main_unit) {
   main_unit = MainDWARFCompileUnit(main_unit);
   if (main_unit)
     return main_unit;
