@@ -102,7 +102,7 @@ public:
   MainCUtoDWARFDIEPair(DWARFCompileUnit *main_unit) const;
   std::pair<DWARFCompileUnit *, DWARFDebugInfoEntry *>
   MainCUtoDIEPair(DWARFCompileUnit *main_unit) const;
-  bool MainUnitIsValid(DWARFCompileUnit *main_unit) const;
+  bool MainUnitIsNeeded(DWARFCompileUnit *main_unit) const;
 
 protected:
   DWARFCompileUnit *
