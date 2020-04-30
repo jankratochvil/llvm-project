@@ -306,9 +306,9 @@ public:
   lldb_private::FileSpec GetFile(DWARFUnit &unit, size_t file_idx);
 
   static llvm::Expected<lldb_private::TypeSystem &>
-  GetTypeSystem(DWARFUnitPair unitpair);
+  GetTypeSystem(DWARFUnit &unit);
 
-  static DWARFASTParser *GetDWARFParser(DWARFUnitPair unitpair);
+  static DWARFASTParser *GetDWARFParser(DWARFUnit &unit);
 
   // CompilerDecl related functions
 
@@ -325,11 +325,7 @@ public:
 
   static lldb::LanguageType LanguageTypeFromDWARF(uint64_t val);
 
-  static lldb::LanguageType GetLanguage(DWARFUnitPair unitpair);
-  static lldb::LanguageType GetLanguage(DWARFUnit *) = delete;
-  static lldb::LanguageType GetLanguage(DWARFUnit &) = delete;
-  static lldb::LanguageType GetLanguage(DWARFCompileUnit *) = delete;
-  static lldb::LanguageType GetLanguage(DWARFCompileUnit &) = delete;
+  static lldb::LanguageType GetLanguage(DWARFUnit &unit);
 
   SymbolFileDWARFDwz *GetDwzSymbolFile() const {
     return m_dwz_symfile;

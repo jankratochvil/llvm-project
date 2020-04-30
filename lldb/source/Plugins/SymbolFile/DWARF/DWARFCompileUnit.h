@@ -24,14 +24,11 @@ public:
 
   DWARFCompileUnit *MainDWARFCompileUnit(DWARFCompileUnit *main_unit) override;
 
-  // To be called only from DWARFUnitPair.
-  uint64_t GetDWARFLanguageType() { return DWARFUnit::GetDWARFLanguageType(); }
-
   DWARFBaseDIE GetUnitDWARFDIEOnly() { return {this, GetUnitDIEPtrOnly()}; }
 
   DWARFDIE GetDIE(dw_offset_t die_offset) { return DWARFUnit::GetDIE(this,die_offset); }
 
-  DWARFDIE DIE() { return DWARFDIE(DWARFUnitPair(this), DIEPtr()); }
+  DWARFDIE DIE() { return {this, DIEPtr()}; }
 
   DWARFDIE LookupAddress(const dw_addr_t address);
 

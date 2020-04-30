@@ -26,9 +26,6 @@ public:
 
   DWARFCompileUnit *MainDWARFCompileUnit(DWARFCompileUnit *main_unit) override { return nullptr; }
 
-  // To be called only from DWARFUnitPair.
-  uint64_t GetDWARFLanguageType() { return DWARFUnit::GetDWARFLanguageType(); }
-
 private:
   DWARFTypeUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
                 const DWARFUnitHeader &header,

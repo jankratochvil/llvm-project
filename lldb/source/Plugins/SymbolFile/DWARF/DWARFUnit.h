@@ -304,7 +304,6 @@ protected:
     return &m_die_array[0];
   }
 
-  // To be called only as DWARCompileUnit or DWARFTypeUnit.
   uint64_t GetDWARFLanguageType();
 
   SymbolFileDWARF &m_dwarf;

@@ -3948,11 +3948,11 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
   return m_dwp_symfile;
 }
 
-llvm::Expected<TypeSystem &> SymbolFileDWARF::GetTypeSystem(DWARFUnitPair &unit) {
+llvm::Expected<TypeSystem &> SymbolFileDWARF::GetTypeSystem(DWARFUnit &unit) {
   return unit.GetSymbolFileDWARF().GetTypeSystemForLanguage(GetLanguage(unit));
 }
 
-DWARFASTParser *SymbolFileDWARF::GetDWARFParser(DWARFUnitPair &unit) {
+DWARFASTParser *SymbolFileDWARF::GetDWARFParser(DWARFUnit &unit) {
   auto type_system_or_err = GetTypeSystem(unit);
   if (auto err = type_system_or_err.takeError()) {
     LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
@@ -4006,6 +4006,8 @@ LanguageType SymbolFileDWARF::LanguageTypeFromDWARF(uint64_t val) {
   }
 }
 
-LanguageType SymbolFileDWARF::GetLanguage(DWARFUnitPair &unit) {
-  return LanguageTypeFromDWARF(unitpair.GetDWARFLanguageType());
+LanguageType SymbolFileDWARF::GetLanguage(DWARFUnit &unit) {
+  // Caller should have called MainDWARFUnit().
+  lldbassert(unit.GetUnitDIEOnly().Tag()!=DW_TAG_partial_unit);
+  return LanguageTypeFromDWARF(unit.GetDWARFLanguageType());
 }
