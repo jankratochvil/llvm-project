@@ -548,11 +548,18 @@ const DWARFDebugInfoEntry *DWARFUnit::GetDIEPtr(dw_offset_t die_offset) {
 // checking if the DIE is contained within this compile unit and grabbing the
 // DIE from this compile unit. Otherwise we grab the DIE from the DWARF file.
 DWARFDIE
-DWARFUnit::GetDIE(DWARFCompileUnit *main_cu, dw_offset_t die_offset) {
+DWARFUnit::GetDIE(dw_offset_t die_offset) {
   const DWARFDebugInfoEntry *die = GetDIEPtr(die_offset);
   if (!die)
     return DWARFDIE();
-  return DWARFDIE({this, main_cu}, die);
+  return {this, die};
+}
+
+DWARFUnit &DWARFUnit::GetNonSkeletonUnit() {
+  ExtractUnitDIEIfNeeded();
+  if (m_dwo)
+    return *m_dwo;
+  return *this;
 }
 
 uint8_t DWARFUnit::GetAddressByteSize(const DWARFUnit *cu) {

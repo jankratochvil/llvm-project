@@ -276,7 +276,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
           }
           // If we have a mangled name, then the DW_AT_name attribute is
           // usually the method name without the class or any parameters
-          bool is_method = DWARFDIE(unitpair, &die).IsMethod();
+          bool is_method = DWARFDIE(&unit, &die).IsMethod();
 
           if (is_method)
             set.function_methods.Insert(ConstString(name), uid);
@@ -372,7 +372,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
               import_cu_firstdie_offset);
           break;
         }
-        IndexUnit({import_cu,unitpair.GetMainCU()}, nullptr/*dwp*/, set);
+        IndexUnitImpl(*import_cu, main_unit, cu_language, set);
       }
       break;
 

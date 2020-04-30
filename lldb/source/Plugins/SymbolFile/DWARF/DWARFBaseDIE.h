@@ -57,7 +57,7 @@ public:
 
   DWARFDebugInfoEntry *GetDIE() const { return m_die; }
 
-  llvm::Optional<DIERef> GetDIERef() const;
+  llvm::Optional<DIERef> GetDIERef(DWARFCompileUnit *main_unit) const;
 
   void Set(DWARFUnit *cu, DWARFDebugInfoEntry *die) {
     if (cu && die) {
@@ -107,6 +107,8 @@ public:
                                       uint64_t fail_value) const;
 
   size_t GetAttributes(DWARFAttributes &attributes, uint32_t depth = 0) const;
+
+  bool MainUnitIsNeeded(DWARFCompileUnit *main_unit) const;
 
 protected:
   DWARFUnit *m_cu;

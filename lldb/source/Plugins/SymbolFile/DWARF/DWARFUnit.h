@@ -180,7 +180,9 @@ public:
 
   const DWARFDebugInfoEntry *GetDIEPtr(dw_offset_t die_offset);
 
-  DWARFDIE GetDIE(DWARFCompileUnit *main_cu, dw_offset_t die_offset);
+  DWARFDIE GetDIE(dw_offset_t die_offset);
+
+  DWARFUnit &GetNonSkeletonUnit();
 
   static uint8_t GetAddressByteSize(const DWARFUnit *cu);
 
@@ -276,6 +278,8 @@ public:
     return *dieptr;
   }
 
+  uint64_t GetDWARFLanguageType();
+
 protected:
   DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
             const DWARFUnitHeader &header,
@@ -303,8 +307,6 @@ protected:
       return NULL;
     return &m_die_array[0];
   }
-
-  uint64_t GetDWARFLanguageType();
 
   SymbolFileDWARF &m_dwarf;
   std::shared_ptr<DWARFCompileUnit> m_dwo;

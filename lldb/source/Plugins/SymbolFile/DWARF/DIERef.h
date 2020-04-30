@@ -70,12 +70,13 @@ public:
   }
 
   bool operator==(DIERef other) const {
-    if (m_dwo_num_valid != other.m_dwo_num_valid ||
-        m_section != other.m_section || m_die_offset != other.m_die_offset)
-      return false;
-    if (m_dwo_num_valid && m_dwo_num != other.m_dwo_num)
-      return false;
-    return true;
+    if (m_data_kind != other.m_data_kind)
+      return m_data_kind == other.m_data_kind;
+    if (m_data_kind != NoneKind && (m_data != other.m_data))
+      return m_data == other.m_data;
+    if (m_section != other.m_section)
+      return m_section == other.m_section;
+    return m_die_offset == other.m_die_offset;
   }
 
 private:

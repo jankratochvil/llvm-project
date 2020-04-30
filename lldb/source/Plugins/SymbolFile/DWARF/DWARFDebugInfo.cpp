@@ -215,11 +215,10 @@ bool DWARFDebugInfo::ContainsTypeUnits() {
 
 DWARFDIE
 DWARFDebugInfo::GetDIEForDIEOffset(DIERef::Section section,
-                                   dw_offset_t die_offset,
-                                   DWARFCompileUnit *main_cu) {
+                                   dw_offset_t die_offset) {
   DWARFUnit *cu = GetUnitContainingDIEOffset(section, die_offset);
   if (cu)
-    return cu->GetDIE(main_cu, die_offset);
+    return cu->GetDIE(die_offset);
   return DWARFDIE();
 }
 
@@ -233,7 +232,7 @@ DWARFDebugInfo::GetDIE(const DIERef &die_ref) {
     DWARFCompileUnit *main_cu = GetMainUnit(die_ref);
     if (main_cu == cu)
       cu = main_cu = &main_cu->GetNonSkeletonUnit();
-    return cu->GetDIE(main_cu, die_ref.die_offset());
+    return cu->GetDIE(die_ref.die_offset());
   }
   return DWARFDIE(); // Not found
 }

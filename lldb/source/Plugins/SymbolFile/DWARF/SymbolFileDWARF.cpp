@@ -759,7 +759,9 @@ Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
   if (!die.IsValid())
     return nullptr;
 
-  auto type_system_or_err = GetTypeSystemForLanguage(GetLanguage(die.GetCU()));
+  DWARFCompileUnit *main_unit = GetDWARFCompileUnit(&comp_unit);
+
+  auto type_system_or_err = GetTypeSystemForLanguage(GetLanguage(*die.MainDWARFUnit(main_unit)));
   if (auto err = type_system_or_err.takeError()) {
     LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
                    std::move(err), "Unable to parse function");
@@ -1230,7 +1232,7 @@ user_id_t SymbolFileDWARF::GetUID(DWARFCompileUnit *main_unit,
                                   const DWARFDIE &die) {
   if (!die.MainUnitIsNeeded(main_unit))
     main_unit = nullptr;
-  return GetUID(die.MainDWARFCompileUnit(main_unit), die.GetDIERef());
+  return GetUID(die.MainDWARFCompileUnit(main_unit), die.GetDIERef(main_unit));
 }
 
 user_id_t SymbolFileDWARF::GetUID(DWARFCompileUnit *main_unit, DIERef ref) {
@@ -1240,14 +1242,14 @@ user_id_t SymbolFileDWARF::GetUID(DWARFCompileUnit *main_unit, DIERef ref) {
   // FIXME: Expensive
   DWARFDIE dwarfdie_check = GetDIE(ref);
   lldbassert(dwarfdie_check.IsValid());
-  lldbassert(*dwarfdie_check.GetDIERef() == ref);
+  lldbassert(*dwarfdie_check.GetDIERef(main_unit) == ref);
 
   // WARNING: Use ref.dwo_num(), GetDwoNum() may not be valid in 'this'.
   bool has_main_cu =
       main_unit && (&main_unit->GetSymbolFileDWARF() != this ||
                     !main_unit->ContainsDIEOffset(ref.die_offset()));
   bool is_dwz = has_main_cu && !ref.dwo_num().hasValue();
-  bool is_dwz_common = is_dwz && &main_unit->GetSymbolFileDWARF() != this;
+//  bool is_dwz_common = is_dwz && &main_unit->GetSymbolFileDWARF() != this;
   lldbassert(!ref.dwo_num().hasValue() || *ref.dwo_num() < 0x1fffffff);
   static_assert(sizeof(ref.die_offset()) * 8 == 32, "");
 
@@ -1511,7 +1513,7 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
           dwarf_die.GetID(nullptr), dwarf_die.GetTagAsCString(),
           type->GetName().AsCString());
     assert(compiler_type);
-    if (DWARFASTParser *dwarf_ast = GetDWARFParser(dwarf_die.GetCU()))
+    if (DWARFASTParser *dwarf_ast = GetDWARFParser(*dwarf_die.MainDWARFUnit(main_unit)))
       return dwarf_ast->CompleteTypeFromDWARF(dwarf_die, type, compiler_type);
   }
   return false;
@@ -1593,7 +1595,7 @@ lldb::ModuleSP SymbolFileDWARF::GetExternalModule(ConstString name) {
 
 DWARFDIE
 SymbolFileDWARF::GetDIE(const DIERef &die_ref) {
-  if (die_ref.dwo_num() & !GetIsDwz()) {
+  if (die_ref.dwo_num() && !GetIsDwz()) {
     if (GetDwzSymbolFile()) {
       lldbassert(0 == *die_ref.dwo_num());
       return GetDwzSymbolFile()->GetDIE(die_ref);
@@ -2904,7 +2906,7 @@ TypeSP SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(
         // looking for. We don't want to find a "Foo" type from Java if we
         // are looking for a "Foo" type for C, C++, ObjC, or ObjC++.
         if (type_system &&
-            !type_system->SupportsLanguage(GetLanguage(type_die.GetCU())))
+            !type_system->SupportsLanguage(GetLanguage(*type_die.MainDWARFUnit(main_unit))))
           return true;
         bool try_resolving_type = false;
 
@@ -2953,7 +2955,7 @@ TypeSP SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(
           return true;
         }
 
-        DWARFDeclContext type_dwarf_decl_ctx = GetDWARFDeclContext(type_die);
+        DWARFDeclContext type_dwarf_decl_ctx = GetDWARFDeclContext(main_unit, type_die);
 
         if (log) {
           GetObjectFile()->GetModule()->LogMessage(
@@ -3016,7 +3018,7 @@ TypeSP SymbolFileDWARF::ParseType(const SymbolContext &sc, const DWARFDIE &die,
               .AsCString(""));
       if (scope_qualified_name.size()) {
         m_function_scope_qualified_name_map[scope_qualified_name].insert(
-            *die.GetDIERef());
+            *die.GetDIERef(main_unit));
       }
     }
   }
@@ -3355,8 +3357,8 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
         // declaration context.
         if ((parent_tag == DW_TAG_compile_unit ||
              parent_tag == DW_TAG_partial_unit) &&
-            Language::LanguageIsCPlusPlus(GetLanguage(die.GetCU())))
-          mangled = GetDWARFDeclContext(die)
+            Language::LanguageIsCPlusPlus(GetLanguage(*die.MainDWARFUnit(main_unit))))
+          mangled = GetDWARFDeclContext(main_unit, die)
                         .GetQualifiedNameAsConstString()
                         .GetCString();
       }
@@ -3984,12 +3986,12 @@ SymbolFileDWARF::GetContainingDeclContext(DWARFCompileUnit *main_unit,
   return CompilerDeclContext();
 }
 
-DWARFDeclContext SymbolFileDWARF::GetDWARFDeclContext(const DWARFDIE &die) {
+DWARFDeclContext SymbolFileDWARF::GetDWARFDeclContext(DWARFCompileUnit *main_unit, const DWARFDIE &die) {
   if (!die.IsValid())
     return {};
   DWARFDeclContext dwarf_decl_ctx =
-      die.GetDIE()->GetDWARFDeclContext(die.GetCU());
-  dwarf_decl_ctx.SetLanguage(GetLanguage(die.GetCU()));
+      die.GetDIE()->GetDWARFDeclContext(die.GetCU()); // DIE.GetCU(), not main_unit.
+  dwarf_decl_ctx.SetLanguage(GetLanguage(*die.MainDWARFUnit(main_unit)));
   return dwarf_decl_ctx;
 }
 

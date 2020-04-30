@@ -26,13 +26,9 @@ public:
 
   DWARFBaseDIE GetUnitDWARFDIEOnly() { return {this, GetUnitDIEPtrOnly()}; }
 
-  DWARFDIE GetDIE(dw_offset_t die_offset) { return DWARFUnit::GetDIE(this,die_offset); }
-
   DWARFDIE DIE() { return {this, DIEPtr()}; }
 
   DWARFDIE LookupAddress(const dw_addr_t address);
-
-  DWARFCompileUnit &GetNonSkeletonUnit();
 
 private:
   DWARFCompileUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,

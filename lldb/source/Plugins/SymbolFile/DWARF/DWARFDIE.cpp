@@ -492,9 +492,3 @@ std::pair<DWARFCompileUnit *, DWARFDebugInfoEntry *>
 DWARFDIE::MainCUtoDIEPair(DWARFCompileUnit *main_unit) const {
   return std::make_pair(MainDWARFCompileUnitOrNull(main_unit), GetDIE());
 }
-
-bool DWARFDIE::MainUnitIsNeeded(DWARFCompileUnit *main_unit) const {
-  if (!IsValid())
-    return false;
-  return GetCU()->MainUnitIsNeeded(main_unit);
-}
