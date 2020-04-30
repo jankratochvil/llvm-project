@@ -104,6 +104,15 @@ bool DWARFBaseDIE::Supports_DW_AT_APPLE_objc_complete_type() const {
   return IsValid() && GetDWARF()->Supports_DW_AT_APPLE_objc_complete_type(m_cu);
 }
 
+size_t DWARFBaseDIE::GetAttributes(DWARFAttributes &attributes,
+                               uint32_t depth) const {
+  if (IsValid())
+    return m_die->GetAttributes(m_cu, attributes, depth);
+  if (depth == 0)
+    attributes.Clear();
+  return 0;
+}
+
 bool operator==(const DWARFBaseDIE &lhs, const DWARFBaseDIE &rhs) {
   return lhs.GetDIE() == rhs.GetDIE() && lhs.GetCU() == rhs.GetCU();
 }
