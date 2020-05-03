@@ -1525,18 +1525,18 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       }
     }
 
-    setOperationAction(ISD::TRUNCATE,           MVT::v8i32, Custom);
-    setOperationAction(ISD::TRUNCATE,           MVT::v16i16, Custom);
-    setOperationAction(ISD::TRUNCATE,           MVT::v32i8, Custom);
-    setOperationAction(ISD::ZERO_EXTEND,        MVT::v32i16, Custom);
-    setOperationAction(ISD::ZERO_EXTEND,        MVT::v16i32, Custom);
-    setOperationAction(ISD::ZERO_EXTEND,        MVT::v8i64, Custom);
-    setOperationAction(ISD::ANY_EXTEND,         MVT::v32i16, Custom);
-    setOperationAction(ISD::ANY_EXTEND,         MVT::v16i32, Custom);
-    setOperationAction(ISD::ANY_EXTEND,         MVT::v8i64, Custom);
-    setOperationAction(ISD::SIGN_EXTEND,        MVT::v32i16, Custom);
-    setOperationAction(ISD::SIGN_EXTEND,        MVT::v16i32, Custom);
-    setOperationAction(ISD::SIGN_EXTEND,        MVT::v8i64, Custom);
+    setOperationAction(ISD::TRUNCATE,    MVT::v8i32,  Legal);
+    setOperationAction(ISD::TRUNCATE,    MVT::v16i16, Legal);
+    setOperationAction(ISD::TRUNCATE,    MVT::v32i8,  HasBWI ? Legal : Custom);
+    setOperationAction(ISD::ZERO_EXTEND, MVT::v32i16, Custom);
+    setOperationAction(ISD::ZERO_EXTEND, MVT::v16i32, Custom);
+    setOperationAction(ISD::ZERO_EXTEND, MVT::v8i64,  Custom);
+    setOperationAction(ISD::ANY_EXTEND,  MVT::v32i16, Custom);
+    setOperationAction(ISD::ANY_EXTEND,  MVT::v16i32, Custom);
+    setOperationAction(ISD::ANY_EXTEND,  MVT::v8i64,  Custom);
+    setOperationAction(ISD::SIGN_EXTEND, MVT::v32i16, Custom);
+    setOperationAction(ISD::SIGN_EXTEND, MVT::v16i32, Custom);
+    setOperationAction(ISD::SIGN_EXTEND, MVT::v8i64,  Custom);
 
     if (HasBWI) {
       // Extends from v64i1 masks to 512-bit vectors.
@@ -5728,13 +5728,21 @@ static bool collectConcatOps(SDNode *N, SmallVectorImpl<SDValue> &Ops) {
 
     // TODO - Handle more general insert_subvector chains.
     if (VT.getSizeInBits() == (SubVT.getSizeInBits() * 2) &&
-        Idx == (VT.getVectorNumElements() / 2) &&
-        Src.getOpcode() == ISD::INSERT_SUBVECTOR &&
-        Src.getOperand(1).getValueType() == SubVT &&
-        isNullConstant(Src.getOperand(2))) {
-      Ops.push_back(Src.getOperand(1));
-      Ops.push_back(Sub);
-      return true;
+        Idx == (VT.getVectorNumElements() / 2)) {
+      // insert_subvector(insert_subvector(undef, x, lo), y, hi)
+      if (Src.getOpcode() == ISD::INSERT_SUBVECTOR &&
+          Src.getOperand(1).getValueType() == SubVT &&
+          isNullConstant(Src.getOperand(2))) {
+        Ops.push_back(Src.getOperand(1));
+        Ops.push_back(Sub);
+        return true;
+      }
+      // insert_subvector(x, extract_subvector(x, lo), hi)
+      if (Sub.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+          Sub.getOperand(0) == Src && isNullConstant(Sub.getOperand(1))) {
+        Ops.append(2, Sub);
+        return true;
+      }
     }
   }
 
@@ -5743,13 +5751,14 @@ static bool collectConcatOps(SDNode *N, SmallVectorImpl<SDValue> &Ops) {
 
 static std::pair<SDValue, SDValue> splitVector(SDValue Op, SelectionDAG &DAG,
                                                const SDLoc &dl) {
-  MVT VT = Op.getSimpleValueType();
+  EVT VT = Op.getValueType();
   unsigned NumElems = VT.getVectorNumElements();
   unsigned SizeInBits = VT.getSizeInBits();
+  assert((NumElems % 2) == 0 && (SizeInBits % 2) == 0 &&
+         "Can't split odd sized vector");
 
   SDValue Lo = extractSubVector(Op, 0, DAG, dl, SizeInBits / 2);
   SDValue Hi = extractSubVector(Op, NumElems / 2, DAG, dl, SizeInBits / 2);
-
   return std::make_pair(Lo, Hi);
 }
 
@@ -15130,37 +15139,13 @@ static SDValue splitAndLowerShuffle(const SDLoc &DL, MVT VT, SDValue V1,
   int NumElements = VT.getVectorNumElements();
   int SplitNumElements = NumElements / 2;
   MVT ScalarVT = VT.getVectorElementType();
-  MVT SplitVT = MVT::getVectorVT(ScalarVT, NumElements / 2);
+  MVT SplitVT = MVT::getVectorVT(ScalarVT, SplitNumElements);
 
-  // Rather than splitting build-vectors, just build two narrower build
-  // vectors. This helps shuffling with splats and zeros.
+  // Use splitVector/extractSubVector so that split build-vectors just build two
+  // narrower build vectors. This helps shuffling with splats and zeros.
   auto SplitVector = [&](SDValue V) {
-    V = peekThroughBitcasts(V);
-
-    MVT OrigVT = V.getSimpleValueType();
-    int OrigNumElements = OrigVT.getVectorNumElements();
-    int OrigSplitNumElements = OrigNumElements / 2;
-    MVT OrigScalarVT = OrigVT.getVectorElementType();
-    MVT OrigSplitVT = MVT::getVectorVT(OrigScalarVT, OrigNumElements / 2);
-
     SDValue LoV, HiV;
-
-    auto *BV = dyn_cast<BuildVectorSDNode>(V);
-    if (!BV) {
-      LoV = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, OrigSplitVT, V,
-                        DAG.getIntPtrConstant(0, DL));
-      HiV = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, OrigSplitVT, V,
-                        DAG.getIntPtrConstant(OrigSplitNumElements, DL));
-    } else {
-
-      SmallVector<SDValue, 16> LoOps, HiOps;
-      for (int i = 0; i < OrigSplitNumElements; ++i) {
-        LoOps.push_back(BV->getOperand(i));
-        HiOps.push_back(BV->getOperand(i + OrigSplitNumElements));
-      }
-      LoV = DAG.getBuildVector(OrigSplitVT, DL, LoOps);
-      HiV = DAG.getBuildVector(OrigSplitVT, DL, HiOps);
-    }
+    std::tie(LoV, HiV) = splitVector(peekThroughBitcasts(V), DAG, DL);
     return std::make_pair(DAG.getBitcast(SplitVT, LoV),
                           DAG.getBitcast(SplitVT, HiV));
   };
@@ -20282,10 +20267,9 @@ static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
     return DAG.getBitcast(DstVT, Res);
   }
 
-  // Extract lower/upper subvectors.
-  unsigned NumSubElts = NumElems / 2;
-  SDValue Lo = extractSubVector(In, 0 * NumSubElts, DAG, DL, SrcSizeInBits / 2);
-  SDValue Hi = extractSubVector(In, 1 * NumSubElts, DAG, DL, SrcSizeInBits / 2);
+  // Split lower/upper subvectors.
+  SDValue Lo, Hi;
+  std::tie(Lo, Hi) = splitVector(In, DAG, DL);
 
   unsigned SubSizeInBits = SrcSizeInBits / 2;
   InVT = EVT::getVectorVT(Ctx, InVT, SubSizeInBits / InVT.getSizeInBits());
@@ -20325,7 +20309,7 @@ static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
 
   // Recursively pack lower/upper subvectors, concat result and pack again.
   assert(SrcSizeInBits >= 256 && "Expected 256-bit vector or greater");
-  EVT PackedVT = EVT::getVectorVT(Ctx, PackedSVT, NumSubElts);
+  EVT PackedVT = EVT::getVectorVT(Ctx, PackedSVT, NumElems / 2);
   Lo = truncateVectorWithPACK(Opcode, PackedVT, Lo, DL, DAG, Subtarget);
   Hi = truncateVectorWithPACK(Opcode, PackedVT, Hi, DL, DAG, Subtarget);
 
@@ -23240,14 +23224,10 @@ static SDValue splitVectorStore(StoreSDNode *Store, SelectionDAG &DAG) {
   if (!Store->isSimple())
     return SDValue();
 
-  EVT StoreVT = StoredVal.getValueType();
-  unsigned NumElems = StoreVT.getVectorNumElements();
-  unsigned HalfSize = StoredVal.getValueSizeInBits() / 2;
-  unsigned HalfAlign = (128 == HalfSize ? 16 : 32);
-
   SDLoc DL(Store);
-  SDValue Value0 = extractSubVector(StoredVal, 0, DAG, DL, HalfSize);
-  SDValue Value1 = extractSubVector(StoredVal, NumElems / 2, DAG, DL, HalfSize);
+  SDValue Value0, Value1;
+  std::tie(Value0, Value1) = splitVector(StoredVal, DAG, DL);
+  unsigned HalfAlign = (StoredVal.getValueType().is256BitVector() ? 16 : 32);
   SDValue Ptr0 = Store->getBasePtr();
   SDValue Ptr1 = DAG.getMemBasePlusOffset(Ptr0, HalfAlign, DL);
   unsigned Alignment = Store->getAlignment();
@@ -30597,12 +30577,7 @@ bool X86TargetLowering::isLegalStoreImmediate(int64_t Imm) const {
 }
 
 bool X86TargetLowering::isTruncateFree(EVT VT1, EVT VT2) const {
-  if (!VT1.isInteger() || !VT2.isInteger())
-    return false;
-  // Truncate to mask registers aren't free.
-  // TODO: No vector truncates are free.
-  if (Subtarget.hasAVX512() && VT2.isVector() &&
-      VT2.getVectorElementType() == MVT::i1)
+  if (!VT1.isScalarInteger() || !VT2.isScalarInteger())
     return false;
   unsigned NumBits1 = VT1.getSizeInBits();
   unsigned NumBits2 = VT2.getSizeInBits();
@@ -38017,12 +37992,9 @@ static SDValue combineHorizontalMinMaxResult(SDNode *Extract, SelectionDAG &DAG,
 
   // First, reduce the source down to 128-bit, applying BinOp to lo/hi.
   while (SrcVT.getSizeInBits() > 128) {
-    unsigned NumElts = SrcVT.getVectorNumElements();
-    unsigned NumSubElts = NumElts / 2;
-    SrcVT = EVT::getVectorVT(*DAG.getContext(), SrcSVT, NumSubElts);
-    unsigned SubSizeInBits = SrcVT.getSizeInBits();
-    SDValue Lo = extractSubVector(MinPos, 0, DAG, DL, SubSizeInBits);
-    SDValue Hi = extractSubVector(MinPos, NumSubElts, DAG, DL, SubSizeInBits);
+    SDValue Lo, Hi;
+    std::tie(Lo, Hi) = splitVector(MinPos, DAG, DL);
+    SrcVT = Lo.getValueType();
     MinPos = DAG.getNode(BinOp, DL, SrcVT, Lo, Hi);
   }
   assert(((SrcVT == MVT::v8i16 && ExtractVT == MVT::i16) ||
@@ -38603,12 +38575,10 @@ static SDValue combineReductionToHorizontal(SDNode *ExtElt, SelectionDAG &DAG,
   // vXi8 reduction - sum lo/hi halves then use PSADBW.
   if (VT == MVT::i8) {
     while (Rdx.getValueSizeInBits() > 128) {
-      unsigned HalfSize = VecVT.getSizeInBits() / 2;
-      unsigned HalfElts = VecVT.getVectorNumElements() / 2;
-      SDValue Lo = extractSubVector(Rdx, 0, DAG, DL, HalfSize);
-      SDValue Hi = extractSubVector(Rdx, HalfElts, DAG, DL, HalfSize);
-      Rdx = DAG.getNode(ISD::ADD, DL, Lo.getValueType(), Lo, Hi);
-      VecVT = Rdx.getValueType();
+      SDValue Lo, Hi;
+      std::tie(Lo, Hi) = splitVector(Rdx, DAG, DL);
+      VecVT = Lo.getValueType();
+      Rdx = DAG.getNode(ISD::ADD, DL, VecVT, Lo, Hi);
     }
     assert(VecVT == MVT::v16i8 && "v16i8 reduction expected");
 
@@ -42489,18 +42459,9 @@ static SDValue detectAVGPattern(SDValue In, EVT VT, SelectionDAG &DAG,
   // A lambda checking the given SDValue is a constant vector and each element
   // is in the range [Min, Max].
   auto IsConstVectorInRange = [](SDValue V, unsigned Min, unsigned Max) {
-    BuildVectorSDNode *BV = dyn_cast<BuildVectorSDNode>(V);
-    if (!BV || !BV->isConstant())
-      return false;
-    for (SDValue Op : V->ops()) {
-      ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op);
-      if (!C)
-        return false;
-      const APInt &Val = C->getAPIntValue();
-      if (Val.ult(Min) || Val.ugt(Max))
-        return false;
-    }
-    return true;
+    return ISD::matchUnaryPredicate(V, [Min, Max](ConstantSDNode *C) {
+      return !(C->getAPIntValue().ult(Min) || C->getAPIntValue().ugt(Max));
+    });
   };
 
   // Check if each element of the vector is right-shifted by one.
@@ -46684,6 +46645,15 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
          (EltSizeInBits >= 32 && MayFoldLoad(Op0.getOperand(0)))) &&
         Op0.getOperand(0).getValueType() == VT.getScalarType())
       return DAG.getNode(X86ISD::VBROADCAST, DL, VT, Op0.getOperand(0));
+
+    // concat_vectors(extract_subvector(broadcast(x)),
+    //                extract_subvector(broadcast(x))) -> broadcast(x)
+    if (Op0.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        Op0.getOperand(0).getValueType() == VT) {
+      if (Op0.getOperand(0).getOpcode() == X86ISD::VBROADCAST ||
+          Op0.getOperand(0).getOpcode() == X86ISD::VBROADCAST_LOAD)
+        return Op0.getOperand(0);
+    }
   }
 
   // Repeated opcode.
