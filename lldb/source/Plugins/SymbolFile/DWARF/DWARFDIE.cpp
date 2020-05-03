@@ -464,15 +464,16 @@ bool DWARFDIE::GetDIENamesAndRanges(
 }
 
 DWARFCompileUnit *
-DWARFDIE::MainDWARFCompileUnit(DWARFCompileUnit *main_unit) const {
+DWARFDIE::MainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) const {
   if (!IsValid())
     return nullptr;
   return GetCU()->MainDWARFCompileUnit(main_unit);
 }
 
-DWARFUnit *DWARFDIE::MainDWARFUnit(DWARFCompileUnit *main_unit) const {
+MainDWARFUnit *DWARFDIE::MainDWARFUnit(MainDWARFCompileUnit *main_unit) const {
   lldbassert(IsValid()) ;
-  return GetCU()->MainDWARFUnit(main_unit);
+  DWARFUnit *retval = GetCU()->MainDWARFUnit(main_unit);
+  return reinterpret_cast<MainDWARFUnit *>(retval);
 }
 
 DWARFCompileUnit *

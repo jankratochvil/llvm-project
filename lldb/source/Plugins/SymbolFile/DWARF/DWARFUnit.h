@@ -21,6 +21,8 @@ class DWARFCompileUnit;
 class NameToDIE;
 class SymbolFileDWARF;
 class SymbolFileDWARFDwo;
+class MainDWARFUnit;
+class MainDWARFCompileUnit;
 
 typedef std::shared_ptr<DWARFUnit> DWARFUnitSP;
 
@@ -268,8 +270,8 @@ public:
 
   bool MainUnitIsNeeded(DWARFCompileUnit *main_unit);
 
-  virtual DWARFCompileUnit *MainDWARFCompileUnit(DWARFCompileUnit *main_unit) = 0;
-  DWARFUnit *MainDWARFUnit(DWARFCompileUnit *main_unit);
+  virtual MainDWARFCompileUnit *MainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) = 0;
+  MainDWARFUnit *MainDWARFUnit(MainDWARFCompileUnit *main_unit);
 
   DWARFDebugInfoEntry GetUnitDIEOnly() {
     const DWARFDebugInfoEntry *dieptr = GetUnitDIEPtrOnly();
@@ -367,5 +369,11 @@ private:
 
   DISALLOW_COPY_AND_ASSIGN(DWARFUnit);
 };
+
+class MainDWARFUnit:public DWARFUnit {};
+static_assert(sizeof(MainDWARFUnit)==sizeof(DWARFUnit),"");
+
+class MainDWARFCompileUnit:public DWARFCompileUnit {};
+static_assert(sizeof(MainDWARFCompileUnit)==sizeof(DWARFCompileUnit),"");
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFUNIT_H
