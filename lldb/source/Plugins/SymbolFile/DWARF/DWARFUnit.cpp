@@ -1005,7 +1005,7 @@ bool DWARFUnit::ContainsUID(user_id_t uid) const {
   return ContainsDIERef(decoded->ref);
 }
 
-bool DWARFUnit::MainUnitIsNeeded(DWARFCompileUnit *main_unit) {
+bool DWARFUnit::MainUnitIsNeeded(MainDWARFCompileUnit *main_unit) {
   switch (GetUnitDIEOnly().Tag()) {
   case DW_TAG_compile_unit:
     return false;
@@ -1018,7 +1018,7 @@ bool DWARFUnit::MainUnitIsNeeded(DWARFCompileUnit *main_unit) {
   }
 }
 
-DWARFUnit *DWARFUnit::MainDWARFUnit(DWARFCompileUnit *main_unit) {
+DWARFUnit *DWARFUnit::MainDWARFUnit(MainDWARFCompileUnit *main_unit) {
   main_unit = MainDWARFCompileUnit(main_unit);
   if (main_unit)
     return main_unit;

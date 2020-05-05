@@ -27,44 +27,44 @@ public:
 
   void GetGlobalVariables(
       ConstString basename,
-      llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+      llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
           callback) override;
   void GetGlobalVariables(
       const RegularExpression &regex,
-      llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+      llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
           callback) override;
   void GetGlobalVariables(
       const DWARFUnit &cu,
-      llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+      llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
           callback) override;
   void GetObjCMethods(
       ConstString class_name,
-      llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+      llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
           callback) override {}
   void GetCompleteObjCClass(
       ConstString class_name, bool must_be_implementation,
-      llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+      llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
           callback) override;
   void
   GetTypes(ConstString name,
-           llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+           llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
                callback) override;
   void
   GetTypes(const DWARFDeclContext &context,
-           llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+           llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
                callback) override;
   void GetNamespaces(
       ConstString name,
-      llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+      llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
           callback) override;
   void GetFunctions(
       ConstString name, SymbolFileDWARF &dwarf,
       const CompilerDeclContext &parent_decl_ctx, uint32_t name_type_mask,
-      llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+      llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
           callback) override;
   void GetFunctions(
       const RegularExpression &regex,
-      llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+      llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
           callback) override;
 
   void Dump(Stream &s) override;
@@ -94,7 +94,7 @@ private:
   llvm::Optional<DIERef> ToDIERef(const DebugNames::Entry &entry);
   bool ProcessEntry(
       const DebugNames::Entry &entry,
-      llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+      llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
           callback,
       llvm::StringRef name);
 

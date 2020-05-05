@@ -20,10 +20,10 @@ using namespace lldb;
 DWARFIndex::~DWARFIndex() = default;
 
 bool DWARFIndex::ProcessFunctionDIE(
-    llvm::StringRef name, DWARFCompileUnit *main_unit, DIERef ref,
+    llvm::StringRef name, MainDWARFCompileUnit *main_unit, DIERef ref,
     SymbolFileDWARF &dwarf, const CompilerDeclContext &parent_decl_ctx,
     uint32_t name_type_mask,
-    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+    llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
         callback) {
   DWARFDIE die = dwarf.GetDIE(ref);
   if (!die) {
@@ -69,7 +69,7 @@ bool DWARFIndex::ProcessFunctionDIE(
 
 DWARFIndex::DIECallbackImpl::DIECallbackImpl(
     const DWARFIndex &index,
-    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+    llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
         callback,
     llvm::StringRef name)
     : m_index(index),
@@ -84,7 +84,7 @@ bool DWARFIndex::DIERefCallbackImpl::operator()(DIERef ref) const {
 }
 
 bool DWARFIndex::DIEUIDCallbackImpl::operator()(user_id_t uid) const {
-  DWARFCompileUnit *main_unit;
+  MainDWARFCompileUnit *main_unit;
   if (DWARFDIE die = m_dwarf.GetDIEUnlocked(uid, &main_unit))
     return m_callback(main_unit, die);
   m_index.ReportInvalidDIEUID(uid, m_name);

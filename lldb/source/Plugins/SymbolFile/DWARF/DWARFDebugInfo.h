@@ -57,7 +57,7 @@ public:
 
   llvm::Expected<DWARFDebugAranges &> GetCompileUnitAranges();
 
-  lldb::user_id_t GetUID(DWARFCompileUnit *main_unit, DIERef ref) const {
+  lldb::user_id_t GetUID(MainDWARFCompileUnit *main_unit, DIERef ref) const {
     return m_dwarf.GetUID(main_unit, ref);
   }
 

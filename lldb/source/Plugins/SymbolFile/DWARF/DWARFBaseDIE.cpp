@@ -20,7 +20,7 @@
 
 using namespace lldb_private;
 
-llvm::Optional<DIERef> DWARFBaseDIE::GetDIERef(DWARFCompileUnit *main_unit) const {
+llvm::Optional<DIERef> DWARFBaseDIE::GetDIERef(MainDWARFCompileUnit *main_unit) const {
   if (!IsValid())
     return llvm::None;
   if (!MainUnitIsNeeded(main_unit))
@@ -127,7 +127,7 @@ const DWARFDataExtractor &DWARFBaseDIE::GetData() const {
   return m_cu->GetData();
 }
 
-bool DWARFBaseDIE::MainUnitIsNeeded(DWARFCompileUnit *main_unit) const {
+bool DWARFBaseDIE::MainUnitIsNeeded(MainDWARFCompileUnit *main_unit) const {
   if (!IsValid())
     return false;
   return GetCU()->MainUnitIsNeeded(main_unit);

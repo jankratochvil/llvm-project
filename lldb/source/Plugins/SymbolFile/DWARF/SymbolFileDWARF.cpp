@@ -266,7 +266,7 @@ TypeList &SymbolFileDWARF::GetTypeList() {
     return debug_map_symfile->GetTypeList();
   return SymbolFile::GetTypeList();
 }
-void SymbolFileDWARF::GetTypes(DWARFCompileUnit *main_unit, const DWARFDIE &die,
+void SymbolFileDWARF::GetTypes(MainDWARFCompileUnit *main_unit, const DWARFDIE &die,
                                dw_offset_t min_die_offset,
                                dw_offset_t max_die_offset, uint32_t type_mask,
                                TypeSet &type_set) {
@@ -759,7 +759,7 @@ Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
   if (!die.IsValid())
     return nullptr;
 
-  DWARFCompileUnit *main_unit = GetDWARFCompileUnit(&comp_unit);
+  MainDWARFCompileUnit *main_unit = GetDWARFCompileUnit(&comp_unit);
 
   auto type_system_or_err = GetTypeSystemForLanguage(GetLanguage(*die.MainDWARFUnit(main_unit)));
   if (auto err = type_system_or_err.takeError()) {
@@ -1228,14 +1228,14 @@ void SymbolFileDWARF::ParseDeclsForContext(CompilerDeclContext decl_ctx) {
         decl_ctx);
 }
 
-user_id_t SymbolFileDWARF::GetUID(DWARFCompileUnit *main_unit,
+user_id_t SymbolFileDWARF::GetUID(MainDWARFCompileUnit *main_unit,
                                   const DWARFDIE &die) {
   if (!die.MainUnitIsNeeded(main_unit))
     main_unit = nullptr;
   return GetUID(die.MainDWARFCompileUnit(main_unit), die.GetDIERef(main_unit));
 }
 
-user_id_t SymbolFileDWARF::GetUID(DWARFCompileUnit *main_unit, DIERef ref) {
+user_id_t SymbolFileDWARF::GetUID(MainDWARFCompileUnit *main_unit, DIERef ref) {
   if (GetDebugMapSymfile())
     return GetID() | ref.die_offset();
 
@@ -1349,7 +1349,7 @@ CompilerDecl SymbolFileDWARF::GetDeclForUID(lldb::user_id_t type_uid) {
   // Anytime we have a lldb::user_id_t, we must get the DIE by calling
   // SymbolFileDWARF::GetDIE(). See comments inside the
   // SymbolFileDWARF::GetDIE() for details.
-  DWARFCompileUnit *main_unit;
+  MainDWARFCompileUnit *main_unit;
   if (DWARFDIE die = GetDIEUnlocked(type_uid, &main_unit))
     return GetDecl(main_unit, die);
   return CompilerDecl();
@@ -1363,7 +1363,7 @@ SymbolFileDWARF::GetDeclContextForUID(lldb::user_id_t type_uid) {
   // Anytime we have a lldb::user_id_t, we must get the DIE by calling
   // SymbolFileDWARF::GetDIE(). See comments inside the
   // SymbolFileDWARF::GetDIE() for details.
-  DWARFCompileUnit *main_unit;
+  MainDWARFCompileUnit *main_unit;
   if (DWARFDIE die = GetDIEUnlocked(type_uid, &main_unit))
     return GetDeclContext(main_unit, die);
   return CompilerDeclContext();
@@ -1375,7 +1375,7 @@ SymbolFileDWARF::GetDeclContextContainingUID(lldb::user_id_t type_uid) {
   // Anytime we have a lldb::user_id_t, we must get the DIE by calling
   // SymbolFileDWARF::GetDIE(). See comments inside the
   // SymbolFileDWARF::GetDIE() for details.
-  DWARFCompileUnit *main_unit;
+  MainDWARFCompileUnit *main_unit;
   if (DWARFDIE die = GetDIEUnlocked(type_uid, &main_unit))
     return GetContainingDeclContext(main_unit, die);
   return CompilerDeclContext();
@@ -1386,7 +1386,7 @@ Type *SymbolFileDWARF::ResolveTypeUID(lldb::user_id_t type_uid) {
   // Anytime we have a lldb::user_id_t, we must get the DIE by calling
   // SymbolFileDWARF::GetDIE(). See comments inside the
   // SymbolFileDWARF::GetDIE() for details.
-  DWARFCompileUnit *main_unit;
+  MainDWARFCompileUnit *main_unit;
   if (DWARFDIE type_die = GetDIEUnlocked(type_uid, &main_unit))
     return type_die.ResolveType(main_unit);
   else
@@ -1403,12 +1403,12 @@ SymbolFileDWARF::GetDynamicArrayInfoForUID(
     return llvm::None;
 }
 
-Type *SymbolFileDWARF::ResolveTypeUID(DWARFCompileUnit *main_unit,
+Type *SymbolFileDWARF::ResolveTypeUID(MainDWARFCompileUnit *main_unit,
                                       const DIERef &die_ref) {
   return ResolveType(main_unit, GetDIE(die_ref), true);
 }
 
-Type *SymbolFileDWARF::ResolveTypeUID(DWARFCompileUnit *main_unit,
+Type *SymbolFileDWARF::ResolveTypeUID(MainDWARFCompileUnit *main_unit,
                                       const DWARFDIE &die,
                                       bool assert_not_being_parsed) {
   if (die) {
@@ -1493,7 +1493,7 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
     return true;
   }
 
-  DWARFCompileUnit *main_unit;
+  MainDWARFCompileUnit *main_unit;
   DWARFDIE dwarf_die = GetDIEUnlocked(die_it->getSecond(), &main_unit);
   if (dwarf_die) {
     // Once we start resolving this type, remove it from the forward
@@ -1519,7 +1519,7 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
   return false;
 }
 
-Type *SymbolFileDWARF::ResolveType(DWARFCompileUnit *main_unit,
+Type *SymbolFileDWARF::ResolveType(MainDWARFCompileUnit *main_unit,
                                    const DWARFDIE &die,
                                    bool assert_not_being_parsed,
                                    bool resolve_function_context) {
@@ -1560,12 +1560,12 @@ SymbolFileDWARF::GetCompUnitForDWARFCompUnit(DWARFCompileUnit &dwarf_cu) {
 
 void SymbolFileDWARF::GetObjCMethods(
     ConstString class_name,
-    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+    llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
         callback) {
   m_index->GetObjCMethods(class_name, callback);
 }
 
-bool SymbolFileDWARF::GetFunction(DWARFCompileUnit *main_unit,
+bool SymbolFileDWARF::GetFunction(MainDWARFCompileUnit *main_unit,
                                   const DWARFDIE &die, SymbolContext &sc) {
   sc.Clear(false);
 
@@ -2158,7 +2158,7 @@ void SymbolFileDWARF::FindGlobalVariables(
 
   SymbolContext sc;
   m_index->GetGlobalVariables(
-      ConstString(basename), [&](DWARFCompileUnit *main_unit, DWARFDIE die) {
+      ConstString(basename), [&](MainDWARFCompileUnit *main_unit, DWARFDIE die) {
         if (!sc.module_sp)
           sc.module_sp = m_objfile_sp->GetModule();
         assert(sc.module_sp);
@@ -2225,7 +2225,7 @@ void SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
 
   SymbolContext sc;
   m_index->GetGlobalVariables(
-      regex, [&](DWARFCompileUnit *main_unit, DWARFDIE die) {
+      regex, [&](MainDWARFCompileUnit *main_unit, DWARFDIE die) {
         if (!sc.module_sp)
           sc.module_sp = m_objfile_sp->GetModule();
         assert(sc.module_sp);
@@ -2241,7 +2241,7 @@ void SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
       });
 }
 
-bool SymbolFileDWARF::ResolveFunction(DWARFCompileUnit *main_unit,
+bool SymbolFileDWARF::ResolveFunction(MainDWARFCompileUnit *main_unit,
                                       const DWARFDIE &orig_die,
                                       bool include_inlines,
                                       SymbolContextList &sc_list) {
@@ -2299,7 +2299,7 @@ bool SymbolFileDWARF::ResolveFunction(DWARFCompileUnit *main_unit,
 }
 
 bool SymbolFileDWARF::DIEInDeclContext(const CompilerDeclContext &decl_ctx,
-                                       DWARFCompileUnit *main_unit,
+                                       MainDWARFCompileUnit *main_unit,
                                        const DWARFDIE &die) {
   // If we have no parent decl context to match this DIE matches, and if the
   // parent decl context isn't valid, we aren't trying to look for any
@@ -2358,7 +2358,7 @@ void SymbolFileDWARF::FindFunctions(ConstString name,
 
   m_index->GetFunctions(
       name, *this, parent_decl_ctx, name_type_mask,
-      [&](DWARFCompileUnit *main_unit, DWARFDIE die) {
+      [&](MainDWARFCompileUnit *main_unit, DWARFDIE die) {
         if (resolved_dies.insert(std::make_pair(main_unit, die.GetDIE()))
                 .second)
           ResolveFunction(main_unit, die, include_inlines, sc_list);
@@ -2396,7 +2396,7 @@ void SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
 
   llvm::DenseSet<std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>>
       resolved_dies;
-  m_index->GetFunctions(regex, [&](DWARFCompileUnit *main_unit, DWARFDIE die) {
+  m_index->GetFunctions(regex, [&](MainDWARFCompileUnit *main_unit, DWARFDIE die) {
     if (resolved_dies.insert(std::make_pair(main_unit, die.GetDIE())).second)
       ResolveFunction(main_unit, die, include_inlines, sc_list);
     return true;
@@ -2456,7 +2456,7 @@ void SymbolFileDWARF::FindTypes(
   if (!DeclContextMatchesThisSymbolFile(parent_decl_ctx))
     return;
 
-  m_index->GetTypes(name, [&](DWARFCompileUnit *main_unit, DWARFDIE die) {
+  m_index->GetTypes(name, [&](MainDWARFCompileUnit *main_unit, DWARFDIE die) {
     if (!DIEInDeclContext(parent_decl_ctx, main_unit, die))
       return true; // The containing decl contexts don't match
 
@@ -2518,7 +2518,7 @@ void SymbolFileDWARF::FindTypes(
   if (!name)
     return;
 
-  m_index->GetTypes(name, [&](DWARFCompileUnit *main_unit, DWARFDIE die) {
+  m_index->GetTypes(name, [&](MainDWARFCompileUnit *main_unit, DWARFDIE die) {
     if (!languages[GetLanguage(*die.GetCU())])
       return true;
 
@@ -2563,7 +2563,7 @@ SymbolFileDWARF::FindNamespace(ConstString name,
   if (!DeclContextMatchesThisSymbolFile(parent_decl_ctx))
     return namespace_decl_ctx;
 
-  m_index->GetNamespaces(name, [&](DWARFCompileUnit *main_unit, DWARFDIE die) {
+  m_index->GetNamespaces(name, [&](MainDWARFCompileUnit *main_unit, DWARFDIE die) {
     if (!DIEInDeclContext(parent_decl_ctx, main_unit, die))
       return true; // The containing decl contexts don't match
 
@@ -2590,7 +2590,7 @@ SymbolFileDWARF::FindNamespace(ConstString name,
   return namespace_decl_ctx;
 }
 
-TypeSP SymbolFileDWARF::GetTypeForDIE(DWARFCompileUnit *main_unit,
+TypeSP SymbolFileDWARF::GetTypeForDIE(MainDWARFCompileUnit *main_unit,
                                       const DWARFDIE &die,
                                       bool resolve_function_context) {
   TypeSP type_sp;
@@ -2732,7 +2732,7 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
 
   m_index->GetCompleteObjCClass(
       type_name, must_be_implementation,
-      [&](DWARFCompileUnit *main_unit, DWARFDIE type_die) {
+      [&](MainDWARFCompileUnit *main_unit, DWARFDIE type_die) {
         bool try_resolving_type = false;
 
         // Don't try and resolve the DIE we are looking for with the DIE
@@ -2903,7 +2903,7 @@ TypeSP SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(
         }
       }
 
-      m_index->GetTypes(dwarf_decl_ctx, [&](DWARFCompileUnit *main_unit,
+      m_index->GetTypes(dwarf_decl_ctx, [&](MainDWARFCompileUnit *main_unit,
                                             DWARFDIE type_die) {
         // Make sure type_die's langauge matches the type system we are
         // looking for. We don't want to find a "Foo" type from Java if we
@@ -2992,7 +2992,7 @@ TypeSP SymbolFileDWARF::ParseType(const SymbolContext &sc, const DWARFDIE &die,
   if (!die)
     return {};
 
-  DWARFCompileUnit *main_unit = GetDWARFCompileUnit(sc.comp_unit);
+  MainDWARFCompileUnit *main_unit = GetDWARFCompileUnit(sc.comp_unit);
   SymbolFileDWARF *dwarf =
       llvm::cast<SymbolFileDWARF>(sc.module_sp->GetSymbolFile());
   auto type_system_or_err = dwarf->GetTypeSystemForLanguage(GetLanguage(*die.MainDWARFUnit(main_unit)));
@@ -3052,7 +3052,7 @@ size_t SymbolFileDWARF::ParseTypes(const SymbolContext &sc,
 
     if (parse_children && die.HasChildren()) {
       if (die.Tag() == DW_TAG_subprogram) {
-        DWARFCompileUnit *main_unit = GetDWARFCompileUnit(sc.comp_unit);
+        MainDWARFCompileUnit *main_unit = GetDWARFCompileUnit(sc.comp_unit);
         SymbolContext child_sc(sc);
         child_sc.function =
             sc.comp_unit->FindFunctionByUID(die.GetID(main_unit)).get();
@@ -3138,7 +3138,7 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
 
         m_index->GetGlobalVariables(
             dwarf_cu->GetNonSkeletonUnit(),
-            [&](DWARFCompileUnit *main_unit, DWARFDIE die) {
+            [&](MainDWARFCompileUnit *main_unit, DWARFDIE die) {
               VariableSP var_sp(
                   ParseVariableDIE(sc, die, LLDB_INVALID_ADDRESS));
               if (var_sp) {
@@ -3164,7 +3164,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
   if (!die)
     return var_sp;
 
-  DWARFCompileUnit *main_unit = GetDWARFCompileUnit(sc.comp_unit);
+  MainDWARFCompileUnit *main_unit = GetDWARFCompileUnit(sc.comp_unit);
 
   var_sp = GetDIEToVariable()[die.MainCUtoDIEPair(main_unit)];
   if (var_sp)
@@ -3598,7 +3598,7 @@ size_t SymbolFileDWARF::ParseVariables(const SymbolContext &sc,
     return 0;
 
   VariableListSP variable_list_sp;
-  DWARFCompileUnit *main_unit = GetDWARFCompileUnit(sc.comp_unit);
+  MainDWARFCompileUnit *main_unit = GetDWARFCompileUnit(sc.comp_unit);
 
   size_t vars_added = 0;
   DWARFDIE die = orig_die;
@@ -3967,14 +3967,14 @@ DWARFASTParser *SymbolFileDWARF::GetDWARFParser(DWARFUnit &unit) {
   return type_system_or_err->GetDWARFParser();
 }
 
-CompilerDecl SymbolFileDWARF::GetDecl(DWARFCompileUnit *main_unit,
+CompilerDecl SymbolFileDWARF::GetDecl(MainDWARFCompileUnit *main_unit,
                                       const DWARFDIE &die) {
   if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.MainDWARFUnit(main_unit)))
     return dwarf_ast->GetDeclForUIDFromDWARF(main_unit, die);
   return CompilerDecl();
 }
 
-CompilerDeclContext SymbolFileDWARF::GetDeclContext(DWARFCompileUnit *main_unit,
+CompilerDeclContext SymbolFileDWARF::GetDeclContext(MainDWARFCompileUnit *main_unit,
                                                     const DWARFDIE &die) {
   if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.MainDWARFUnit(main_unit)))
     return dwarf_ast->GetDeclContextForUIDFromDWARF(main_unit, die);
@@ -3982,14 +3982,14 @@ CompilerDeclContext SymbolFileDWARF::GetDeclContext(DWARFCompileUnit *main_unit,
 }
 
 CompilerDeclContext
-SymbolFileDWARF::GetContainingDeclContext(DWARFCompileUnit *main_unit,
+SymbolFileDWARF::GetContainingDeclContext(MainDWARFCompileUnit *main_unit,
                                           const DWARFDIE &die) {
   if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.MainDWARFUnit(main_unit)))
     return dwarf_ast->GetDeclContextContainingUIDFromDWARF(main_unit, die);
   return CompilerDeclContext();
 }
 
-DWARFDeclContext SymbolFileDWARF::GetDWARFDeclContext(DWARFCompileUnit *main_unit, const DWARFDIE &die) {
+DWARFDeclContext SymbolFileDWARF::GetDWARFDeclContext(MainDWARFCompileUnit *main_unit, const DWARFDIE &die) {
   if (!die.IsValid())
     return {};
   DWARFDeclContext dwarf_decl_ctx =

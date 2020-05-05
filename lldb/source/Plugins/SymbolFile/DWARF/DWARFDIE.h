@@ -27,7 +27,7 @@ public:
   // but it might have a SymbolFileDWARF::GetID() in the high 32 bits if
   // we are doing Darwin DWARF in .o file, or DWARF stand alone debug
   // info.
-  lldb::user_id_t GetID(DWARFCompileUnit *main_unit) const;
+  lldb::user_id_t GetID(MainDWARFCompileUnit *main_unit) const;
 
   // Accessing information about a DIE
   const char *GetMangledName() const;
@@ -41,10 +41,10 @@ public:
 
   void AppendTypeName(lldb_private::Stream &s) const;
 
-  lldb_private::Type *ResolveType(DWARFCompileUnit *main_unit) const;
+  lldb_private::Type *ResolveType(MainDWARFCompileUnit *main_unit) const;
 
   // Resolve a type by UID using this DIE's DWARF file
-  lldb_private::Type *ResolveTypeUID(DWARFCompileUnit *main_unit,
+  lldb_private::Type *ResolveTypeUID(MainDWARFCompileUnit *main_unit,
                                      const DWARFDIE &die) const;
 
   // Functions for obtaining DIE relations and references
@@ -96,16 +96,16 @@ public:
                             int &call_line, int &call_column,
                             lldb_private::DWARFExpression *frame_base) const;
 
-  DWARFCompileUnit *MainDWARFCompileUnit(DWARFCompileUnit *main_unit) const;
-  DWARFUnit *MainDWARFUnit(DWARFCompileUnit *main_unit) const;
+  DWARFCompileUnit *MainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) const;
+  DWARFUnit *MainDWARFUnit(MainDWARFCompileUnit *main_unit) const;
   std::pair<DWARFCompileUnit *, DWARFDIE>
-  MainCUtoDWARFDIEPair(DWARFCompileUnit *main_unit) const;
+  MainCUtoDWARFDIEPair(MainDWARFCompileUnit *main_unit) const;
   std::pair<DWARFCompileUnit *, DWARFDebugInfoEntry *>
-  MainCUtoDIEPair(DWARFCompileUnit *main_unit) const;
+  MainCUtoDIEPair(MainDWARFCompileUnit *main_unit) const;
 
 protected:
   DWARFCompileUnit *
-  MainDWARFCompileUnitOrNull(DWARFCompileUnit *main_unit) const;
+  MainDWARFCompileUnitOrNull(MainDWARFCompileUnit *main_unit) const;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDIE_H
