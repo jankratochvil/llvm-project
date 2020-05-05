@@ -24,7 +24,7 @@ public:
 
   static bool classof(const DWARFUnit *unit) { return unit->IsTypeUnit(); }
 
-  DWARFCompileUnit *GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) override { return nullptr; }
+  MainDWARFCompileUnit *GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) override { return nullptr; }
 
 private:
   DWARFTypeUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,

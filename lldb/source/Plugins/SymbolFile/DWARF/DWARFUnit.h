@@ -270,8 +270,8 @@ public:
 
   bool MainUnitIsNeeded(MainDWARFCompileUnit *main_unit);
 
-  virtual GetMainDWARFCompileUnit *MainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) = 0;
-  GetMainDWARFUnit *MainDWARFUnit(MainDWARFCompileUnit *main_unit);
+  virtual MainDWARFCompileUnit *GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) = 0;
+  MainDWARFUnit *GetMainDWARFUnit(MainDWARFCompileUnit *main_unit);
 
   DWARFDebugInfoEntry GetUnitDIEOnly() {
     const DWARFDebugInfoEntry *dieptr = GetUnitDIEPtrOnly();
