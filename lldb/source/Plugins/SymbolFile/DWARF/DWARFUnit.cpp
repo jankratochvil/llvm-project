@@ -1018,8 +1018,8 @@ bool DWARFUnit::MainUnitIsNeeded(MainDWARFCompileUnit *main_unit) {
   }
 }
 
-DWARFUnit *DWARFUnit::MainDWARFUnit(MainDWARFCompileUnit *main_unit) {
-  main_unit = MainDWARFCompileUnit(main_unit);
+DWARFUnit *DWARFUnit::GetMainDWARFUnit(MainDWARFCompileUnit *main_unit) {
+  main_unit = GetMainDWARFCompileUnit(main_unit);
   if (main_unit)
     return main_unit;
   return this;

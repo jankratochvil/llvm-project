@@ -108,7 +108,7 @@ void DWARFCompileUnit::BuildAddressRangeTable(
 }
 
 DWARFCompileUnit *
-DWARFCompileUnit::MainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) {
+DWARFCompileUnit::GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) {
   if (!main_unit)
     main_unit = this;
 #if 0

@@ -23,6 +23,7 @@ class DWARFDebugInfoEntry;
 class DWARFDeclContext;
 class SymbolFileDWARF;
 class DWARFCompileUnit;
+class GetMainDWARFCompileUnit;
 
 class DWARFBaseDIE {
 public:

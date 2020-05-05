@@ -96,8 +96,8 @@ public:
                             int &call_line, int &call_column,
                             lldb_private::DWARFExpression *frame_base) const;
 
-  DWARFCompileUnit *MainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) const;
-  DWARFUnit *MainDWARFUnit(MainDWARFCompileUnit *main_unit) const;
+  DWARFCompileUnit *GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) const;
+  DWARFUnit *GetMainDWARFUnit(MainDWARFCompileUnit *main_unit) const;
   std::pair<DWARFCompileUnit *, DWARFDIE>
   MainCUtoDWARFDIEPair(MainDWARFCompileUnit *main_unit) const;
   std::pair<DWARFCompileUnit *, DWARFDebugInfoEntry *>
