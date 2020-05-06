@@ -1011,7 +1011,7 @@ bool DWARFUnit::MainUnitIsNeeded(MainDWARFCompileUnit *main_unit) {
     return false;
   case DW_TAG_partial_unit:
     // FIXME: DWZ
-    lldbassert(0);
+//    lldbassert(0);
     return true;
   default:
     return false;
