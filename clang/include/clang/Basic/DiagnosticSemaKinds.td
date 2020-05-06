@@ -858,6 +858,16 @@ def warn_pragma_pack_pop_identifier_and_alignment : Warning<
   "specifying both a name and alignment to 'pop' is undefined">;
 def warn_pragma_pop_failed : Warning<"#pragma %0(pop, ...) failed: %1">,
   InGroup<IgnoredPragmas>;
+def err_pragma_fc_pp_scope : Error<
+  "'#pragma float_control push/pop' can only appear at file scope">;
+def err_pragma_fc_noprecise_requires_nofenv : Error<
+  "'#pragma float_control(precise, off)' is illegal when fenv_access is enabled">;
+def err_pragma_fc_except_requires_precise : Error<
+  "'#pragma float_control(except, on)' is illegal when precise is disabled">;
+def err_pragma_fc_noprecise_requires_noexcept : Error<
+  "'#pragma float_control(precise, off)' is illegal when except is enabled">;
+def err_pragma_fenv_requires_precise : Error<
+  "'#pragma STDC FENV_ACCESS ON' is illegal when precise is disabled">;
 def warn_cxx_ms_struct :
   Warning<"ms_struct may not produce Microsoft-compatible layouts for classes "
           "with base classes or virtual functions">,
@@ -2959,6 +2969,11 @@ def warn_objc_collection_literal_element : Warning<
   "object of type %0 is not compatible with "
   "%select{array element type|dictionary key type|dictionary value type}1 %2">,
   InGroup<ObjCLiteralConversion>;
+def warn_nsdictionary_duplicate_key : Warning<
+  "duplicate key in dictionary literal">,
+  InGroup<DiagGroup<"objc-dictionary-duplicate-keys">>;
+def note_nsdictionary_duplicate_key_here : Note<
+  "previous equal key is here">;
 def err_swift_param_attr_not_swiftcall : Error<
   "'%0' parameter can only be used with swiftcall calling convention">;
 def err_swift_indirect_result_not_first : Error<
@@ -5381,15 +5396,18 @@ def err_variable_object_no_init : Error<
 def err_excess_initializers : Error<
   "excess elements in %select{array|vector|scalar|union|struct}0 initializer">;
 def ext_excess_initializers : ExtWarn<
-  "excess elements in %select{array|vector|scalar|union|struct}0 initializer">;
+  "excess elements in %select{array|vector|scalar|union|struct}0 initializer">,
+  InGroup<ExcessInitializers>;
 def err_excess_initializers_in_char_array_initializer : Error<
   "excess elements in char array initializer">;
 def ext_excess_initializers_in_char_array_initializer : ExtWarn<
-  "excess elements in char array initializer">;
+  "excess elements in char array initializer">,
+  InGroup<ExcessInitializers>;
 def err_initializer_string_for_char_array_too_long : Error<
   "initializer-string for char array is too long">;
 def ext_initializer_string_for_char_array_too_long : ExtWarn<
-  "initializer-string for char array is too long">;
+  "initializer-string for char array is too long">,
+  InGroup<ExcessInitializers>;
 def warn_missing_field_initializers : Warning<
   "missing field %0 initializer">,
   InGroup<MissingFieldInitializers>, DefaultIgnore;
