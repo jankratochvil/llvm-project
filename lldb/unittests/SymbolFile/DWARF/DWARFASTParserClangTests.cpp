@@ -95,7 +95,7 @@ TEST_F(DWARFASTParserClangTests,
   TypeSystemClang ast_ctx("dummy ASTContext", HostInfoBase::GetTargetTriple());
   DWARFASTParserClangStub ast_parser(ast_ctx);
 
-  DWARFCompileUnit *unit = llvm::cast<DWARFCompileUnit>(t.GetDwarfUnit().get());
+  MainDWARFCompileUnit *unit = llvm::cast<MainDWARFCompileUnit>(t.GetDwarfUnit().get());
   const DWARFDebugInfoEntry *die_first = unit->DIE().GetDIE();
   const DWARFDebugInfoEntry *die_child0 = die_first->GetFirstChild();
   const DWARFDebugInfoEntry *die_child1 = die_child0->GetSibling();
