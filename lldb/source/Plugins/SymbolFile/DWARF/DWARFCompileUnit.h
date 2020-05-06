@@ -43,6 +43,8 @@ private:
 };
 
 class MainDWARFCompileUnit:public DWARFCompileUnit {
+private:
+  using DWARFCompileUnit::DWARFCompileUnit;
 public:
   operator MainDWARFUnit *() { return reinterpret_cast<MainDWARFUnit *>(this); }
   operator MainDWARFUnit &() { return reinterpret_cast<MainDWARFUnit &>(*this); }
