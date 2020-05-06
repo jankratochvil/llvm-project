@@ -2350,7 +2350,7 @@ void SymbolFileDWARF::FindFunctions(ConstString name,
 
   const uint32_t original_size = sc_list.GetSize();
 
-  llvm::DenseSet<std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>>
+  llvm::DenseSet<std::pair<MainDWARFCompileUnit *, const DWARFDebugInfoEntry *>>
       resolved_dies;
 
   m_index->GetFunctions(
@@ -2391,7 +2391,7 @@ void SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
         regex.GetText().str().c_str());
   }
 
-  llvm::DenseSet<std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>>
+  llvm::DenseSet<std::pair<MainDWARFCompileUnit *, const DWARFDebugInfoEntry *>>
       resolved_dies;
   m_index->GetFunctions(regex, [&](MainDWARFCompileUnit *main_unit, DWARFDIE die) {
     if (resolved_dies.insert(std::make_pair(main_unit, die.GetDIE())).second)
