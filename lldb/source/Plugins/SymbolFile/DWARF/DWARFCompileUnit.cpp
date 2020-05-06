@@ -111,9 +111,7 @@ MainDWARFCompileUnit *
 DWARFCompileUnit::GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) {
   if (!main_unit)
     main_unit = reinterpret_cast<MainDWARFCompileUnit *>(this);
-#if 0
   main_unit = &main_unit->GetNonSkeletonUnit();
-#endif
   return main_unit;
 }
 
