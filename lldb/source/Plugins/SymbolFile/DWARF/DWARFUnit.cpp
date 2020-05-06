@@ -386,7 +386,7 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
     dwo_cu->SetLoclistsBase(llvm::DWARFListTableHeader::getHeaderSize(DWARF32));
   dwo_cu->SetBaseAddress(GetBaseAddress());
 
-  m_dwo = std::shared_ptr<MainDWARFCompileUnit>(std::move(dwo_symbol_file), dwo_cu);
+  m_dwo = std::shared_ptr<DWARFCompileUnit>(std::move(dwo_symbol_file), dwo_cu);
 }
 
 size_t DWARFUnit::GetDebugInfoSize() const {

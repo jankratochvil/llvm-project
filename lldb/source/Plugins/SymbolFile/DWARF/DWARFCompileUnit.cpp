@@ -138,6 +138,6 @@ DWARFCompileUnit &DWARFCompileUnit::GetNonSkeletonUnit() {
 MainDWARFCompileUnit &MainDWARFCompileUnit::GetNonSkeletonUnit() {
   ExtractUnitDIEIfNeeded();
   if (m_dwo)
-    return *m_dwo;
+    return reinterpret_cast<MainDWARFCompileUnit &>(*m_dwo);
   return *this;
 }
