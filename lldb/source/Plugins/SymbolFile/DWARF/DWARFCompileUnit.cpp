@@ -107,10 +107,10 @@ void DWARFCompileUnit::BuildAddressRangeTable(
   }
 }
 
-DWARFCompileUnit *
+MainDWARFCompileUnit *
 DWARFCompileUnit::GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) {
   if (!main_unit)
-    main_unit = this;
+    main_unit = reinterpret_cast<MainDWARFCompileUnit *>(this);
 #if 0
   main_unit = &main_unit->GetNonSkeletonUnit();
 #endif
@@ -129,6 +129,13 @@ DWARFDIE DWARFCompileUnit::LookupAddress(const dw_addr_t address) {
 }
 
 DWARFCompileUnit &DWARFCompileUnit::GetNonSkeletonUnit() {
+  ExtractUnitDIEIfNeeded();
+  if (m_dwo)
+    return *m_dwo;
+  return *this;
+}
+
+MainDWARFCompileUnit &MainDWARFCompileUnit::GetNonSkeletonUnit() {
   ExtractUnitDIEIfNeeded();
   if (m_dwo)
     return *m_dwo;

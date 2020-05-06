@@ -51,6 +51,7 @@ class DWARFDebugRanges;
 class DWARFDeclContext;
 class DWARFFormValue;
 class DWARFTypeUnit;
+class MainDWARFUnit;
 class SymbolFileDWARFDebugMap;
 class SymbolFileDWARFDwo;
 class SymbolFileDWARFDwp;
@@ -268,7 +269,7 @@ public:
   DWARFDIE GetDIE(lldb::user_id_t uid);
 
   DWARFDIE GetDIEUnlocked(lldb::user_id_t uid,
-                          DWARFCompileUnit **main_unit_return = nullptr);
+                          MainDWARFCompileUnit **main_unit_return = nullptr);
 
   lldb::user_id_t GetUID(MainDWARFCompileUnit *main_unit, const DWARFDIE &die);
 
@@ -306,9 +307,9 @@ public:
   lldb_private::FileSpec GetFile(DWARFUnit &unit, size_t file_idx);
 
   static llvm::Expected<lldb_private::TypeSystem &>
-  GetTypeSystem(DWARFUnit &unit);
+  GetTypeSystem(MainDWARFUnit &unit);
 
-  static DWARFASTParser *GetDWARFParser(DWARFUnit &unit);
+  static DWARFASTParser *GetDWARFParser(MainDWARFUnit &unit);
 
   // CompilerDecl related functions
 
@@ -325,7 +326,7 @@ public:
 
   static lldb::LanguageType LanguageTypeFromDWARF(uint64_t val);
 
-  static lldb::LanguageType GetLanguage(DWARFUnit &unit);
+  static lldb::LanguageType GetLanguage(MainDWARFUnit &unit);
 
   SymbolFileDWARFDwz *GetDwzSymbolFile() const {
     return m_dwz_symfile;
@@ -371,7 +372,7 @@ protected:
 
   lldb::CompUnitSP ParseCompileUnit(DWARFCompileUnit &dwarf_cu);
 
-  DWARFCompileUnit *GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit);
+  MainDWARFCompileUnit *GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit);
 
   DWARFUnit *GetNextUnparsedDWARFCompileUnit(DWARFUnit *prev_cu);
 

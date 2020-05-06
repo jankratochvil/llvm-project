@@ -132,8 +132,8 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
   if (unit.GetUnitDIEOnly().Tag() == DW_TAG_partial_unit)
     return;
 
-  const LanguageType cu_language = SymbolFileDWARF::GetLanguage(unit);
-  MainDWARFCompileUnit *main_unit = llvm::dyn_cast<DWARFCompileUnit>(&unit);
+  const LanguageType cu_language = SymbolFileDWARF::GetLanguage(reinterpret_cast<MainDWARFUnit &>(unit));
+  MainDWARFCompileUnit *main_unit = llvm::dyn_cast<MainDWARFCompileUnit>(&unit);
 
   IndexUnitImpl(unit, main_unit, cu_language, set);
 

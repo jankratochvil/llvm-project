@@ -1438,7 +1438,8 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   const dw_tag_t tag = die.Tag();
   SymbolFileDWARF *dwarf =
       llvm::cast<SymbolFileDWARF>(sc.module_sp->GetSymbolFile());
-  LanguageType cu_language = SymbolFileDWARF::GetLanguage(*die.GetCU());
+  MainDWARFCompileUnit *main_unit = dwarf->GetDWARFCompileUnit(sc.comp_unit);
+  LanguageType cu_language = SymbolFileDWARF::GetLanguage(*die.GetMainDWARFUnit(main_unit));
   Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_TYPE_COMPLETION |
                                           DWARF_LOG_LOOKUPS);
 
@@ -1467,7 +1468,6 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
             *unique_ast_entry_up)) {
       type_sp = unique_ast_entry_up->m_type_sp;
       if (type_sp) {
-        MainDWARFCompileUnit *main_unit = dwarf->GetDWARFCompileUnit(sc.comp_unit);
         dwarf->GetDIEToType()[die.MainCUtoDIEPair(main_unit)] = type_sp.get();
         LinkDeclContextToDIE(GetCachedClangDeclContextForDIE(
                                  main_unit, unique_ast_entry_up->m_die),
@@ -1507,8 +1507,6 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
     // and the byte size is zero.
     attrs.is_forward_declaration = true;
   }
-
-  MainDWARFCompileUnit *main_unit = dwarf->GetDWARFCompileUnit(sc.comp_unit);
 
   if (attrs.class_language == eLanguageTypeObjC ||
       attrs.class_language == eLanguageTypeObjC_plus_plus) {

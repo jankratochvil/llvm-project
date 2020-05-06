@@ -21,7 +21,7 @@ class CompileUnit;
 class ExecutionContext;
 }
 class SymbolFileDWARF;
-class DWARFCompileUnit;
+class MainDWARFCompileUnit;
 
 class DWARFASTParser {
 public:

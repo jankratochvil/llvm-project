@@ -42,4 +42,12 @@ private:
   friend class DWARFUnit;
 };
 
+class MainDWARFCompileUnit:public DWARFCompileUnit {
+public:
+  operator MainDWARFUnit *() { return reinterpret_cast<MainDWARFUnit *>(this); }
+  operator MainDWARFUnit &() { return reinterpret_cast<MainDWARFUnit &>(*this); }
+  MainDWARFCompileUnit &GetNonSkeletonUnit();
+};
+static_assert(sizeof(MainDWARFCompileUnit)==sizeof(DWARFCompileUnit),"");
+
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFCOMPILEUNIT_H

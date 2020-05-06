@@ -386,7 +386,7 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
     dwo_cu->SetLoclistsBase(llvm::DWARFListTableHeader::getHeaderSize(DWARF32));
   dwo_cu->SetBaseAddress(GetBaseAddress());
 
-  m_dwo = std::shared_ptr<DWARFCompileUnit>(std::move(dwo_symbol_file), dwo_cu);
+  m_dwo = std::shared_ptr<MainDWARFCompileUnit>(std::move(dwo_symbol_file), dwo_cu);
 }
 
 size_t DWARFUnit::GetDebugInfoSize() const {
@@ -1018,9 +1018,19 @@ bool DWARFUnit::MainUnitIsNeeded(MainDWARFCompileUnit *main_unit) {
   }
 }
 
-DWARFUnit *DWARFUnit::GetMainDWARFUnit(MainDWARFCompileUnit *main_unit) {
+CompileUnit *
+DWARFUnit::GetMainCompUnit(MainDWARFCompileUnit *main_unit) {
+  main_unit = GetMainDWARFCompileUnit(main_unit);
+  if (main_unit == nullptr)
+    return nullptr;
+  CompileUnit *comp_unit = main_unit->GetSymbolFileDWARF().GetCompUnitForDWARFCompUnit(*main_unit);
+  lldbassert(comp_unit);
+  return comp_unit;
+}
+
+MainDWARFUnit *DWARFUnit::GetMainDWARFUnit(MainDWARFCompileUnit *main_unit) {
   main_unit = GetMainDWARFCompileUnit(main_unit);
   if (main_unit)
-    return main_unit;
-  return this;
+    return reinterpret_cast<MainDWARFUnit *>(main_unit);
+  return reinterpret_cast<MainDWARFUnit *>(this);
 }

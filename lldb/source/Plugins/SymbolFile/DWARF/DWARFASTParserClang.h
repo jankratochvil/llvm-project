@@ -77,21 +77,21 @@ protected:
   typedef std::vector<DelayedAddObjCClassProperty> DelayedPropertyList;
 
   typedef llvm::SmallSet<
-      std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>, 4>
+      std::pair<MainDWARFCompileUnit *, const DWARFDebugInfoEntry *>, 4>
       DIEPointerSet;
   typedef llvm::DenseMap<
-      std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>,
+      std::pair<MainDWARFCompileUnit *, const DWARFDebugInfoEntry *>,
       clang::DeclContext *>
       DIEToDeclContextMap;
   typedef std::multimap<const clang::DeclContext *,
-                        std::pair<DWARFCompileUnit *, const DWARFDIE>>
+                        std::pair<MainDWARFCompileUnit *, const DWARFDIE>>
       DeclContextToDIEMap;
   typedef llvm::DenseMap<
-      std::pair<const DWARFCompileUnit *, const DWARFDebugInfoEntry *>,
+      std::pair<const MainDWARFCompileUnit *, const DWARFDebugInfoEntry *>,
       lldb_private::OptionalClangModuleID>
       DIEToModuleMap;
   typedef llvm::DenseMap<
-      std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>, clang::Decl *>
+      std::pair<MainDWARFCompileUnit *, const DWARFDebugInfoEntry *>, clang::Decl *>
       DIEToDeclMap;
   typedef llvm::DenseMap<const clang::Decl *, DIEPointerSet> DeclToDIEMap;
 
