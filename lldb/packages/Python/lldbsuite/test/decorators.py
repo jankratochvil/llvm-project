@@ -9,6 +9,7 @@ import re
 import sys
 import tempfile
 import subprocess
+import distutils.spawn
 
 # Third-party modules
 import six
@@ -862,3 +863,18 @@ def skipIfReproducer(func):
             return "reproducers unsupported"
         return None
     return skipTestIfFn(is_reproducer)(func)
+
+def skipUnlessDWZInstalled(func):
+    """Decorate the item to skip tests when no DWZ optimization tool is available.
+       /usr/lib/rpm/sepdebugcrcfix is not tested here but it may be needed
+       when build-ids cannot be used."""
+
+    def is_dwz_missing(self):
+        if distutils.spawn.find_executable("dwz") is None:
+            return "skipping because dwz is not found"
+        # dwz has a bug it can process only separate debug info files.
+        # Moreover dwz is compatible only with debug infos created by eu-strip.
+        if distutils.spawn.find_executable("eu-strip") is None:
+            return "skipping because eu-strip is not found"
+        return None
+    return skipTestIfFn(is_dwz_missing)(func)

@@ -350,6 +350,10 @@ Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec,
       if (llvm::sys::fs::equivalent(file_spec.GetPath(),
                                     module_file_spec.GetPath()))
         continue;
+      if (FileSystem::Instance()
+              .ResolveSymbolicLink(file_spec, file_spec)
+              .Fail())
+        continue;
 
       if (FileSystem::Instance().Exists(file_spec)) {
         lldb_private::ModuleSpecList specs;
