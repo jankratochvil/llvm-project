@@ -3119,10 +3119,10 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
         return num_variables;
       }
     } else if (sc.comp_unit) {
-      DWARFCompileUnit *dwarf_cu = llvm::dyn_cast_or_null<DWARFCompileUnit>(DebugInfo().GetUnitAtIndex(sc.comp_unit->GetID()));
-
-      if (dwarf_cu == nullptr)
+      MainDWARFCompileUnit *main_unit = GetDWARFCompileUnit(sc.comp_unit);
+      if (main_unit == nullptr)
         return 0;
+      main_unit = &main_unit->GetNonSkeletonUnit();
 
       uint32_t vars_added = 0;
       VariableListSP variables(sc.comp_unit->GetVariableList(false));
@@ -3132,8 +3132,9 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
         sc.comp_unit->SetVariableList(variables);
 
         m_index->GetGlobalVariables(
-            dwarf_cu->GetNonSkeletonUnit(),
-            [&](MainDWARFCompileUnit *main_unit, DWARFDIE die) {
+            *main_unit,
+            [&](MainDWARFCompileUnit *main_unit_check, DWARFDIE die) {
+              lldbassert(main_unit_check == main_unit);
               VariableSP var_sp(
                   ParseVariableDIE(sc, die, LLDB_INVALID_ADDRESS));
               if (var_sp) {

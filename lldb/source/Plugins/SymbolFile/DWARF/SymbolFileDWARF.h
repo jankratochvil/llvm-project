@@ -336,7 +336,6 @@ public:
   struct DecodedUID {
     SymbolFileDWARF &dwarf;
     DIERef ref;
-    // FIXME: DWZ: uint32_t main_cu = 0xffffffff
   };
   llvm::Optional<DecodedUID> DecodeUIDUnlocked(lldb::user_id_t uid);
 
