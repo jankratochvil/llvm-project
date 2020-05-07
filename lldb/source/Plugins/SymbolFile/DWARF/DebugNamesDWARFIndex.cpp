@@ -132,10 +132,10 @@ void DebugNamesDWARFIndex::GetGlobalVariables(
 }
 
 void DebugNamesDWARFIndex::GetGlobalVariables(
-    const DWARFUnit &cu,
+    const MainDWARFCompileUnit &main_unit,
     llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
         callback) {
-  uint64_t cu_offset = cu.GetOffset();
+  uint64_t cu_offset = main_unit.GetOffset();
   for (const DebugNames::NameIndex &ni: *m_debug_names_up) {
     for (DebugNames::NameTableEntry nte: ni) {
       uint64_t entry_offset = nte.getEntryOffset();
@@ -154,7 +154,7 @@ void DebugNamesDWARFIndex::GetGlobalVariables(
     }
   }
 
-  m_fallback.GetGlobalVariables(cu, callback);
+  m_fallback.GetGlobalVariables(main_unit, callback);
 }
 
 void DebugNamesDWARFIndex::GetCompleteObjCClass(

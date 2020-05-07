@@ -34,7 +34,7 @@ public:
       llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
           callback) override;
   void GetGlobalVariables(
-      const DWARFUnit &cu,
+      const MainDWARFCompileUnit &main_unit,
       llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
           callback) override;
   void GetObjCMethods(
