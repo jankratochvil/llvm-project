@@ -26,6 +26,7 @@
 # SPLIT_DEBUG_SYMBOLS := YES
 # CROSS_COMPILE :=
 # USE_PRIVATE_MODULE_CACHE := YES
+# DWZ := YES
 #
 # And test/functionalities/archives/Makefile:
 # MAKE_DSYM := NO
@@ -259,8 +260,12 @@ else
 		override ARCHFLAG := -
 	endif
 
-	ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
-		DSYM = $(EXE).debug
+	ifeq "$(DWZ)" "YES"
+		# DWZ always does SPLIT_DEBUG_SYMBOLS (as otherwise the dwz command fails)
+	else
+		ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
+			DSYM = $(EXE).debug
+		endif
 	endif
 endif
 
@@ -418,6 +423,26 @@ endif
 
 ifdef PIE
 	LDFLAGS += -pie
+endif
+
+#----------------------------------------------------------------------
+# Make the DWZ symbol file from the executable if $(DWZ) = "YES"
+# The dwz retry without -m is there because:
+#   dwz -m still succeeds even for no debug info present (missing -g):
+#     dwz: $(1).debug: .debug_info section not present
+#   But dwz -m fails if there is some debug info but none if it is big enough
+#   to be shared from the the common file $(1).debug.dwz:
+#     dwz: $(1).debug.dwz: .debug_info section not present
+#----------------------------------------------------------------------
+ifeq "$(DWZ)" "YES"
+	dwz_strip = \
+		eu-strip --remove-comment -f "$(1).debug" "$(1)" \
+		&& cp "$(1).debug" "$(1).debug.dup" \
+		&& (dwz -m "$(1).debug.dwz" -M $$(basename "$(1).debug.dwz") "$(1).debug" "$(1).debug.dup" \
+		    || dwz "$(1).debug") \
+		&& /usr/lib/rpm/sepdebugcrcfix . "$$(realpath --relative-to=$$PWD "$(1)")"
+else
+	dwz_strip =
 endif
 
 #----------------------------------------------------------------------
@@ -608,6 +633,7 @@ ifneq "$(DYLIB_NAME)" ""
 ifeq "$(DYLIB_ONLY)" ""
 $(EXE) : $(OBJECTS) $(ARCHIVE_NAME) $(DYLIB_FILENAME)
 	$(LD) $(OBJECTS) $(ARCHIVE_NAME) -L. -l$(DYLIB_NAME) $(LDFLAGS) -o "$(EXE)"
+	$(call dwz_strip,$(EXE))
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$(EXE)"
 endif
@@ -617,6 +643,7 @@ endif
 else
 $(EXE) : $(OBJECTS) $(ARCHIVE_NAME)
 	$(LD) $(OBJECTS) $(LDFLAGS) $(ARCHIVE_NAME) -o "$(EXE)"
+	$(call dwz_strip,$(EXE))
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$(EXE)"
 endif
@@ -690,9 +717,14 @@ endif
 endif
 else
 	$(LD) $(DYLIB_OBJECTS) $(LDFLAGS) -shared -o "$(DYLIB_FILENAME)"
+ifeq "$(DWZ)" "YES"
+        # DWZ always does SPLIT_DEBUG_SYMBOLS (as otherwise the dwz command fails)
+	$(call dwz_strip,$(DYLIB_FILENAME))
+else
 ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
 	$(OBJCOPY) --only-keep-debug "$(DYLIB_FILENAME)" "$(DYLIB_FILENAME).debug"
 	$(OBJCOPY) --strip-debug --add-gnu-debuglink="$(DYLIB_FILENAME).debug" "$(DYLIB_FILENAME)" "$(DYLIB_FILENAME)"
+endif
 endif
 endif
 

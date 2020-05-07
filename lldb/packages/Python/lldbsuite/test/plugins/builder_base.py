@@ -259,6 +259,28 @@ def buildGModules(
     return True
 
 
+def buildDWZ(
+        sender=None,
+        architecture=None,
+        compiler=None,
+        dictionary=None,
+        testdir=None,
+        testname=None):
+    """Build the binaries with DWZ - a DWARF optimization tool."""
+    commands = []
+    # dwz has a bug being unable to process non-separated debug info.
+    commands.append(getMake(testdir, testname) +
+                    ["MAKE_DSYM=NO",
+                     "DWZ=YES",
+                     getArchSpec(architecture),
+                     getCCSpec(compiler),
+                     getCmdLine(dictionary)])
+
+    lldbtest.system(commands, sender=sender)
+    # True signifies that we can handle building dwz.
+    return True
+
+
 def cleanup(sender=None, dictionary=None):
     """Perform a platform-specific cleanup after the test."""
     return True

@@ -1,5 +1,6 @@
 add_subdirectory(DWARF)
 add_subdirectory(NativePDB)
+add_subdirectory(DWZ)
 if (LLVM_ENABLE_DIA_SDK)
   add_subdirectory(PDB)
 endif()

@@ -951,6 +951,33 @@ def checkDebugInfoSupport():
     if skipped:
         print("Skipping following debug info categories:", skipped)
 
+def canRunDWZTests():
+    from lldbsuite.test import lldbplatformutil
+
+    platform = lldbplatformutil.getPlatform()
+
+    if platform == "linux":
+        import distutils.spawn
+
+        if not os.access("/usr/lib/rpm/sepdebugcrcfix", os.X_OK):
+            return False, "Unable to find /usr/lib/rpm/sepdebugcrcfix"
+        if distutils.spawn.find_executable("eu-strip") is None:
+            return False, "Unable to find executable eu-strip"
+        if distutils.spawn.find_executable("dwz") is None:
+            return False, "Unable to find executable dwz"
+        return True, "/usr/lib/rpm/sepdebugcrcfix, eu-strip and dwz found"
+
+    return False, "Don't know how to build with DWZ on %s" % platform
+
+def checkDWZSupport():
+    result, reason = canRunDWZTests()
+    if result:
+        return # dwz supported
+    if "dwz" in configuration.categoriesList:
+        return # dwz category explicitly requested, let it run.
+    print("dwz tests will not be run because: " + reason)
+    configuration.skipCategories.append("dwz")
+
 def run_suite():
     # On MacOS X, check to make sure that domain for com.apple.DebugSymbols defaults
     # does not exist before proceeding to running the test suite.
@@ -1053,6 +1080,7 @@ def run_suite():
     checkLibstdcxxSupport()
     checkWatchpointSupport()
     checkDebugInfoSupport()
+    checkDWZSupport()
 
     # Don't do debugserver tests on anything except OS X.
     configuration.dont_do_debugserver_test = (
