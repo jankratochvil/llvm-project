@@ -49,6 +49,8 @@ public:
   operator MainDWARFUnit *() { return reinterpret_cast<MainDWARFUnit *>(this); }
   operator MainDWARFUnit &() { return reinterpret_cast<MainDWARFUnit &>(*this); }
   MainDWARFCompileUnit &GetNonSkeletonUnit();
+  bool ContainsDIERef(DIERef die_ref) const;
+  bool ContainsUID(lldb::user_id_t uid) const;
 };
 static_assert(sizeof(MainDWARFCompileUnit)==sizeof(DWARFCompileUnit),"");
 
