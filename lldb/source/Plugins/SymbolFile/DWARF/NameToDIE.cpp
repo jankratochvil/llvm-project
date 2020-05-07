@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NameToDIE.h"
-#include "DWARFUnit.h"
+#include "DWARFCompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RegularExpression.h"
@@ -45,7 +45,7 @@ bool NameToDIE::Find(const RegularExpression &regex,
 }
 
 void NameToDIE::FindAllEntriesForUnit(
-    const DWARFUnit &unit,
+    const MainDWARFCompileUnit &unit,
     llvm::function_ref<bool(user_id_t uid)> callback) const {
   const uint32_t size = m_map.GetSize();
   for (uint32_t i = 0; i < size; ++i) {
