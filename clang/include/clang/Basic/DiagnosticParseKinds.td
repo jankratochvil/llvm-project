@@ -105,6 +105,14 @@ def ext_clang_c_enum_fixed_underlying_type : Extension<
 def warn_cxx98_compat_enum_fixed_underlying_type : Warning<
   "enumeration types with a fixed underlying type are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
+def ext_enum_base_in_type_specifier : ExtWarn<
+  "non-defining declaration of enumeration with a fixed underlying type is "
+  "only permitted as a standalone declaration"
+  "%select{|; missing list of enumerators?}0">, InGroup<DiagGroup<"enum-base">>;
+def err_anonymous_enum_bitfield : Error<
+  "ISO C++ only allows ':' in member enumeration declaration to introduce "
+  "a fixed underlying type, not an anonymous bit-field">;
+
 def warn_cxx98_compat_alignof : Warning<
   "alignof expressions are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
@@ -1332,10 +1340,12 @@ def err_pragma_loop_invalid_option : Error<
   "pipeline, pipeline_initiation_interval, vectorize_predicate, or distribute">;
 
 def err_pragma_fp_invalid_option : Error<
-  "%select{invalid|missing}0 option%select{ %1|}0; expected contract">;
+  "%select{invalid|missing}0 option%select{ %1|}0; expected 'contract' or 'reassociate'">;
 def err_pragma_fp_invalid_argument : Error<
   "unexpected argument '%0' to '#pragma clang fp %1'; "
-  "expected 'on', 'fast' or 'off'">;
+  "%select{"
+  "expected 'fast' or 'on' or 'off'|"
+  "expected 'on' or 'off'}2">;
 
 def err_pragma_invalid_keyword : Error<
   "invalid argument; expected 'enable'%select{|, 'full'}0%select{|, 'assume_safety'}1 or 'disable'">;
