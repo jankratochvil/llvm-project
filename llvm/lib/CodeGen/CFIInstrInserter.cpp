@@ -124,7 +124,7 @@ class CFIInstrInserter : public MachineFunctionPass {
   /// if needed. The negated value is needed when creating CFI instructions that
   /// set absolute offset.
   int getCorrectCFAOffset(MachineBasicBlock *MBB) {
-    return -MBBVector[MBB->getNumber()].IncomingCFAOffset;
+    return MBBVector[MBB->getNumber()].IncomingCFAOffset;
   }
 
   void reportCFAError(const MBBCFAInfo &Pred, const MBBCFAInfo &Succ);
@@ -314,7 +314,7 @@ bool CFIInstrInserter::insertCFIInstrs(MachineFunction &MF) {
       // incoming offset and register of this block, add a def_cfa instruction
       // with the correct offset and register for this block.
       if (PrevMBBInfo->OutgoingCFARegister != MBBInfo.IncomingCFARegister) {
-        unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createDefCfa(
+        unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfa(
             nullptr, MBBInfo.IncomingCFARegister, getCorrectCFAOffset(&MBB)));
         BuildMI(*MBBInfo.MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
             .addCFIIndex(CFIIndex);
@@ -322,9 +322,8 @@ bool CFIInstrInserter::insertCFIInstrs(MachineFunction &MF) {
         // of this block, add a def_cfa_offset instruction with the correct
         // offset for this block.
       } else {
-        unsigned CFIIndex =
-            MF.addFrameInst(MCCFIInstruction::createDefCfaOffset(
-                nullptr, getCorrectCFAOffset(&MBB)));
+        unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(
+            nullptr, getCorrectCFAOffset(&MBB)));
         BuildMI(*MBBInfo.MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
             .addCFIIndex(CFIIndex);
       }
