@@ -39,33 +39,6 @@
 using namespace mlir;
 using llvm::dbgs;
 
-/// Given a shape with sizes greater than 0 along all dimensions,
-/// returns the distance, in number of elements, between a slice in a dimension
-/// and the next slice in the same dimension.
-///   e.g. shape[3, 4, 5] -> linearization_basis[20, 5, 1]
-static SmallVector<int64_t, 8> computeStrides(ArrayRef<int64_t> shape) {
-  if (shape.empty())
-    return {};
-  SmallVector<int64_t, 8> tmp;
-  tmp.reserve(shape.size());
-  int64_t running = 1;
-  for (auto size : llvm::reverse(shape)) {
-    assert(size > 0 && "size must be nonnegative");
-    tmp.push_back(running);
-    running *= size;
-  }
-  return SmallVector<int64_t, 8>(tmp.rbegin(), tmp.rend());
-}
-
-static int64_t computeMaxLinearIndex(ArrayRef<int64_t> basis) {
-  if (basis.empty())
-    return 0;
-  int64_t res = 1;
-  for (auto b : basis)
-    res *= b;
-  return res;
-}
-
 // Clones `op` into a new operations that takes `operands` and returns
 // `resultTypes`.
 static Operation *cloneOpWithOperandsAndTypes(OpBuilder &builder, Location loc,
@@ -564,9 +537,12 @@ struct SplitTransferReadOp : public OpRewritePattern<vector::TransferReadOp> {
       // Get VectorType for slice 'i'.
       auto sliceVectorType = resultTupleType.getType(index);
       // Create split TransferReadOp for 'sliceUser'.
+      // `masked` attribute propagates conservatively: if the coarse op didn't
+      // need masking, the fine op doesn't either.
       vectorTupleValues[index] = rewriter.create<vector::TransferReadOp>(
           loc, sliceVectorType, xferReadOp.memref(), sliceIndices,
-          xferReadOp.permutation_map(), xferReadOp.padding());
+          xferReadOp.permutation_map(), xferReadOp.padding(),
+          xferReadOp.masked() ? *xferReadOp.masked() : ArrayAttr());
     };
     generateTransferOpSlices(memrefElementType, sourceVectorType,
                              resultTupleType, sizes, strides, indices, rewriter,
@@ -620,9 +596,12 @@ struct SplitTransferWriteOp : public OpRewritePattern<vector::TransferWriteOp> {
                                   xferWriteOp.indices().end());
     auto createSlice = [&](unsigned index, ArrayRef<Value> sliceIndices) {
       // Create split TransferWriteOp for source vector 'tupleOp.operand[i]'.
+      // `masked` attribute propagates conservatively: if the coarse op didn't
+      // need masking, the fine op doesn't either.
       rewriter.create<vector::TransferWriteOp>(
           loc, tupleOp.getOperand(index), xferWriteOp.memref(), sliceIndices,
-          xferWriteOp.permutation_map());
+          xferWriteOp.permutation_map(),
+          xferWriteOp.masked() ? *xferWriteOp.masked() : ArrayAttr());
     };
     generateTransferOpSlices(memrefElementType, resultVectorType,
                              sourceTupleType, sizes, strides, indices, rewriter,
