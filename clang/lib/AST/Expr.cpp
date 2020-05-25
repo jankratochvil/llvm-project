@@ -2909,7 +2909,8 @@ Expr *Expr::IgnoreUnlessSpelledInSource() {
   Expr *LastE = nullptr;
   while (E != LastE) {
     LastE = E;
-    E = IgnoreExprNodes(E, IgnoreImplicitSingleStep, IgnoreImpCastsSingleStep,
+    E = IgnoreExprNodes(E, IgnoreImplicitSingleStep,
+                        IgnoreImpCastsExtraSingleStep,
                         IgnoreParensOnlySingleStep);
 
     auto SR = E->getSourceRange();
@@ -2931,8 +2932,10 @@ Expr *Expr::IgnoreUnlessSpelledInSource() {
         continue;
       }
       if (auto *PE = dyn_cast<ParenExpr>(ExprNode)) {
-        E = PE;
-        continue;
+        if (PE->getSourceRange() == C->getSourceRange()) {
+          E = PE;
+          continue;
+        }
       }
       ExprNode = ExprNode->IgnoreParenImpCasts();
       if (ExprNode->getSourceRange() == SR)
