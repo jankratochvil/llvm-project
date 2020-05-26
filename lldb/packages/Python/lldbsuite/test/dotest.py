@@ -973,10 +973,10 @@ def checkDWZSupport():
     result, reason = canRunDWZTests()
     if result:
         return # dwz supported
-    if "dwz" in configuration.categoriesList:
+    if "dwz" in configuration.categories_list:
         return # dwz category explicitly requested, let it run.
     print("dwz tests will not be run because: " + reason)
-    configuration.skipCategories.append("dwz")
+    configuration.skip_categories.append("dwz")
 
 def run_suite():
     # On MacOS X, check to make sure that domain for com.apple.DebugSymbols defaults
