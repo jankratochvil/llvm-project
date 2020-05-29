@@ -15,6 +15,7 @@
 #ifndef LLVM_OBJECTYAML_DWARFYAML_H
 #define LLVM_OBJECTYAML_DWARFYAML_H
 
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -171,6 +172,8 @@ struct Data {
   std::vector<LineTable> DebugLines;
 
   bool isEmpty() const;
+
+  SetVector<StringRef> getUsedSectionNames() const;
 };
 
 } // end namespace DWARFYAML
@@ -210,7 +213,7 @@ template <> struct MappingTraits<DWARFYAML::ARangeDescriptor> {
 };
 
 template <> struct MappingTraits<DWARFYAML::ARange> {
-  static void mapping(IO &IO, DWARFYAML::ARange &Range);
+  static void mapping(IO &IO, DWARFYAML::ARange &ARange);
 };
 
 template <> struct MappingTraits<DWARFYAML::RangeEntry> {
