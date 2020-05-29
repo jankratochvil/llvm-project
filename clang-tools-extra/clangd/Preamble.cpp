@@ -24,6 +24,8 @@
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
@@ -104,24 +106,6 @@ private:
   const SourceManager *SourceMgr = nullptr;
 };
 
-// Runs preprocessor over preamble section.
-class PreambleOnlyAction : public PreprocessorFrontendAction {
-protected:
-  void ExecuteAction() override {
-    Preprocessor &PP = getCompilerInstance().getPreprocessor();
-    auto &SM = PP.getSourceManager();
-    PP.EnterMainSourceFile();
-    auto Bounds = ComputePreambleBounds(getCompilerInstance().getLangOpts(),
-                                        SM.getBuffer(SM.getMainFileID()), 0);
-    Token Tok;
-    do {
-      PP.Lex(Tok);
-      assert(SM.isInMainFile(Tok.getLocation()));
-    } while (Tok.isNot(tok::eof) &&
-             SM.getDecomposedLoc(Tok.getLocation()).second < Bounds.Size);
-  }
-};
-
 /// Gets the includes in the preamble section of the file by running
 /// preprocessor over \p Contents. Returned includes do not contain resolved
 /// paths. \p VFS and \p Cmd is used to build the compiler invocation, which
@@ -142,8 +126,15 @@ scanPreambleIncludes(llvm::StringRef Contents,
                                    "failed to create compiler invocation");
   CI->getDiagnosticOpts().IgnoreWarnings = true;
   auto ContentsBuffer = llvm::MemoryBuffer::getMemBuffer(Contents);
+  // This means we're scanning (though not preprocessing) the preamble section
+  // twice. However, it's important to precisely follow the preamble bounds used
+  // elsewhere.
+  auto Bounds =
+      ComputePreambleBounds(*CI->getLangOpts(), ContentsBuffer.get(), 0);
+  auto PreambleContents =
+      llvm::MemoryBuffer::getMemBufferCopy(Contents.substr(0, Bounds.Size));
   auto Clang = prepareCompilerInstance(
-      std::move(CI), nullptr, std::move(ContentsBuffer),
+      std::move(CI), nullptr, std::move(PreambleContents),
       // Provide an empty FS to prevent preprocessor from performing IO. This
       // also implies missing resolved paths for includes.
       new llvm::vfs::InMemoryFileSystem, IgnoreDiags);
@@ -152,7 +143,7 @@ scanPreambleIncludes(llvm::StringRef Contents,
                                    "compiler instance had no inputs");
   // We are only interested in main file includes.
   Clang->getPreprocessorOpts().SingleFileParseMode = true;
-  PreambleOnlyAction Action;
+  PreprocessOnlyAction Action;
   if (!Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0]))
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "failed BeginSourceFile");
@@ -285,6 +276,7 @@ void escapeBackslashAndQuotes(llvm::StringRef Text, llvm::raw_ostream &OS) {
 PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
                                     const ParseInputs &Modified,
                                     const PreambleData &Baseline) {
+  assert(llvm::sys::path::is_absolute(FileName) && "relative FileName!");
   // First scan the include directives in Baseline and Modified. These will be
   // used to figure out newly added directives in Modified. Scanning can fail,
   // the code just bails out and creates an empty patch in such cases, as:
@@ -312,7 +304,7 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
   }
   // No patch needed if includes are equal.
   if (*BaselineIncludes == *ModifiedIncludes)
-    return {};
+    return PreamblePatch::unmodified(Baseline);
 
   PreamblePatch PP;
   // This shouldn't coincide with any real file name.
@@ -323,10 +315,15 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
 
   // We are only interested in newly added includes, record the ones in Baseline
   // for exclusion.
-  llvm::DenseSet<std::pair<tok::PPKeywordKind, llvm::StringRef>>
+  llvm::DenseMap<std::pair<tok::PPKeywordKind, llvm::StringRef>,
+                 /*Resolved=*/llvm::StringRef>
       ExistingIncludes;
+  for (const auto &Inc : Baseline.Includes.MainFileIncludes)
+    ExistingIncludes[{Inc.Directive, Inc.Written}] = Inc.Resolved;
+  // There might be includes coming from disabled regions, record these for
+  // exclusion too. note that we don't have resolved paths for those.
   for (const auto &Inc : *BaselineIncludes)
-    ExistingIncludes.insert({Inc.Directive, Inc.Written});
+    ExistingIncludes.try_emplace({Inc.Directive, Inc.Written});
   // Calculate extra includes that needs to be inserted.
   llvm::raw_string_ostream Patch(PP.PatchContents);
   // Set default filename for subsequent #line directives
@@ -335,9 +332,15 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
   // might lead to problems on windows especially.
   escapeBackslashAndQuotes(FileName, Patch);
   Patch << "\"\n";
-  for (const auto &Inc : *ModifiedIncludes) {
-    if (ExistingIncludes.count({Inc.Directive, Inc.Written}))
+  for (auto &Inc : *ModifiedIncludes) {
+    auto It = ExistingIncludes.find({Inc.Directive, Inc.Written});
+    // Include already present in the baseline preamble. Set resolved path and
+    // put into preamble includes.
+    if (It != ExistingIncludes.end()) {
+      Inc.Resolved = It->second.str();
+      PP.PreambleIncludes.push_back(Inc);
       continue;
+    }
     // Include is new in the modified preamble. Inject it into the patch and use
     // #line to set the presumed location to where it is spelled.
     auto LineCol = offsetToClangLineColumn(Modified.Contents, Inc.HashOffset);
@@ -365,6 +368,16 @@ void PreamblePatch::apply(CompilerInvocation &CI) const {
   // The patch will be parsed after loading the preamble ast and before parsing
   // the main file.
   PPOpts.Includes.push_back(PatchFileName);
+}
+
+std::vector<Inclusion> PreamblePatch::preambleIncludes() const {
+  return PreambleIncludes;
+}
+
+PreamblePatch PreamblePatch::unmodified(const PreambleData &Preamble) {
+  PreamblePatch PP;
+  PP.PreambleIncludes = Preamble.Includes.MainFileIncludes;
+  return PP;
 }
 
 } // namespace clangd
