@@ -112,7 +112,8 @@ public:
     DWARFUnit *m_cu;
     bool m_clear_dies = false;
     bool m_unlock;
-    DISALLOW_COPY_AND_ASSIGN(ScopedExtractDIEs);
+    ScopedExtractDIEs(const ScopedExtractDIEs &) = delete;
+    const ScopedExtractDIEs &operator=(const ScopedExtractDIEs &) = delete;
   };
 
   bool Verify(lldb_private::Stream *s) const;
@@ -365,7 +366,8 @@ private:
   void ComputeCompDirAndGuessPathStyle();
   void ComputeAbsolutePath();
 
-  DISALLOW_COPY_AND_ASSIGN(DWARFUnit);
+  DWARFUnit(const DWARFUnit &) = delete;
+  const DWARFUnit &operator=(const DWARFUnit &) = delete;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFUNIT_H
