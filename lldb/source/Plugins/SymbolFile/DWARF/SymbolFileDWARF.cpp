@@ -447,9 +447,9 @@ void SymbolFileDWARF::InitializeObject() {
     LoadSectionData(eSectionTypeDWARFAppleTypes, apple_types);
     LoadSectionData(eSectionTypeDWARFAppleObjC, apple_objc);
 
-    m_index = AppleDWARFIndex::Create(*this, apple_names, apple_namespaces,
-                                      apple_types, apple_objc,
-                                      m_context.getOrLoadStrData());
+    m_index = AppleDWARFIndex::Create(
+        *GetObjectFile()->GetModule(), apple_names, apple_namespaces,
+        apple_types, apple_objc, m_context.getOrLoadStrData());
 
     if (m_index)
       return;
