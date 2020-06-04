@@ -107,7 +107,6 @@ void AppleDWARFIndex::GetCompleteObjCClass(
         callback) {
   if (!m_apple_types_up)
     return;
-
   m_apple_types_up->FindCompleteObjCClassByName(
       class_name.GetStringRef(),
       DIERefCallback(callback, class_name.GetStringRef()),
