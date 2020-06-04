@@ -29,7 +29,8 @@ private:
   size_t m_use_count = 0;
   lldb::ModuleSP m_module;
 
-  DISALLOW_COPY_AND_ASSIGN(SymbolFileDWARFDwz);
+  SymbolFileDWARFDwz(const SymbolFileDWARFDwz &) = delete;
+  const SymbolFileDWARFDwz &operator=(const SymbolFileDWARFDwz &) = delete;
 };
 
 #endif // SymbolFileDWARFDwz_SymbolFileDWARFDwz_h_
