@@ -18,18 +18,16 @@ namespace lldb_private {
 class AppleDWARFIndex : public DWARFIndex {
 public:
   static std::unique_ptr<AppleDWARFIndex>
-  Create(SymbolFileDWARF &dwarf, DWARFDataExtractor apple_names,
+  Create(Module &module, DWARFDataExtractor apple_names,
          DWARFDataExtractor apple_namespaces, DWARFDataExtractor apple_types,
          DWARFDataExtractor apple_objc, DWARFDataExtractor debug_str);
 
   AppleDWARFIndex(
-      SymbolFileDWARF &dwarf,
-      std::unique_ptr<DWARFMappedHash::MemoryTable> apple_names,
+      Module &module, std::unique_ptr<DWARFMappedHash::MemoryTable> apple_names,
       std::unique_ptr<DWARFMappedHash::MemoryTable> apple_namespaces,
       std::unique_ptr<DWARFMappedHash::MemoryTable> apple_types,
       std::unique_ptr<DWARFMappedHash::MemoryTable> apple_objc)
-      : DWARFIndex(*dwarf.GetObjectFile()->GetModule()),
-        m_apple_names_up(std::move(apple_names)),
+      : DWARFIndex(module), m_apple_names_up(std::move(apple_names)),
         m_apple_namespaces_up(std::move(apple_namespaces)),
         m_apple_types_up(std::move(apple_types)),
         m_apple_objc_up(std::move(apple_objc)) {}
