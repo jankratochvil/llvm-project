@@ -11,8 +11,6 @@
 
 #include "Plugins/SymbolFile/DWARF/DWARFIndex.h"
 #include "Plugins/SymbolFile/DWARF/HashedNameToDIE.h"
-#include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
-#include "lldb/Symbol/ObjectFile.h"
 
 namespace lldb_private {
 class AppleDWARFIndex : public DWARFIndex {
