@@ -18,7 +18,7 @@ using namespace lldb_private;
 using namespace lldb;
 
 std::unique_ptr<AppleDWARFIndex> AppleDWARFIndex::Create(
-    SymbolFileDWARF &dwarf, DWARFDataExtractor apple_names,
+    Module &module, DWARFDataExtractor apple_names,
     DWARFDataExtractor apple_namespaces, DWARFDataExtractor apple_types,
     DWARFDataExtractor apple_objc, DWARFDataExtractor debug_str) {
   auto apple_names_table_up = std::make_unique<DWARFMappedHash::MemoryTable>(
@@ -45,7 +45,7 @@ std::unique_ptr<AppleDWARFIndex> AppleDWARFIndex::Create(
   if (apple_names_table_up || apple_names_table_up || apple_types_table_up ||
       apple_objc_table_up)
     return std::make_unique<AppleDWARFIndex>(
-        dwarf, std::move(apple_names_table_up),
+        module, std::move(apple_names_table_up),
         std::move(apple_namespaces_table_up), std::move(apple_types_table_up),
         std::move(apple_objc_table_up));
 
@@ -107,7 +107,6 @@ void AppleDWARFIndex::GetCompleteObjCClass(
         callback) {
   if (!m_apple_types_up)
     return;
-
   m_apple_types_up->FindCompleteObjCClassByName(
       class_name.GetStringRef(),
       DIERefCallback(callback, class_name.GetStringRef()),
