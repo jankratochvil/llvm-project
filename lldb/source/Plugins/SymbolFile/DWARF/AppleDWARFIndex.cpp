@@ -108,7 +108,6 @@ void AppleDWARFIndex::GetCompleteObjCClass(
   if (!m_apple_types_up)
     return;
 
-  DIEArray refs;
   m_apple_types_up->FindCompleteObjCClassByName(
       class_name.GetStringRef(),
       DIERefCallback(callback, class_name.GetStringRef()),
@@ -139,7 +138,6 @@ void AppleDWARFIndex::GetTypes(
   const bool has_qualified_name_hash =
       m_apple_types_up->GetHeader().header_data.ContainsAtom(
           DWARFMappedHash::eAtomTypeQualNameHash);
-  DIEArray refs;
 
   const ConstString type_name(context[0].name);
   const dw_tag_t tag = context[0].tag;
