@@ -23,10 +23,9 @@ class TestReturnValueUnderConstructionChecker
   : public Checker<check::PostCall> {
 public:
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const {
-    // We are checking the invocation of `returnC` which returns an object
-    // by value.
-    const IdentifierInfo *ID = Call.getCalleeIdentifier();
-    if (ID->getName() != "returnC")
+    // Only calls with origin expression are checked. These are `returnC()`
+    // and C::C().
+    if (!Call.getOriginExpr())
       return;
 
     // Since `returnC` returns an object by value, the invocation results
