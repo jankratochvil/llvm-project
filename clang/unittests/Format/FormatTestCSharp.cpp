@@ -525,6 +525,33 @@ var x = foo(className, $@"some code:
   EXPECT_EQ(Code, format(Code, Style));
 }
 
+TEST_F(FormatTestCSharp, CSharpLambdas) {
+  FormatStyle GoogleStyle = getGoogleStyle(FormatStyle::LK_CSharp);
+  FormatStyle MicrosoftStyle = getMicrosoftStyle(FormatStyle::LK_CSharp);
+
+  verifyFormat(R"(//
+class MyClass {
+  Action<string> greet = name => {
+    string greeting = $"Hello {name}!";
+    Console.WriteLine(greeting);
+  };
+})",
+               GoogleStyle);
+
+  // Microsoft Style:
+  // https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/statements-expressions-operators/lambda-expressions#statement-lambdas
+  verifyFormat(R"(//
+class MyClass
+{
+    Action<string> greet = name =>
+    {
+        string greeting = $"Hello {name}!";
+        Console.WriteLine(greeting);
+    };
+})",
+               MicrosoftStyle);
+}
+
 TEST_F(FormatTestCSharp, CSharpObjectInitializers) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
 
@@ -740,6 +767,9 @@ TEST_F(FormatTestCSharp, CSharpSpaces) {
 foreach ((A a, B b) in someList) {
 })",
                Style);
+
+  // space after lock in `lock (processes)`.
+  verifyFormat("lock (process)", Style);
 
   Style.SpacesInSquareBrackets = true;
   verifyFormat(R"(private float[ , ] Values;)", Style);
