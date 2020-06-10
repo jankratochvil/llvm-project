@@ -106,13 +106,8 @@ and from the command line.
 .. option:: --dump-input <mode>
 
   Dump input to stderr, adding annotations representing currently enabled
-  diagnostics.  Do this either 'always', on 'fail', or 'never'.  Specify 'help'
-  to explain the dump format and quit.
-
-.. option:: --dump-input-on-failure
-
-  When the check fails, dump all of the original input.  This option is
-  deprecated in favor of `--dump-input=fail`.
+  diagnostics.  Do this either 'always', on 'fail' (default), or 'never'.
+  Specify 'help' to explain the dump format and quit.
 
 .. option:: --enable-var-scope
 
@@ -691,12 +686,27 @@ The syntax of a numeric substitution is ``[[#%<fmtspec>,<expr>]]`` where:
   * a numeric operand, or
   * an expression followed by an operator and a numeric operand.
 
-  A numeric operand is a previously defined numeric variable, or an integer
-  literal and have a 64-bit precision. The supported operators are ``+`` and
-  ``-``. Spaces are accepted before, after and between any of these elements.
-  Overflow and underflow are rejected. There is currently no support for
-  operator precendence, but parentheses can be used to change the evaluation
-  order.
+  A numeric operand is a previously defined numeric variable, an integer
+  literal, or a function. Spaces are accepted before, after and between any of
+  these elements. Numeric operands have 64-bit precision. Overflow and underflow
+  are rejected. There is no support for operator precendence, but parentheses
+  can be used to change the evaluation order.
+
+The supported operators are:
+
+  * ``+`` - Returns the sum of its two operands.
+  * ``-`` - Returns the difference of its two operands.
+
+The syntax of a function call is ``<name>(<arguments>)`` where:
+
+* ``name`` is a predefined string literal. Accepted values are:
+
+  * add - Returns the sum of its two operands.
+  * max - Returns the largest of its two operands.
+  * min - Returns the smallest of its two operands.
+  * sub - Returns the difference of its two operands.
+
+* ``<arguments>`` is a comma seperated list of expressions.
 
 For example:
 
