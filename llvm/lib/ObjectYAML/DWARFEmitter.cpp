@@ -148,13 +148,19 @@ Error DWARFYAML::emitDebugRanges(raw_ostream &OS, const DWARFYAML::Data &DI) {
                                    Twine::utohexstr(CurrOffset) + ")");
     if (DebugRanges.Offset)
       ZeroFillBytes(OS, *DebugRanges.Offset - CurrOffset);
+
+    uint8_t AddrSize;
+    if (DebugRanges.AddrSize)
+      AddrSize = *DebugRanges.AddrSize;
+    else
+      AddrSize = DI.Is64bit ? 8 : 4;
     for (auto Entry : DebugRanges.Entries) {
-      writeVariableSizedInteger(Entry.LowOffset, DebugRanges.AddrSize, OS,
+      writeVariableSizedInteger(Entry.LowOffset, AddrSize, OS,
                                 DI.IsLittleEndian);
-      writeVariableSizedInteger(Entry.HighOffset, DebugRanges.AddrSize, OS,
+      writeVariableSizedInteger(Entry.HighOffset, AddrSize, OS,
                                 DI.IsLittleEndian);
     }
-    ZeroFillBytes(OS, DebugRanges.AddrSize * 2);
+    ZeroFillBytes(OS, AddrSize * 2);
     ++EntryIndex;
   }
 
@@ -262,8 +268,9 @@ static void emitFileEntry(raw_ostream &OS, const DWARFYAML::File &File) {
 
 Error DWARFYAML::emitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
   for (const auto &LineTable : DI.DebugLines) {
-    writeInitialLength(LineTable.Length, OS, DI.IsLittleEndian);
-    uint64_t SizeOfPrologueLength = LineTable.Length.isDWARF64() ? 8 : 4;
+    writeInitialLength(LineTable.Format, LineTable.Length, OS,
+                       DI.IsLittleEndian);
+    uint64_t SizeOfPrologueLength = LineTable.Format == dwarf::DWARF64 ? 8 : 4;
     writeInteger((uint16_t)LineTable.Version, OS, DI.IsLittleEndian);
     writeVariableSizedInteger(LineTable.PrologueLength, SizeOfPrologueLength,
                               OS, DI.IsLittleEndian);
@@ -339,6 +346,40 @@ Error DWARFYAML::emitDebugLine(raw_ostream &OS, const DWARFYAML::Data &DI) {
           }
         }
       }
+    }
+  }
+
+  return Error::success();
+}
+
+Error DWARFYAML::emitDebugAddr(raw_ostream &OS, const Data &DI) {
+  for (const AddrTableEntry &TableEntry : DI.DebugAddr) {
+    uint8_t AddrSize;
+    if (TableEntry.AddrSize)
+      AddrSize = *TableEntry.AddrSize;
+    else
+      AddrSize = DI.Is64bit ? 8 : 4;
+
+    uint64_t Length;
+    if (TableEntry.Length)
+      Length = (uint64_t)*TableEntry.Length;
+    else
+      // 2 (version) + 1 (address_size) + 1 (segment_selector_size) = 4
+      Length = 4 + (AddrSize + TableEntry.SegSelectorSize) *
+                       TableEntry.SegAddrPairs.size();
+
+    writeInitialLength(TableEntry.Format, Length, OS, DI.IsLittleEndian);
+    writeInteger((uint16_t)TableEntry.Version, OS, DI.IsLittleEndian);
+    writeInteger((uint8_t)AddrSize, OS, DI.IsLittleEndian);
+    writeInteger((uint8_t)TableEntry.SegSelectorSize, OS, DI.IsLittleEndian);
+
+    for (const SegAddrPair &Pair : TableEntry.SegAddrPairs) {
+      if (TableEntry.SegSelectorSize != 0)
+        writeVariableSizedInteger(Pair.Segment, TableEntry.SegSelectorSize, OS,
+                                  DI.IsLittleEndian);
+      if (AddrSize != 0)
+        writeVariableSizedInteger(Pair.Address, AddrSize, OS,
+                                  DI.IsLittleEndian);
     }
   }
 
