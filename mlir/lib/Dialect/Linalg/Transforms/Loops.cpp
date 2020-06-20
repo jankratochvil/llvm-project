@@ -242,17 +242,6 @@ void emitScalarImplementation(ArrayRef<Value> allIvs, DotOp dotOp) {
   // Emit scalar form.
   C() = C() + A(r_i) * B(r_i);
 }
-template <typename IndexedValueType>
-void emitScalarImplementation(ArrayRef<Value> allIvs, MatvecOp matvecOp) {
-  assert(matvecOp.hasBufferSemantics() &&
-         "expected linalg op with buffer semantics");
-  assert(allIvs.size() == 2);
-  Value i(allIvs[0]), r_j(allIvs[1]);
-  IndexedValueType A(matvecOp.getInput(0)), B(matvecOp.getInput(1)),
-      C(matvecOp.getOutputBuffer(0));
-  // Emit scalar form.
-  C(i) = C(i) + A(i, r_j) * B(r_j);
-}
 
 template <typename IndexedValueType>
 Value getConvOpInput(ConvOp convOp, StdIndexedValue im,
@@ -459,10 +448,6 @@ Optional<LinalgLoops> linalgOpToLoopsImpl(Operation *op, OpBuilder &builder) {
   auto linalgOp = cast<ConcreteOpTy>(op);
   assert(linalgOp.hasBufferSemantics() &&
          "expected linalg op with buffer semantics");
-  auto nPar = linalgOp.getNumParallelLoops();
-  auto nRed = linalgOp.getNumReductionLoops();
-  auto nWin = linalgOp.getNumWindowLoops();
-  auto nLoops = nPar + nRed + nWin;
   auto mapsRange =
       linalgOp.indexing_maps().template getAsRange<AffineMapAttr>();
   auto maps = llvm::to_vector<8>(
@@ -475,15 +460,14 @@ Optional<LinalgLoops> linalgOpToLoopsImpl(Operation *op, OpBuilder &builder) {
     return LinalgLoops();
   }
 
-  SmallVector<Value, 4> allIvs(nLoops);
+  SmallVector<Value, 4> allIvs;
   auto loopRanges =
       emitLoopRanges(scope.getBuilderRef(), scope.getLocation(), invertedMap,
                      getViewSizes(builder, linalgOp));
-  assert(loopRanges.size() == allIvs.size());
   GenerateLoopNest<LoopTy>::doit(
-      allIvs, loopRanges, linalgOp.iterator_types().getValue(), [&] {
-        SmallVector<Value, 4> allIvValues(allIvs.begin(), allIvs.end());
-        emitScalarImplementation<IndexedValueTy>(allIvValues, linalgOp);
+      loopRanges, linalgOp.iterator_types().getValue(), [&](ValueRange ivs) {
+        allIvs.append(ivs.begin(), ivs.end());
+        emitScalarImplementation<IndexedValueTy>(allIvs, linalgOp);
       });
   // Number of loop ops might be different from the number of ivs since some
   // loops like affine.parallel and scf.parallel have multiple ivs.
@@ -629,8 +613,6 @@ Optional<LinalgLoops> linalgOpToLoopsImplSwitch(Operation *op,
     return linalgOpToLoopsImpl<LoopTy, FillOp>(op, builder);
   if (isa<DotOp>(op))
     return linalgOpToLoopsImpl<LoopTy, DotOp>(op, builder);
-  if (isa<MatvecOp>(op))
-    return linalgOpToLoopsImpl<LoopTy, MatvecOp>(op, builder);
   if (isa<ConvOp>(op))
     return linalgOpToLoopsImpl<LoopTy, ConvOp>(op, builder);
   if (isa<PoolingMaxOp>(op))
@@ -647,6 +629,8 @@ Optional<LinalgLoops> linalgOpToLoopsImplSwitch(Operation *op,
     return linalgOpToLoopsImpl<LoopTy, GenericOp>(op, builder);
   if (isa<MatmulOp>(op))
     return linalgOpToLoopsImpl<LoopTy, MatmulOp>(op, builder);
+  if (isa<MatvecOp>(op))
+    return linalgOpToLoopsImpl<LoopTy, MatvecOp>(op, builder);
   if (isa<BatchMatmulOp>(op))
     return linalgOpToLoopsImpl<LoopTy, BatchMatmulOp>(op, builder);
   llvm_unreachable("Unexpected op in linalgOpToLoopsImpl");
