@@ -291,6 +291,11 @@ bool TargetTransformInfo::collectFlatAddressOperands(
   return TTIImpl->collectFlatAddressOperands(OpIndexes, IID);
 }
 
+bool TargetTransformInfo::isNoopAddrSpaceCast(unsigned FromAS,
+                                              unsigned ToAS) const {
+  return TTIImpl->isNoopAddrSpaceCast(FromAS, ToAS);
+}
+
 Value *TargetTransformInfo::rewriteIntrinsicWithAddressSpace(
     IntrinsicInst *II, Value *OldV, Value *NewV) const {
   return TTIImpl->rewriteIntrinsicWithAddressSpace(II, OldV, NewV);
@@ -313,9 +318,8 @@ bool TargetTransformInfo::preferPredicateOverEpilogue(
   return TTIImpl->preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LAI);
 }
 
-bool TargetTransformInfo::emitGetActiveLaneMask(Loop *L, LoopInfo *LI,
-    ScalarEvolution &SE, bool TailFolded) const {
-  return TTIImpl->emitGetActiveLaneMask(L, LI, SE, TailFolded);
+bool TargetTransformInfo::emitGetActiveLaneMask() const {
+  return TTIImpl->emitGetActiveLaneMask();
 }
 
 void TargetTransformInfo::getUnrollingPreferences(
