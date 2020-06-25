@@ -92,7 +92,7 @@ static bool DeclKindIsCXXClass(clang::Decl::Kind decl_kind) {
 
 ClangASTImporter &DWARFASTParserClang::GetClangASTImporter() {
   if (!m_clang_ast_importer_up) {
-    m_clang_ast_importer_up.reset(new ClangASTImporter);
+    m_clang_ast_importer_up = std::make_unique<ClangASTImporter>();
   }
   return *m_clang_ast_importer_up;
 }
@@ -1832,7 +1832,7 @@ public:
         m_property_getter_name(property_getter_name),
         m_property_attributes(property_attributes) {
     if (metadata != nullptr) {
-      m_metadata_up.reset(new ClangASTMetadata());
+      m_metadata_up = std::make_unique<ClangASTMetadata>();
       *m_metadata_up = *metadata;
     }
   }
@@ -1852,7 +1852,7 @@ public:
     m_property_attributes = rhs.m_property_attributes;
 
     if (rhs.m_metadata_up) {
-      m_metadata_up.reset(new ClangASTMetadata());
+      m_metadata_up = std::make_unique<ClangASTMetadata>();
       *m_metadata_up = *rhs.m_metadata_up;
     }
     return *this;
@@ -1884,8 +1884,8 @@ bool DWARFASTParserClang::ParseTemplateDIE(
 
   switch (tag) {
   case DW_TAG_GNU_template_parameter_pack: {
-    template_param_infos.packed_args.reset(
-      new TypeSystemClang::TemplateParameterInfos);
+    template_param_infos.packed_args =
+        std::make_unique<TypeSystemClang::TemplateParameterInfos>();
     for (DWARFDIE child_die = die.GetFirstChild(); child_die.IsValid();
          child_die = child_die.GetSibling()) {
       if (!ParseTemplateDIE(main_unit, child_die,
@@ -2424,8 +2424,8 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
       FunctionSP func_sp;
       std::unique_ptr<Declaration> decl_up;
       if (decl_file != 0 || decl_line != 0 || decl_column != 0)
-        decl_up.reset(new Declaration(die.GetCU()->GetFile(decl_file),
-                                      decl_line, decl_column));
+        decl_up = std::make_unique<Declaration>(die.GetCU()->GetFile(decl_file),
+                                                decl_line, decl_column);
 
       // Supply the type _only_ if it has already been parsed
       Type *func_type =
