@@ -237,8 +237,8 @@ static bool SemaBuiltinAlignment(Sema &S, CallExpr *TheCall, unsigned ID) {
   }
   Expr::EvalResult AlignResult;
   unsigned MaxAlignmentBits = S.Context.getIntWidth(SrcTy) - 1;
-  // We can't check validity of alignment if it is type dependent.
-  if (!AlignOp->isInstantiationDependent() &&
+  // We can't check validity of alignment if it is value dependent.
+  if (!AlignOp->isValueDependent() &&
       AlignOp->EvaluateAsInt(AlignResult, S.Context,
                              Expr::SE_AllowSideEffects)) {
     llvm::APSInt AlignValue = AlignResult.Val.getInt();
@@ -3124,6 +3124,16 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
            SemaBuiltinConstantArgRange(TheCall, 1, 0, 1);
   case PPC::BI__builtin_pack_vector_int128:
     return SemaVSXCheck(TheCall);
+  case PPC::BI__builtin_altivec_vgnb:
+     return SemaBuiltinConstantArgRange(TheCall, 1, 2, 7);
+  case PPC::BI__builtin_vsx_xxeval:
+     return SemaBuiltinConstantArgRange(TheCall, 3, 0, 255);
+  case PPC::BI__builtin_altivec_vsldbi:
+     return SemaBuiltinConstantArgRange(TheCall, 2, 0, 7);
+  case PPC::BI__builtin_altivec_vsrdbi:
+     return SemaBuiltinConstantArgRange(TheCall, 2, 0, 7);
+  case PPC::BI__builtin_vsx_xxpermx:
+     return SemaBuiltinConstantArgRange(TheCall, 3, 0, 7);
   }
   return SemaBuiltinConstantArgRange(TheCall, i, l, u);
 }
