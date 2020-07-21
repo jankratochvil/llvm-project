@@ -825,14 +825,14 @@ XcodeSDK SymbolFileDWARF::ParseXcodeSDK(CompileUnit &comp_unit) {
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
   if (!dwarf_cu)
     return {};
-  const DWARFBaseDIE cu_die = dwarf_cu->GetNonSkeletonUnit().GetUnitDIEOnly();
+  const DWARFDebugInfoEntry cu_die = dwarf_cu->GetNonSkeletonUnit().GetUnitDIEOnly();
   if (!cu_die)
     return {};
-  const char *sdk = cu_die.GetAttributeValueAsString(DW_AT_APPLE_sdk, nullptr);
+  const char *sdk = cu_die.GetAttributeValueAsString(dwarf_cu, DW_AT_APPLE_sdk, nullptr);
   if (!sdk)
     return {};
   const char *sysroot =
-      cu_die.GetAttributeValueAsString(DW_AT_LLVM_sysroot, "");
+      cu_die.GetAttributeValueAsString(dwarf_cu, DW_AT_LLVM_sysroot, "");
   // Register the sysroot path remapping with the module belonging to
   // the CU as well as the one belonging to the symbol file. The two
   // would be different if this is an OSO object and module is the
