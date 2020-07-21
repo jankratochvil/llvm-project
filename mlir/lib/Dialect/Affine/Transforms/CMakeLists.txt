@@ -18,6 +18,7 @@ add_mlir_dialect_library(MLIRAffineTransforms
 
   LINK_LIBS PUBLIC
   MLIRAffineOps
+  MLIRAffineUtils
   MLIREDSC
   MLIRIR
   MLIRPass
