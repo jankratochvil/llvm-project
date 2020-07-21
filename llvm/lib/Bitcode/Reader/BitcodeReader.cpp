@@ -1530,6 +1530,10 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SanitizeMemTag;
   case bitc::ATTR_KIND_PREALLOCATED:
     return Attribute::Preallocated;
+  case bitc::ATTR_KIND_NOUNDEF:
+    return Attribute::NoUndef;
+  case bitc::ATTR_KIND_BYREF:
+    return Attribute::ByRef;
   }
 }
 
@@ -1647,6 +1651,8 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             return Err;
           if (Kind == Attribute::ByVal) {
             B.addByValAttr(HasType ? getTypeByID(Record[++i]) : nullptr);
+          } else if (Kind == Attribute::ByRef) {
+            B.addByRefAttr(getTypeByID(Record[++i]));
           } else if (Kind == Attribute::Preallocated) {
             B.addPreallocatedAttr(getTypeByID(Record[++i]));
           }
@@ -5020,8 +5026,10 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       else
         FailureOrdering = getDecodedOrdering(Record[OpNum + 3]);
 
-      I = new AtomicCmpXchgInst(Ptr, Cmp, New, SuccessOrdering, FailureOrdering,
-                                SSID);
+      Align Alignment(
+          TheModule->getDataLayout().getTypeStoreSize(Cmp->getType()));
+      I = new AtomicCmpXchgInst(Ptr, Cmp, New, Alignment, SuccessOrdering,
+                                FailureOrdering, SSID);
       FullTy = StructType::get(Context, {FullTy, Type::getInt1Ty(Context)});
       cast<AtomicCmpXchgInst>(I)->setVolatile(Record[OpNum]);
 
@@ -5058,7 +5066,9 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
           Ordering == AtomicOrdering::Unordered)
         return error("Invalid record");
       SyncScope::ID SSID = getDecodedSyncScopeID(Record[OpNum + 3]);
-      I = new AtomicRMWInst(Operation, Ptr, Val, Ordering, SSID);
+      Align Alignment(
+          TheModule->getDataLayout().getTypeStoreSize(Val->getType()));
+      I = new AtomicRMWInst(Operation, Ptr, Val, Alignment, Ordering, SSID);
       FullTy = getPointerElementFlatType(FullTy);
       cast<AtomicRMWInst>(I)->setVolatile(Record[OpNum+1]);
       InstructionList.push_back(I);
