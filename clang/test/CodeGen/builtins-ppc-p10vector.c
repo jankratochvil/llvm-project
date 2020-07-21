@@ -402,25 +402,25 @@ vector double test_vec_blend_d(void) {
 }
 
 vector unsigned char test_vec_insertl_uc(void) {
-  // CHECK-BE: @llvm.ppc.altivec.vinsblx(<16 x i8> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-BE: @llvm.ppc.altivec.vinsblx(<16 x i8> %{{.+}}, i32 %{{.+}}, i32
   // CHECK-BE-NEXT: ret <16 x i8>
-  // CHECK-LE: @llvm.ppc.altivec.vinsbrx(<16 x i8> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-LE: @llvm.ppc.altivec.vinsbrx(<16 x i8> %{{.+}}, i32 %{{.+}}, i32
   // CHECK-LE-NEXT: ret <16 x i8>
   return vec_insertl(uca, vuca, uia);
 }
 
 vector unsigned short test_vec_insertl_us(void) {
-  // CHECK-BE: @llvm.ppc.altivec.vinshlx(<8 x i16> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-BE: @llvm.ppc.altivec.vinshlx(<8 x i16> %{{.+}}, i32 %{{.+}}, i32
   // CHECK-BE-NEXT: ret <8 x i16>
-  // CHECK-LE: @llvm.ppc.altivec.vinshrx(<8 x i16> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-LE: @llvm.ppc.altivec.vinshrx(<8 x i16> %{{.+}}, i32 %{{.+}}, i32
   // CHECK-LE-NEXT: ret <8 x i16>
   return vec_insertl(usa, vusa, uia);
 }
 
 vector unsigned int test_vec_insertl_ui(void) {
-  // CHECK-BE: @llvm.ppc.altivec.vinswlx(<4 x i32> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-BE: @llvm.ppc.altivec.vinswlx(<4 x i32> %{{.+}}, i32 %{{.+}}, i32
   // CHECK-BE-NEXT: ret <4 x i32>
-  // CHECK-LE: @llvm.ppc.altivec.vinswrx(<4 x i32> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-LE: @llvm.ppc.altivec.vinswrx(<4 x i32> %{{.+}}, i32 %{{.+}}, i32
   // CHECK-LE-NEXT: ret <4 x i32>
   return vec_insertl(uib, vuia, uia);
 }
@@ -458,25 +458,25 @@ vector unsigned int test_vec_insertl_uiv(void) {
 }
 
 vector unsigned char test_vec_inserth_uc(void) {
-  // CHECK-BE: @llvm.ppc.altivec.vinsbrx(<16 x i8> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-BE: @llvm.ppc.altivec.vinsbrx(<16 x i8> %{{.+}}, i32 %{{.+}}, i32
   // CHECK-BE-NEXT: ret <16 x i8>
-  // CHECK-LE: @llvm.ppc.altivec.vinsblx(<16 x i8> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-LE: @llvm.ppc.altivec.vinsblx(<16 x i8> %{{.+}}, i32 %{{.+}}, i32
   // CHECK-LE-NEXT: ret <16 x i8>
   return vec_inserth(uca, vuca, uia);
 }
 
 vector unsigned short test_vec_inserth_us(void) {
-  // CHECK-BE: @llvm.ppc.altivec.vinshrx(<8 x i16> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-BE: @llvm.ppc.altivec.vinshrx(<8 x i16> %{{.+}}, i32 %{{.+}}, i32
   // CHECK-BE-NEXT: ret <8 x i16>
-  // CHECK-LE: @llvm.ppc.altivec.vinshlx(<8 x i16> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-LE: @llvm.ppc.altivec.vinshlx(<8 x i16> %{{.+}}, i32 %{{.+}}, i32
   // CHECK-LE-NEXT: ret <8 x i16>
   return vec_inserth(usa, vusa, uia);
 }
 
 vector unsigned int test_vec_inserth_ui(void) {
-  // CHECK-BE: @llvm.ppc.altivec.vinswrx(<4 x i32> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-BE: @llvm.ppc.altivec.vinswrx(<4 x i32> %{{.+}}, i32 %{{.+}}, i32
   // CHECK-BE-NEXT: ret <4 x i32>
-  // CHECK-LE: @llvm.ppc.altivec.vinswlx(<4 x i32> %{{.+}}, i64 %{{.+}}, i64
+  // CHECK-LE: @llvm.ppc.altivec.vinswlx(<4 x i32> %{{.+}}, i32 %{{.+}}, i32
   // CHECK-LE-NEXT: ret <4 x i32>
   return vec_inserth(uib, vuia, uia);
 }
@@ -511,4 +511,85 @@ vector unsigned int test_vec_inserth_uiv(void) {
   // CHECK-LE: @llvm.ppc.altivec.vinswvlx(<4 x i32> %{{.+}}, i64 %{{.+}}, <4 x i32>
   // CHECK-LE-NEXT: ret <4 x i32>
   return vec_inserth(vuia, vuib, uia);
+}
+
+vector signed int test_vec_vec_splati_si(void) {
+  // CHECK-BE: ret <4 x i32> <i32 -17, i32 -17, i32 -17, i32 -17>
+  // CHECK: ret <4 x i32> <i32 -17, i32 -17, i32 -17, i32 -17>
+  return vec_splati(-17);
+}
+
+vector unsigned int test_vec_vec_splati_ui(void) {
+  // CHECK-BE: ret <4 x i32> <i32 16, i32 16, i32 16, i32 16>
+  // CHECK: ret <4 x i32> <i32 16, i32 16, i32 16, i32 16>
+  return vec_splati(16U);
+}
+
+vector float test_vec_vec_splati_f(void) {
+  // CHECK-BE: ret <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+  // CHECK: ret <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
+  return vec_splati(1.0f);
+}
+
+vector double test_vec_vec_splatid(void) {
+  // CHECK-BE: [[T1:%.+]] = fpext float %{{.+}} to double
+  // CHECK-BE-NEXT: [[T2:%.+]] = insertelement <2 x double> undef, double [[T1:%.+]], i32 0
+  // CHECK-BE-NEXT: [[T3:%.+]] = shufflevector <2 x double> [[T2:%.+]], <2 x double> undef, <2 x i32> zeroinitialize
+  // CHECK-BE-NEXT: ret <2 x double> [[T3:%.+]]
+  // CHECK: [[T1:%.+]] = fpext float %{{.+}} to double
+  // CHECK-NEXT: [[T2:%.+]] = insertelement <2 x double> undef, double [[T1:%.+]], i32 0
+  // CHECK-NEXT: [[T3:%.+]] = shufflevector <2 x double> [[T2:%.+]], <2 x double> undef, <2 x i32> zeroinitialize
+  // CHECK-NEXT: ret <2 x double> [[T3:%.+]]
+  return vec_splatid(1.0);
+}
+
+vector signed int test_vec_vec_splati_ins_si(void) {
+  // CHECK-BE: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 %{{.+}}
+  // CHECK-BE:  [[T1:%.+]] = add i32 2, %{{.+}}
+  // CHECK-BE: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 [[T1]]
+  // CHECK-BE: ret <4 x i32>
+  // CHECK:  [[T1:%.+]] = sub i32 1, %{{.+}}
+  // CHECK: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 [[T1]]
+  // CHECK:  [[T2:%.+]] = sub i32 3, %{{.+}}
+  // CHECK: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 [[T2]]
+  // CHECK: ret <4 x i32>
+  return vec_splati_ins(vsia, 0, -17);
+}
+
+vector unsigned int test_vec_vec_splati_ins_ui(void) {
+  // CHECK-BE: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 %{{.+}}
+  // CHECK-BE:  [[T1:%.+]] = add i32 2, %{{.+}}
+  // CHECK-BE: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 [[T1]]
+  // CHECK-BE: ret <4 x i32>
+  // CHECK:  [[T1:%.+]] = sub i32 1, %{{.+}}
+  // CHECK: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 [[T1]]
+  // CHECK:  [[T2:%.+]] = sub i32 3, %{{.+}}
+  // CHECK: insertelement <4 x i32> %{{.+}}, i32 %{{.+}}, i32 [[T2]]
+  // CHECK: ret <4 x i32>
+  return vec_splati_ins(vuia, 1, 16U);
+}
+
+vector float test_vec_vec_splati_ins_f(void) {
+  // CHECK-BE: insertelement <4 x float> %{{.+}}, float %{{.+}}, i32 %{{.+}}
+  // CHECK-BE:  [[T1:%.+]] = add i32 2, %{{.+}}
+  // CHECK-BE: insertelement <4 x float> %{{.+}}, float %{{.+}}, i32 [[T1]]
+  // CHECK-BE: ret <4 x float>
+  // CHECK:  [[T1:%.+]] = sub i32 1, %{{.+}}
+  // CHECK: insertelement <4 x float> %{{.+}}, float %{{.+}}, i32 [[T1]]
+  // CHECK:  [[T2:%.+]] = sub i32 3, %{{.+}}
+  // CHECK: insertelement <4 x float> %{{.+}}, float %{{.+}}, i32 [[T2]]
+  // CHECK: ret <4 x float>
+  return vec_splati_ins(vfa, 0, 1.0f);
+}
+
+int test_vec_test_lsbb_all_ones(void) {
+  // CHECK: @llvm.ppc.vsx.xvtlsbb(<16 x i8> %{{.+}}, i1 true
+  // CHECK-NEXT: ret i32
+  return vec_test_lsbb_all_ones(vuca);
+}
+
+int test_vec_test_lsbb_all_zeros(void) {
+  // CHECK: @llvm.ppc.vsx.xvtlsbb(<16 x i8> %{{.+}}, i1 false
+  // CHECK-NEXT: ret i32
+  return vec_test_lsbb_all_zeros(vuca);
 }
