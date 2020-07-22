@@ -16,7 +16,7 @@ add_llvm_library(LLVMTestingSupport
   )
 
 if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
-  add_definitions("-Wno-suggest-override")
+  add_compile_options("-Wno-suggest-override")
 endif()
 
 include_directories(${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest/include)
