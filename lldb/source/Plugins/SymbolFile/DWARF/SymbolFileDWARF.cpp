@@ -1876,7 +1876,7 @@ SymbolFileDWARF::GlobalVariableMap &SymbolFileDWARF::GetGlobalAranges() {
                     lldb::addr_t byte_size = 1;
                     if (var_sp->GetType())
                       byte_size =
-                          var_sp->GetType()->GetByteSize().getValueOr(0);
+                          var_sp->GetType()->GetByteSize(nullptr).getValueOr(0);
                     m_global_aranges_up->Append(GlobalVariableMap::Entry(
                         file_addr, byte_size, var_sp.get()));
                   }
@@ -3555,9 +3555,10 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
             *this, GetUID(main_unit, type_die_form.Reference())));
 
         if (const_value.Form() && type_sp && type_sp->GetType())
-          location.UpdateValue(const_value.Unsigned(),
-                               type_sp->GetType()->GetByteSize().getValueOr(0),
-                               die.GetCU()->GetAddressByteSize());
+          location.UpdateValue(
+              const_value.Unsigned(),
+              type_sp->GetType()->GetByteSize(nullptr).getValueOr(0),
+              die.GetCU()->GetAddressByteSize());
 
         var_sp = std::make_shared<Variable>(
             die.GetID(main_unit), name, mangled, type_sp, scope,
