@@ -8,7 +8,7 @@ endif()
 #===============================================================================
 # Setup Project
 #===============================================================================
-cmake_minimum_required(VERSION 3.4.3)
+cmake_minimum_required(VERSION 3.13.4)
 
 if(POLICY CMP0042)
   cmake_policy(SET CMP0042 NEW) # Set MACOSX_RPATH=YES by default
@@ -519,10 +519,10 @@ remove_flags(-Wno-pedantic -pedantic-errors -pedantic)
 # Required flags ==============================================================
 function(cxx_add_basic_build_flags target)
 
-  # Require C++14 for all targets. C++14 is needed to ensure constant
-  # initialization for certain globals (ex global memory resources).
+  # Require C++17 for all targets. C++17 is needed to use aligned allocation
+  # in the dylib.
   set_target_properties(${target} PROPERTIES
-    CXX_STANDARD 14
+    CXX_STANDARD 17
     CXX_STANDARD_REQUIRED YES
     CXX_EXTENSIONS NO)
 
