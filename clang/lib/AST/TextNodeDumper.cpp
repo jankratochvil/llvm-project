@@ -1340,6 +1340,12 @@ void TextNodeDumper::VisitOMPIteratorExpr(const OMPIteratorExpr *Node) {
   }
 }
 
+void TextNodeDumper::VisitConceptSpecializationExpr(
+    const ConceptSpecializationExpr *Node) {
+  OS << " ";
+  dumpBareDeclRef(Node->getFoundDecl());
+}
+
 void TextNodeDumper::VisitRValueReferenceType(const ReferenceType *T) {
   if (T->isSpelledAsLValue())
     OS << " written as lvalue reference";
@@ -1994,7 +2000,7 @@ void TextNodeDumper::VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *D) {
       dumpBareDeclRef(TC->getFoundDecl());
       OS << ")";
     }
-    Visit(TC->getImmediatelyDeclaredConstraint());
+    AddChild([=] { Visit(TC->getImmediatelyDeclaredConstraint()); });
   } else if (D->wasDeclaredWithTypename())
     OS << " typename";
   else
