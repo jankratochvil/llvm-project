@@ -24,7 +24,7 @@ namespace {
 #include "ShapeCanonicalization.inc"
 }
 
-static RankedTensorType getExtentTensorType(MLIRContext *ctx) {
+RankedTensorType shape::getExtentTensorType(MLIRContext *ctx) {
   return RankedTensorType::get({ShapedType::kDynamicSize}, IndexType::get(ctx));
 }
 
@@ -59,8 +59,7 @@ static LogicalResult verifyShapeOrExtentTensorOp(Operation *op) {
   return success();
 }
 
-ShapeDialect::ShapeDialect(MLIRContext *context)
-    : Dialect(getDialectNamespace(), context) {
+void ShapeDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/Shape/IR/ShapeOps.cpp.inc"
@@ -713,12 +712,9 @@ OpFoldResult ShapeOfOp::fold(ArrayRef<Attribute>) {
 }
 
 void ShapeOfOp::build(OpBuilder &builder, OperationState &result, Value arg) {
-  if (arg.getType().isa<ShapedType>()) {
-    auto type = RankedTensorType::get({ShapedType::kDynamicSize},
-                                      builder.getIndexType());
-    return ShapeOfOp::build(builder, result, type, arg);
-  }
-  auto type = ShapeType::get(builder.getContext());
+  Type type = arg.getType().isa<ShapedType>()
+                  ? (Type)getExtentTensorType(builder.getContext())
+                  : (Type)builder.getType<ShapeType>();
   return ShapeOfOp::build(builder, result, type, arg);
 }
 
