@@ -109,10 +109,18 @@ void DWARFCompileUnit::BuildAddressRangeTable(
 
 MainDWARFCompileUnit *
 DWARFCompileUnit::GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) {
-  if (!main_unit)
+  if (GetUnitDIEOnly().Tag() != DW_TAG_partial_unit)
     main_unit = reinterpret_cast<MainDWARFCompileUnit *>(this);
-  main_unit = &main_unit->GetNonSkeletonUnit();
-  return main_unit;
+#if 0
+  else
+    lldbassert(main_unit);
+  if (!main_unit) {
+    if (m_dwarf.GetIsDwz())
+      return nullptr;
+    main_unit = reinterpret_cast<MainDWARFCompileUnit *>(this);
+  }
+#endif
+  return DWARFUnit::GetMainDWARFCompileUnit(main_unit);
 }
 
 DWARFDIE DWARFCompileUnit::LookupAddress(const dw_addr_t address) {

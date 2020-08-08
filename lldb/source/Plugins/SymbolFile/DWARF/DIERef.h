@@ -44,6 +44,8 @@ public:
     return llvm::None;
   }
 
+  // It indexes DWARFCompileUnit's excl. DWARFTypeUnit's.
+  // It is the index used as parameter of SymbolFileDWARF::GetDWARFUnitIndex.
   llvm::Optional<uint32_t> main_cu() const {
     if (m_data_kind == MainDwzKind || m_data_kind == DwzCommonKind )
       return m_data;
@@ -53,6 +55,10 @@ public:
   DwzCommon dwz_common() const {
     assert(m_data_kind == MainDwzKind || m_data_kind == DwzCommonKind );
     return m_data_kind == MainDwzKind ? MainDwz : CommonDwz;
+  }
+
+  Kind kind_get() const {
+    return Kind(m_data_kind);
   }
 
   Section section() const { return static_cast<Section>(m_section); }

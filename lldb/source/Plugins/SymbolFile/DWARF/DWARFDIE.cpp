@@ -483,8 +483,6 @@ CompileUnit *DWARFDIE::GetMainCompUnit(MainDWARFCompileUnit *main_unit) const {
 MainDWARFCompileUnit *
 DWARFDIE::GetMainDWARFCompileUnitOrNull(MainDWARFCompileUnit *main_unit) const {
   lldbassert(IsValid());
-  if (!MainUnitIsNeeded(main_unit))
-    return nullptr;
   return GetMainDWARFCompileUnit(main_unit);
 }
 

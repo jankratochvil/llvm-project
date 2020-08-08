@@ -357,9 +357,8 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
     return; // Can't fetch the compile unit from the dwo file.
   dwo_cu->SetUserData(this);
 
-  // 'main_cu' is not used.
-  const DWARFDebugInfoEntry *dwo_cu_die = dwo_cu->GetUnitDIEPtrOnly();
-  if (!dwo_cu_die)
+  DWARFBaseDIE dwo_cu_die = dwo_cu->GetUnitDIEOnly();
+  if (!dwo_cu_die.IsValid())
     return; // Can't fetch the compile unit DIE from the dwo file.
 
   // Here for DWO CU we want to use the address base set in the skeleton unit
@@ -516,12 +515,8 @@ static bool CompareDIEOffset(const DWARFDebugInfoEntry &die,
 }
 
 const DWARFDebugInfoEntry *DWARFUnit::GetDIEPtr(dw_offset_t die_offset) {
-  if (die_offset == DW_INVALID_OFFSET) {
-    m_dwarf.GetObjectFile()->GetModule()->ReportError(
-        "CU 0x%8.8" PRIx32 " does not contain DIE 0x%8.8" PRIx32, GetOffset(),
-        die_offset);
+  if (die_offset == DW_INVALID_OFFSET)
     return nullptr;
-  }
   lldbassert(!GetDwoSymbolFile()); // FIXME: Or maybe just leave it running here now?
 
   if (!ContainsDIEOffset(die_offset)) {
@@ -539,6 +534,9 @@ const DWARFDebugInfoEntry *DWARFUnit::GetDIEPtr(dw_offset_t die_offset) {
     if (die_offset == (*pos).GetOffset())
       return &(*pos);
   }
+  GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
+      "CU 0x%8.8" PRIx32 " does not contain DIE 0x%8.8" PRIx32, GetOffset(),
+      die_offset);
   return nullptr;
 }
 
@@ -983,23 +981,18 @@ DWARFUnit::FindRnglistFromIndex(uint32_t index) {
                                  "missing or invalid range list table");
 }
 
-bool DWARFUnit::MainUnitIsNeeded(MainDWARFCompileUnit *main_unit) {
-  switch (GetUnitDIEOnly().Tag()) {
-  case DW_TAG_compile_unit:
-    return false;
-  case DW_TAG_partial_unit:
-    // FIXME: DWZ
-//    lldbassert(0);
-    return true;
-  default:
-    return false;
-  }
+MainDWARFCompileUnit *
+DWARFUnit::GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) {
+  lldbassert(main_unit);
+  main_unit = &main_unit->GetNonSkeletonUnit();
+  return main_unit;
 }
 
 CompileUnit *
 DWARFUnit::GetMainCompUnit(MainDWARFCompileUnit *main_unit) {
   main_unit = GetMainDWARFCompileUnit(main_unit);
-  if (main_unit == nullptr)
+//  lldbassert(main_unit);
+  if (!main_unit)
     return nullptr;
   CompileUnit *comp_unit = main_unit->GetSymbolFileDWARF().GetCompUnitForDWARFCompUnit(*main_unit);
   lldbassert(comp_unit);

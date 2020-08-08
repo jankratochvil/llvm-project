@@ -22,6 +22,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -1310,4 +1311,25 @@ bool lldb_private::operator==(const SymbolContextList &lhs,
 bool lldb_private::operator!=(const SymbolContextList &lhs,
                               const SymbolContextList &rhs) {
   return !(lhs == rhs);
+}
+
+MainDWARFCompileUnit *SymbolContext::GetMainDWARFCompileUnit(SymbolFileDWARF **dwarf_return) const {
+  SymbolFileDWARF *dwarf = nullptr;
+  if (module_sp)
+    dwarf = llvm::dyn_cast<SymbolFileDWARF>(module_sp->GetSymbolFile());
+  MainDWARFCompileUnit *retval = nullptr;
+  if (comp_unit == nullptr)
+    lldbassert(dwarf);
+  else {
+    retval = comp_unit->GetMainDWARFCompileUnit();
+    if (dwarf)
+      lldbassert(&retval->GetSymbolFileDWARF() == dwarf);
+    else {
+      lldbassert(retval);
+      dwarf = &retval->GetSymbolFileDWARF();
+    }
+  }
+  if (dwarf_return)
+    *dwarf_return = dwarf;
+  return retval;
 }

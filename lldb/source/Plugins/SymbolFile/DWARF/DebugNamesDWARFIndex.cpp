@@ -75,7 +75,8 @@ bool DebugNamesDWARFIndex::ProcessEntry(
   if (!die)
     return true;
   // FIXME: DWZ
-  return callback(nullptr /* main_unit */, die);
+  MainDWARFCompileUnit *main_unit = die.GetMainDWARFCompileUnit(nullptr);
+  return callback(main_unit, die);
 }
 
 void DebugNamesDWARFIndex::MaybeLogLookupError(llvm::Error error,
@@ -272,11 +273,13 @@ void DebugNamesDWARFIndex::GetFunctions(
       if (!ProcessFunctionDIE(
               name.GetStringRef(), main_unit, *ref, dwarf, parent_decl_ctx,
               name_type_mask,
-              [&](DWARFCompileUnit *main_unit_check, DWARFDIE die) {
-                lldbassert(main_unit_check == main_unit);
+              [&](MainDWARFCompileUnit *main_unit_check, DWARFDIE die) {
+                // FIXME: DWZ
+                //lldbassert(main_unit_check == main_unit);
                 if (!seen.insert(die.GetDIE()).second)
                   return true;
-                return callback(main_unit, die);
+                // FIXME: DWZ
+                return callback(main_unit_check, die);
               }))
         return;
     }

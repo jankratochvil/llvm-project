@@ -267,7 +267,7 @@ public:
       return m_external_type_modules;
   }
 
-  virtual DWARFDIE GetDIE(const DIERef &die_ref);
+  virtual DWARFDIE GetDIE(const DIERef &die_ref, MainDWARFCompileUnit **main_unit_return = nullptr);
 
   DWARFDIE GetDIE(lldb::user_id_t uid);
 
@@ -342,6 +342,8 @@ public:
   };
   llvm::Optional<DecodedUID> DecodeUIDUnlocked(lldb::user_id_t uid);
 
+  llvm::Optional<uint32_t> GetDWARFUnitIndex(uint32_t cu_idx);
+
 protected:
   typedef llvm::DenseMap<
       std::pair<MainDWARFCompileUnit *, const DWARFDebugInfoEntry *>,
@@ -375,7 +377,7 @@ protected:
 
   lldb::CompUnitSP ParseCompileUnit(DWARFCompileUnit &dwarf_cu);
 
-  MainDWARFCompileUnit *GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit);
+  MainDWARFCompileUnit *GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) override;
 
   DWARFUnit *GetNextUnparsedDWARFCompileUnit(DWARFUnit *prev_cu);
 
@@ -502,7 +504,6 @@ protected:
   }
 
   void BuildCuTranslationTable();
-  llvm::Optional<uint32_t> GetDWARFUnitIndex(uint32_t cu_idx);
 
   llvm::Optional<DecodedUID> DecodeUID(lldb::user_id_t uid);
 
