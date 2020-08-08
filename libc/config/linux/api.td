@@ -95,8 +95,13 @@ def CTypeAPI : PublicAPI<"ctype.h"> {
     "isdigit",
     "isgraph",
     "islower",
+    "isprint",
     "ispunct",
+    "isspace",
     "isupper",
+    "isxdigit",
+    "tolower",
+    "toupper",
   ];
 }
 
