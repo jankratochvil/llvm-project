@@ -24,7 +24,6 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Module.h"
 #include "mlir/IR/Types.h"
-#include "mlir/Support/ThreadLocalCache.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
@@ -96,9 +95,10 @@ struct BuiltinDialect : public Dialect {
     addAttributes<CallSiteLoc, FileLineColLoc, FusedLoc, NameLoc, OpaqueLoc,
                   UnknownLoc>();
 
-    addTypes<ComplexType, FloatType, FunctionType, IndexType, IntegerType,
-             MemRefType, UnrankedMemRefType, NoneType, OpaqueType,
-             RankedTensorType, TupleType, UnrankedTensorType, VectorType>();
+    addTypes<ComplexType, BFloat16Type, Float16Type, Float32Type, Float64Type,
+             FunctionType, IndexType, IntegerType, MemRefType,
+             UnrankedMemRefType, NoneType, OpaqueType, RankedTensorType,
+             TupleType, UnrankedTensorType, VectorType>();
 
     // TODO: These operations should be moved to a different dialect when they
     // have been fully decoupled from the core.
@@ -281,12 +281,8 @@ public:
   /// operations.
   llvm::StringMap<AbstractOperation> registeredOperations;
 
-  /// Identifers are uniqued by string value and use the internal string set for
-  /// storage.
+  /// These are identifiers uniqued into this MLIRContext.
   llvm::StringSet<llvm::BumpPtrAllocator &> identifiers;
-  /// A thread local cache of identifiers to reduce lock contention.
-  ThreadLocalCache<llvm::StringMap<llvm::StringMapEntry<llvm::NoneType> *>>
-      localIdentifierCache;
 
   /// An allocator used for AbstractAttribute and AbstractType objects.
   llvm::BumpPtrAllocator abstractDialectSymbolAllocator;
@@ -318,7 +314,10 @@ public:
   StorageUniquer typeUniquer;
 
   /// Cached Type Instances.
-  FloatType bf16Ty, f16Ty, f32Ty, f64Ty;
+  BFloat16Type bf16Ty;
+  Float16Type f16Ty;
+  Float32Type f32Ty;
+  Float64Type f64Ty;
   IndexType indexTy;
   IntegerType int1Ty, int8Ty, int16Ty, int32Ty, int64Ty, int128Ty;
   NoneType noneType;
@@ -364,10 +363,10 @@ MLIRContext::MLIRContext() : impl(new MLIRContextImpl()) {
 
   //// Types.
   /// Floating-point Types.
-  impl->bf16Ty = TypeUniquer::get<FloatType>(this, StandardTypes::BF16);
-  impl->f16Ty = TypeUniquer::get<FloatType>(this, StandardTypes::F16);
-  impl->f32Ty = TypeUniquer::get<FloatType>(this, StandardTypes::F32);
-  impl->f64Ty = TypeUniquer::get<FloatType>(this, StandardTypes::F64);
+  impl->bf16Ty = TypeUniquer::get<BFloat16Type>(this, StandardTypes::BF16);
+  impl->f16Ty = TypeUniquer::get<Float16Type>(this, StandardTypes::F16);
+  impl->f32Ty = TypeUniquer::get<Float32Type>(this, StandardTypes::F32);
+  impl->f64Ty = TypeUniquer::get<Float64Type>(this, StandardTypes::F64);
   /// Index Type.
   impl->indexTy = TypeUniquer::get<IndexType>(this, StandardTypes::Index);
   /// Integer Types.
@@ -634,6 +633,16 @@ const AbstractType &AbstractType::lookup(TypeID typeID, MLIRContext *context) {
 
 /// Return an identifier for the specified string.
 Identifier Identifier::get(StringRef str, MLIRContext *context) {
+  auto &impl = context->getImpl();
+
+  // Check for an existing identifier in read-only mode.
+  if (context->isMultithreadingEnabled()) {
+    llvm::sys::SmartScopedReader<true> contextLock(impl.identifierMutex);
+    auto it = impl.identifiers.find(str);
+    if (it != impl.identifiers.end())
+      return Identifier(&*it);
+  }
+
   // Check invariants after seeing if we already have something in the
   // identifier table - if we already had it in the table, then it already
   // passed invariant checks.
@@ -641,30 +650,10 @@ Identifier Identifier::get(StringRef str, MLIRContext *context) {
   assert(str.find('\0') == StringRef::npos &&
          "Cannot create an identifier with a nul character");
 
-  auto &impl = context->getImpl();
-  if (!context->isMultithreadingEnabled())
-    return Identifier(&*impl.identifiers.insert(str).first);
-
-  // Check for an existing instance in the local cache.
-  auto *&localEntry = (*impl.localIdentifierCache)[str];
-  if (localEntry)
-    return Identifier(localEntry);
-
-  // Check for an existing identifier in read-only mode.
-  if (context->isMultithreadingEnabled()) {
-    llvm::sys::SmartScopedReader<true> contextLock(impl.identifierMutex);
-    auto it = impl.identifiers.find(str);
-    if (it != impl.identifiers.end()) {
-      localEntry = &*it;
-      return Identifier(localEntry);
-    }
-  }
-
   // Acquire a writer-lock so that we can safely create the new instance.
-  llvm::sys::SmartScopedWriter<true> contextLock(impl.identifierMutex);
+  ScopedWriterLock contextLock(impl.identifierMutex, impl.threadingIsEnabled);
   auto it = impl.identifiers.insert(str).first;
-  localEntry = &*it;
-  return Identifier(localEntry);
+  return Identifier(&*it);
 }
 
 //===----------------------------------------------------------------------===//
@@ -675,19 +664,17 @@ Identifier Identifier::get(StringRef str, MLIRContext *context) {
 /// This should not be used directly.
 StorageUniquer &MLIRContext::getTypeUniquer() { return getImpl().typeUniquer; }
 
-FloatType FloatType::get(StandardTypes::Kind kind, MLIRContext *context) {
-  switch (kind) {
-  case StandardTypes::BF16:
-    return context->getImpl().bf16Ty;
-  case StandardTypes::F16:
-    return context->getImpl().f16Ty;
-  case StandardTypes::F32:
-    return context->getImpl().f32Ty;
-  case StandardTypes::F64:
-    return context->getImpl().f64Ty;
-  default:
-    llvm_unreachable("unexpected floating-point kind");
-  }
+BFloat16Type BFloat16Type::get(MLIRContext *context) {
+  return context->getImpl().bf16Ty;
+}
+Float16Type Float16Type::get(MLIRContext *context) {
+  return context->getImpl().f16Ty;
+}
+Float32Type Float32Type::get(MLIRContext *context) {
+  return context->getImpl().f32Ty;
+}
+Float64Type Float64Type::get(MLIRContext *context) {
+  return context->getImpl().f64Ty;
 }
 
 /// Get an instance of the IndexType.
