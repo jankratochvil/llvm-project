@@ -233,6 +233,11 @@ def setoeq_or_seteq : PatFrags<(ops node:$lhs, node:$rhs),
 def setone_or_setne : PatFrags<(ops node:$lhs, node:$rhs),
                                 [(setone node:$lhs, node:$rhs),
                                  (setne node:$lhs, node:$rhs)]>;
+def AArch64mul_p_oneuse : PatFrag<(ops node:$pred, node:$src1, node:$src2),
+                                  (AArch64mul_p node:$pred, node:$src1, node:$src2), [{
+  return N->hasOneUse();
+}]>;
+
 
 let Predicates = [HasSVE] in {
   defm RDFFR_PPz  : sve_int_rdffr_pred<0b0, "rdffr", int_aarch64_sve_rdffr_z>;
@@ -281,8 +286,8 @@ let Predicates = [HasSVE] in {
 
   defm MAD_ZPmZZ : sve_int_mladdsub_vvv_pred<0b0, "mad", int_aarch64_sve_mad>;
   defm MSB_ZPmZZ : sve_int_mladdsub_vvv_pred<0b1, "msb", int_aarch64_sve_msb>;
-  defm MLA_ZPmZZ : sve_int_mlas_vvv_pred<0b0, "mla", int_aarch64_sve_mla>;
-  defm MLS_ZPmZZ : sve_int_mlas_vvv_pred<0b1, "mls", int_aarch64_sve_mls>;
+  defm MLA_ZPmZZ : sve_int_mlas_vvv_pred<0b0, "mla", int_aarch64_sve_mla, add, AArch64mul_p_oneuse>;
+  defm MLS_ZPmZZ : sve_int_mlas_vvv_pred<0b1, "mls", int_aarch64_sve_mls, sub, AArch64mul_p_oneuse>;
 
   // SVE predicated integer reductions.
   defm SADDV_VPZ : sve_int_reduce_0_saddv<0b000, "saddv", int_aarch64_sve_saddv>;
@@ -1347,6 +1352,10 @@ multiclass sve_prefetch<SDPatternOperator prefetch, ValueType PredTy, Instructio
   defm LSR_ZPmI  : sve_int_bin_pred_shift_imm_right_dup<0b0001, "lsr",  "LSR_ZPZI",  int_aarch64_sve_lsr>;
   defm LSL_ZPmI  : sve_int_bin_pred_shift_imm_left_dup< 0b0011, "lsl",  "LSL_ZPZI",  int_aarch64_sve_lsl>;
   defm ASRD_ZPmI : sve_int_bin_pred_shift_imm_right<    0b0100, "asrd", "ASRD_ZPZI", int_aarch64_sve_asrd>;
+
+  defm ASR_ZPZI : sve_int_shift_pred_bhsd<AArch64asr_p, SVEShiftImmR8, SVEShiftImmR16, SVEShiftImmR32, SVEShiftImmR64>;
+  defm LSR_ZPZI : sve_int_shift_pred_bhsd<AArch64lsr_p, SVEShiftImmR8, SVEShiftImmR16, SVEShiftImmR32, SVEShiftImmR64>;
+  defm LSL_ZPZI : sve_int_shift_pred_bhsd<AArch64lsl_p, SVEShiftImmL8, SVEShiftImmL16, SVEShiftImmL32, SVEShiftImmL64>;
 
   let Predicates = [HasSVE, UseExperimentalZeroingPseudos] in {
     defm ASR_ZPZZ    : sve_int_bin_pred_zeroing_bhsd<int_aarch64_sve_asr>;
