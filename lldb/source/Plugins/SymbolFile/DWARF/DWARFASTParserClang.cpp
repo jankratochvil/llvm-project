@@ -571,7 +571,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
     // Type::ResolveCompilerType.
     PrepareContextToReceiveMembers(
         m_ast, GetClangASTImporter(),
-        GetClangDeclContextContainingDIE(die, nullptr), die,
+        GetClangDeclContextContainingDIE(main_unit, die, nullptr), die,
         attrs.name.GetCString());
 
     if (attrs.type.IsValid()) {
