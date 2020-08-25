@@ -546,7 +546,7 @@ private:
         R += std::string(
             formatv("- '{0}' covers '{1}'+{2} tokens\n", It->second->kind(),
                     It->first->text(A.sourceManager()), CoveredTokens));
-        R += It->second->dump(A);
+        R += It->second->dump(A.sourceManager());
       }
       return R;
     }
@@ -947,6 +947,16 @@ public:
     buildIdExpression(S->getQualifierLoc(), S->getTemplateKeywordLoc(),
                       SourceRange(S->getLocation(), S->getEndLoc()), S);
 
+    return true;
+  }
+
+  bool WalkUpFromCXXThisExpr(CXXThisExpr *S) {
+    if (!S->isImplicit()) {
+      Builder.markChildToken(S->getLocation(),
+                             syntax::NodeRole::IntroducerKeyword);
+      Builder.foldNode(Builder.getExprRange(S),
+                       new (allocator()) syntax::ThisExpression, S);
+    }
     return true;
   }
 
