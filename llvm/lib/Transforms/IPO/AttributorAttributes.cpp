@@ -3287,7 +3287,7 @@ ChangeStatus AAIsDeadFunction::updateImpl(Attributor &A) {
 
     // Fast forward for uninteresting instructions. We could look for UB here
     // though.
-    while(!I->isTerminator() && !isa<CallBase>(I)) {
+    while (!I->isTerminator() && !isa<CallBase>(I)) {
       Change = ChangeStatus::CHANGED;
       I = I->getNextNode();
     }
@@ -7715,7 +7715,8 @@ struct AANoUndefImpl : AANoUndef {
       indicatePessimisticFixpoint();
     else if (isa<FreezeInst>(V))
       indicateOptimisticFixpoint();
-    else if (isGuaranteedNotToBeUndefOrPoison(&V))
+    else if (getPositionKind() != IRPosition::IRP_RETURNED &&
+             isGuaranteedNotToBeUndefOrPoison(&V))
       indicateOptimisticFixpoint();
     else
       AANoUndef::initialize(A);
