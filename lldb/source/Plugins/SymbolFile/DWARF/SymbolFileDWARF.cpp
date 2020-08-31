@@ -2574,7 +2574,7 @@ void SymbolFileDWARF::FindTypes(
   if (!name)
     return;
 
-  m_index->GetTypes(name, [&](DWARFCompileUnit *main_unit, DWARFDIE die) {
+  m_index->GetTypes(name, [&](MainDWARFCompileUnit *main_unit, DWARFDIE die) {
     if (!languages[GetLanguage(*die.GetMainDWARFUnit(main_unit))])
       return true;
 
