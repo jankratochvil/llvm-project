@@ -2075,9 +2075,10 @@ void Clang::AddX86TargetArgs(const ArgList &Args,
 
   // Handle -mtune.
 
-  // Default to "generic" unless -march is present.
+  // Default to "generic" unless -march is present or targetting the PS4.
   std::string TuneCPU;
-  if (!Args.hasArg(clang::driver::options::OPT_march_EQ))
+  if (!Args.hasArg(clang::driver::options::OPT_march_EQ) &&
+      !getToolChain().getTriple().isPS4CPU())
     TuneCPU = "generic";
 
   // Override based on -mtune.
@@ -4223,8 +4224,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.getLastArg(options::OPT_save_temps_EQ))
     Args.AddLastArg(CmdArgs, options::OPT_save_temps_EQ);
 
-  if (Args.hasFlag(options::OPT_fmemprof, options::OPT_fno_memprof, false))
-    Args.AddLastArg(CmdArgs, options::OPT_fmemprof);
+  if (Args.hasFlag(options::OPT_fmemory_profile,
+                   options::OPT_fno_memory_profile, false))
+    Args.AddLastArg(CmdArgs, options::OPT_fmemory_profile);
 
   // Embed-bitcode option.
   // Only white-listed flags below are allowed to be embedded.
@@ -5209,6 +5211,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   Args.AddLastArg(CmdArgs, options::OPT_fvisibility_inlines_hidden);
+  Args.AddLastArg(CmdArgs, options::OPT_fvisibility_inlines_hidden_static_local_var,
+                           options::OPT_fno_visibility_inlines_hidden_static_local_var);
   Args.AddLastArg(CmdArgs, options::OPT_fvisibility_global_new_delete_hidden);
 
   Args.AddLastArg(CmdArgs, options::OPT_ftlsmodel_EQ);
