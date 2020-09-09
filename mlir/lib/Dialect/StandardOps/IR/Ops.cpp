@@ -1312,7 +1312,6 @@ Optional<int64_t> DimOp::getConstantIndex() {
 }
 
 static LogicalResult verify(DimOp op) {
-
   // Assume unknown index to be in range.
   Optional<int64_t> index = op.getConstantIndex();
   if (!index.hasValue())
@@ -1635,6 +1634,67 @@ LogicalResult DmaWaitOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// DynamicTensorFromElementsOp
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseDynamicTensorFromElementsOp(OpAsmParser &parser,
+                                                    OperationState &result) {
+  // Parse operands.
+  SmallVector<OpAsmParser::OperandType, 4> dynamicExtents;
+  Type indexTy = parser.getBuilder().getIndexType();
+  if (parser.parseOperandList(dynamicExtents) ||
+      parser.resolveOperands(dynamicExtents, indexTy, result.operands))
+    return failure();
+
+  // Parse body.
+  Region *body = result.addRegion();
+  if (parser.parseRegion(*body, {}, {}))
+    return failure();
+
+  // Parse result type.
+  Type resultType;
+  if (parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseColonType(resultType))
+    return failure();
+  result.addTypes(resultType);
+
+  return success();
+}
+
+static void print(OpAsmPrinter &p, DynamicTensorFromElementsOp op) {
+  p << "dynamic_tensor_from_elements " << op.dynamicExtents();
+  p.printRegion(op.body());
+  p.printOptionalAttrDict(op.getAttrs());
+  p << " : " << op.getType();
+}
+
+static LogicalResult verify(DynamicTensorFromElementsOp op) {
+  // Ensure that the tensor type has as many dynamic dimensions as are specified
+  // by the operands.
+  RankedTensorType resultTy = op.getType().cast<RankedTensorType>();
+  if (op.getNumOperands() != resultTy.getNumDynamicDims())
+    return op.emitError("must have as many index operands as dynamic extents "
+                        "in the result type");
+
+  // Ensure that region arguments span the index space.
+  if (!llvm::all_of(op.body().getArgumentTypes(),
+                    [](Type ty) { return ty.isIndex(); }))
+    return op.emitError("all body arguments must be index");
+  if (op.body().getNumArguments() != resultTy.getRank())
+    return op.emitError("must have one body argument per input dimension");
+
+  // Ensure that the region yields an element of the right type.
+  auto yieldOp =
+      llvm::cast<YieldOp>(op.body().getBlocks().front().getTerminator());
+  if (yieldOp.value().getType() != resultTy.getElementType())
+    return op.emitOpError(
+        "body must be terminated with a `yield` operation of the tensor "
+        "element type");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ExtractElementOp
 //===----------------------------------------------------------------------===//
 
@@ -1684,9 +1744,9 @@ static ParseResult parseTensorFromElementsOp(OpAsmParser &parser,
                                              OperationState &result) {
   SmallVector<OpAsmParser::OperandType, 4> elementsOperands;
   Type resultType;
-  if (parser.parseLParen() || parser.parseOperandList(elementsOperands) ||
-      parser.parseRParen() || parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColon() || parser.parseType(resultType))
+  if (parser.parseOperandList(elementsOperands) ||
+      parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseColonType(resultType))
     return failure();
 
   if (parser.resolveOperands(elementsOperands,
@@ -1699,9 +1759,9 @@ static ParseResult parseTensorFromElementsOp(OpAsmParser &parser,
 }
 
 static void print(OpAsmPrinter &p, TensorFromElementsOp op) {
-  p << "tensor_from_elements(" << op.elements() << ')';
+  p << "tensor_from_elements " << op.elements();
   p.printOptionalAttrDict(op.getAttrs());
-  p << " : " << op.result().getType();
+  p << " : " << op.getType();
 }
 
 static LogicalResult verify(TensorFromElementsOp op) {
@@ -1716,6 +1776,14 @@ static LogicalResult verify(TensorFromElementsOp op) {
            << "expected result type to be a 1D tensor with " << elementsCount
            << (elementsCount == 1 ? " element" : " elements");
   return success();
+}
+
+void TensorFromElementsOp::build(OpBuilder &builder, OperationState &result,
+                                 ValueRange elements) {
+  assert(!elements.empty() && "expected at least one element");
+  result.addOperands(elements);
+  result.addTypes(RankedTensorType::get({static_cast<int64_t>(elements.size())},
+                                        *elements.getTypes().begin()));
 }
 
 namespace {
