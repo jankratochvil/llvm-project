@@ -3965,6 +3965,15 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
     if (match(FalseVal, isRotate) && TrueVal == X && CmpLHS == ShAmt &&
         Pred == ICmpInst::ICMP_EQ)
       return FalseVal;
+
+    // X == 0 ? abs(X) : -abs(X) --> -abs(X)
+    // X == 0 ? -abs(X) : abs(X) --> abs(X)
+    if (match(TrueVal, m_Intrinsic<Intrinsic::abs>(m_Value(X))) &&
+        match(FalseVal, m_Neg(m_Intrinsic<Intrinsic::abs>(m_Specific(X)))))
+      return FalseVal;
+    if (match(TrueVal, m_Neg(m_Intrinsic<Intrinsic::abs>(m_Value(X)))) &&
+        match(FalseVal, m_Intrinsic<Intrinsic::abs>(m_Specific(X))))
+      return FalseVal;
   }
 
   // Check for other compares that behave like bit test.
@@ -5264,9 +5273,6 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
     // It is always ok to pick the earlier abs. We'll just lose nsw if its only
     // on the outer abs.
     if (match(Op0, m_Intrinsic<Intrinsic::abs>(m_Value(), m_Value())))
-      return Op0;
-    // If the sign bit is clear already, then abs does not do anything.
-    if (isKnownNonNegative(Op0, Q.DL, 0, Q.AC, Q.CxtI, Q.DT))
       return Op0;
     break;
 
