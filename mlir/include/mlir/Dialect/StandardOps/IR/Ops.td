@@ -1476,6 +1476,37 @@ def DivFOp : FloatArithmeticOp<"divf"> {
 }
 
 //===----------------------------------------------------------------------===//
+// DynamicTensorFromElementsOp
+//===----------------------------------------------------------------------===//
+
+def DynamicTensorFromElementsOp : Std_Op<"dynamic_tensor_from_elements",
+    [RecursiveSideEffects, SingleBlockImplicitTerminator<"YieldOp">]> {
+  string summary = "Creates a dynamically sized tensor from elements";
+  string description = [{
+    This operation creates a dynamically sized tensor with elements of any type.
+    It expects one index operand per dynamic extent of the result tensor.
+
+    The body region defines the tensor's elements. It takes index operands as
+    its region arguments that span the index space. The element at the given
+    position is yielded with the `yield` operation (see `YieldOp`).
+
+    Example:
+
+    ```mlir
+      %tnsr = dynamic_tensor_from_elements %m, %n {
+      ^bb0(%i : index, %j : index, %k : index):
+        ...
+        yield %elem : f32
+      } : tensor<?x3x?f32>
+    ```
+  }];
+
+  let arguments = (ins Variadic<Index>:$dynamicExtents);
+  let results = (outs AnyRankedTensor:$result);
+  let regions = (region SizedRegion<1>:$body);
+}
+
+//===----------------------------------------------------------------------===//
 // ExpOp
 //===----------------------------------------------------------------------===//
 
@@ -1590,14 +1621,9 @@ def TensorFromElementsOp : Std_Op<"tensor_from_elements",
   let results = (outs AnyTensor:$result);
 
   let skipDefaultBuilders = 1;
-  let builders = [OpBuilder<
-    "OpBuilder &builder, OperationState &result, ValueRange elements", [{
-      assert(!elements.empty() && "expected at least one element");
-      result.addOperands(elements);
-      result.addTypes(
-          RankedTensorType::get({static_cast<int64_t>(elements.size())},
-                                *elements.getTypes().begin()));
-    }]>];
+  let builders = [
+    OpBuilder<"OpBuilder &b, OperationState &result, ValueRange elements">
+  ];
 
   let hasCanonicalizer = 1;
 }
@@ -3250,6 +3276,24 @@ def ViewOp : Std_Op<"view", [
   }];
 
   let hasCanonicalizer = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// YieldOp
+//===----------------------------------------------------------------------===//
+
+def YieldOp : Std_Op<"yield", [NoSideEffect, ReturnLike, Terminator,
+                               HasParent<"DynamicTensorFromElementsOp">]> {
+  let summary = "Yield a value from a region";
+  let description = [{
+     This operation is used to yield a single value from a within a region. It
+     is used to create dynamically sized tensors
+     (see `DynamicTensorFromElementsOp`).
+  }];
+
+  let arguments = (ins AnyType:$value);
+  let assemblyFormat = "$value attr-dict `:` type($value)";
+  let verifier = ?;
 }
 
 //===----------------------------------------------------------------------===//
