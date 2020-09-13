@@ -1504,6 +1504,13 @@ def DynamicTensorFromElementsOp : Std_Op<"dynamic_tensor_from_elements",
   let arguments = (ins Variadic<Index>:$dynamicExtents);
   let results = (outs AnyRankedTensor:$result);
   let regions = (region SizedRegion<1>:$body);
+
+  let builders = [
+    // Build op and populate its body per callback function.
+    OpBuilder<"OpBuilder &b, OperationState &result, Type resultTy, "
+              "ValueRange dynamicExtents, "
+              "function_ref<void(OpBuilder &, Location, ValueRange)>">,
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1604,8 +1611,13 @@ def ExtractElementOp : Std_Op<"extract_element",
 // TensorFromElementsOp
 //===----------------------------------------------------------------------===//
 
-def TensorFromElementsOp : Std_Op<"tensor_from_elements",
-    [NoSideEffect, SameOperandsAndResultElementType]> {
+def TensorFromElementsOp : Std_Op<"tensor_from_elements", [
+    NoSideEffect,
+    TypesMatchWith<"operand types match result element type",
+                   "result", "elements", "SmallVector<Type, 2>("
+                   "$_self.cast<ShapedType>().getDimSize(0), "
+                   "$_self.cast<ShapedType>().getElementType())">
+  ]> {
   string summary = "tensor from elements operation.";
   string description = [{
     Create a 1D tensor from a range of same-type arguments.
@@ -1618,10 +1630,18 @@ def TensorFromElementsOp : Std_Op<"tensor_from_elements",
   }];
 
   let arguments = (ins Variadic<AnyType>:$elements);
-  let results = (outs AnyTensor:$result);
+  let results = (outs 1DTensorOf<[AnyType]>:$result);
+
+  let assemblyFormat = "$elements attr-dict `:` type($result)";
+
+  // This op is fully verified by its traits.
+  let verifier = ?;
 
   let skipDefaultBuilders = 1;
   let builders = [
+    OpBuilder<"OpBuilder &b, OperationState &result, Type elementType,"
+    "ValueRange elements">,
+    // Special case builder for when `elements` has size >=1.
     OpBuilder<"OpBuilder &b, OperationState &result, ValueRange elements">
   ];
 
