@@ -1558,9 +1558,15 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
       DAG.ReplaceAllUsesWith(N, &RV);
     }
 
-    // Push the new node and any users onto the worklist
-    AddToWorklist(RV.getNode());
-    AddUsersToWorklist(RV.getNode());
+    // Push the new node and any users onto the worklist.  Omit this if the
+    // new node is the EntryToken (e.g. if a store managed to get optimized
+    // out), because re-visiting the EntryToken and its users will not uncover
+    // any additional opportunities, but there may be a large number of such
+    // users, potentially causing compile time explosion.
+    if (RV.getOpcode() != ISD::EntryToken) {
+      AddToWorklist(RV.getNode());
+      AddUsersToWorklist(RV.getNode());
+    }
 
     // Finally, if the node is now dead, remove it from the graph.  The node
     // may not be dead if the replacement process recursively simplified to
@@ -5567,6 +5573,25 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   if (TLI.hasBitTest(N0, N1))
     if (SDValue V = combineShiftAnd1ToBitTest(N, DAG))
       return V;
+
+  // fold (and (ctpop X), 1) -> parity X
+  // Only do this before op legalization as it might be turned back into ctpop.
+  // TODO: Support vectors?
+  if (!LegalOperations && isOneConstant(N1) && N0.hasOneUse()) {
+    SDValue Tmp = N0;
+
+    // It's possible the ctpop has been truncated, but since we only care about
+    // the LSB we can look through it.
+    if (Tmp.getOpcode() == ISD::TRUNCATE && Tmp.getOperand(0).hasOneUse())
+      Tmp = Tmp.getOperand(0);
+
+    if (Tmp.getOpcode() == ISD::CTPOP) {
+      SDLoc dl(N);
+      SDValue Parity =
+          DAG.getNode(ISD::PARITY, dl, Tmp.getValueType(), Tmp.getOperand(0));
+      return DAG.getNode(ISD::TRUNCATE, dl, VT, Parity);
+    }
+  }
 
   return SDValue();
 }
@@ -13160,11 +13185,11 @@ SDValue DAGCombiner::visitFMA(SDNode *N) {
     if (N1CFP && N1CFP->isZero())
       return N2;
   }
-  // TODO: The FMA node should have flags that propagate to these nodes.
+
   if (N0CFP && N0CFP->isExactlyValue(1.0))
-    return DAG.getNode(ISD::FADD, SDLoc(N), VT, N1, N2);
+    return DAG.getNode(ISD::FADD, SDLoc(N), VT, N1, N2, Flags);
   if (N1CFP && N1CFP->isExactlyValue(1.0))
-    return DAG.getNode(ISD::FADD, SDLoc(N), VT, N0, N2);
+    return DAG.getNode(ISD::FADD, SDLoc(N), VT, N0, N2, Flags);
 
   // Canonicalize (fma c, x, y) -> (fma x, c, y)
   if (isConstantFPBuildVectorOrConstantFP(N0) &&
@@ -13193,19 +13218,16 @@ SDValue DAGCombiner::visitFMA(SDNode *N) {
     }
   }
 
-  // (fma x, 1, y) -> (fadd x, y)
   // (fma x, -1, y) -> (fadd (fneg x), y)
   if (N1CFP) {
     if (N1CFP->isExactlyValue(1.0))
-      // TODO: The FMA node should have flags that propagate to this node.
-      return DAG.getNode(ISD::FADD, DL, VT, N0, N2);
+      return DAG.getNode(ISD::FADD, DL, VT, N0, N2, Flags);
 
     if (N1CFP->isExactlyValue(-1.0) &&
         (!LegalOperations || TLI.isOperationLegal(ISD::FNEG, VT))) {
       SDValue RHSNeg = DAG.getNode(ISD::FNEG, DL, VT, N0);
       AddToWorklist(RHSNeg.getNode());
-      // TODO: The FMA node should have flags that propagate to this node.
-      return DAG.getNode(ISD::FADD, DL, VT, N2, RHSNeg);
+      return DAG.getNode(ISD::FADD, DL, VT, N2, RHSNeg, Flags);
     }
 
     // fma (fneg x), K, y -> fma x -K, y
@@ -14034,7 +14056,8 @@ SDValue DAGCombiner::visitFNEG(SDNode *N) {
 }
 
 static SDValue visitFMinMax(SelectionDAG &DAG, SDNode *N,
-                            APFloat (*Op)(const APFloat &, const APFloat &)) {
+                            APFloat (*Op)(const APFloat &, const APFloat &),
+                            bool PropagatesNaN) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
@@ -14052,23 +14075,30 @@ static SDValue visitFMinMax(SelectionDAG &DAG, SDNode *N,
       !isConstantFPBuildVectorOrConstantFP(N1))
     return DAG.getNode(N->getOpcode(), SDLoc(N), VT, N1, N0);
 
+  // minnum(X, nan) -> X
+  // maxnum(X, nan) -> X
+  // minimum(X, nan) -> nan
+  // maximum(X, nan) -> nan
+  if (N1CFP && N1CFP->isNaN())
+    return PropagatesNaN ? N->getOperand(1) : N->getOperand(0);
+
   return SDValue();
 }
 
 SDValue DAGCombiner::visitFMINNUM(SDNode *N) {
-  return visitFMinMax(DAG, N, minnum);
+  return visitFMinMax(DAG, N, minnum, /* PropagatesNaN */ false);
 }
 
 SDValue DAGCombiner::visitFMAXNUM(SDNode *N) {
-  return visitFMinMax(DAG, N, maxnum);
+  return visitFMinMax(DAG, N, maxnum, /* PropagatesNaN */ false);
 }
 
 SDValue DAGCombiner::visitFMINIMUM(SDNode *N) {
-  return visitFMinMax(DAG, N, minimum);
+  return visitFMinMax(DAG, N, minimum, /* PropagatesNaN */ true);
 }
 
 SDValue DAGCombiner::visitFMAXIMUM(SDNode *N) {
-  return visitFMinMax(DAG, N, maximum);
+  return visitFMinMax(DAG, N, maximum, /* PropagatesNaN */ true);
 }
 
 SDValue DAGCombiner::visitFABS(SDNode *N) {
