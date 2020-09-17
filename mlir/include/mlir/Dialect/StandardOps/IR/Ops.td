@@ -1511,6 +1511,8 @@ def DynamicTensorFromElementsOp : Std_Op<"dynamic_tensor_from_elements",
               "ValueRange dynamicExtents, "
               "function_ref<void(OpBuilder &, Location, ValueRange)>">,
   ];
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2995,6 +2997,8 @@ def TensorCastOp : CastOp<"tensor_cast"> {
     /// The result of a tensor_cast is always a tensor.
     TensorType getType() { return getResult().getType().cast<TensorType>(); }
   }];
+
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
