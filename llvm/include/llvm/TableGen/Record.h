@@ -1402,11 +1402,13 @@ class RecordVal {
   friend class Record;
 
   Init *Name;
+  SMLoc Loc; // Source location of definition of name.
   PointerIntPair<RecTy *, 1, bool> TyAndPrefix;
   Init *Value;
 
 public:
   RecordVal(Init *N, RecTy *T, bool P);
+  RecordVal(Init *N, SMLoc Loc, RecTy *T, bool P);
 
   StringRef getName() const;
   Init *getNameInit() const { return Name; }
@@ -1415,11 +1417,13 @@ public:
     return getNameInit()->getAsUnquotedString();
   }
 
+  const SMLoc &getLoc() const { return Loc; }
   bool getPrefix() const { return TyAndPrefix.getInt(); }
   RecTy *getType() const { return TyAndPrefix.getPointer(); }
   Init *getValue() const { return Value; }
 
   bool setValue(Init *V);
+  bool setValue(Init *V, SMLoc NewLoc);
 
   void dump() const;
   void print(raw_ostream &OS, bool PrintSem = true) const;
@@ -1635,6 +1639,16 @@ public:
   /// its value as a string, throwing an exception if the field does not exist
   /// or if the value is not a string.
   StringRef getValueAsString(StringRef FieldName) const;
+
+  /// This method looks up the specified field and returns
+  /// its value as a string, throwing an exception if the field if the value is
+  /// not a string and llvm::Optional() if the field does not exist.
+  llvm::Optional<StringRef> getValueAsOptionalString(StringRef FieldName) const;
+
+  /// This method looks up the specified field and returns
+  /// its value as a string, throwing an exception if the field if the value is
+  /// not a code block and llvm::Optional() if the field does not exist.
+  llvm::Optional<StringRef> getValueAsOptionalCode(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns
   /// its value as a BitsInit, throwing an exception if the field does not exist
