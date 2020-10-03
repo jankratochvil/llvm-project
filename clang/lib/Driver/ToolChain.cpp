@@ -391,6 +391,8 @@ StringRef ToolChain::getOSLibName() const {
     return "openbsd";
   case llvm::Triple::Solaris:
     return "sunos";
+  case llvm::Triple::AIX:
+    return "aix";
   default:
     return getOS();
   }
@@ -920,6 +922,29 @@ void ToolChain::addExternCSystemIncludeIfExists(const ArgList &DriverArgs,
     CC1Args.push_back("-internal-isystem");
     CC1Args.push_back(DriverArgs.MakeArgString(Path));
   }
+}
+
+std::string ToolChain::detectLibcxxIncludePath(StringRef Base) const {
+  std::error_code EC;
+  int MaxVersion = 0;
+  std::string MaxVersionString;
+  for (llvm::vfs::directory_iterator LI = getVFS().dir_begin(Base, EC), LE;
+       !EC && LI != LE; LI = LI.increment(EC)) {
+    StringRef VersionText = llvm::sys::path::filename(LI->path());
+    int Version;
+    if (VersionText[0] == 'v' &&
+        !VersionText.slice(1, StringRef::npos).getAsInteger(10, Version)) {
+      if (Version > MaxVersion) {
+        MaxVersion = Version;
+        MaxVersionString = std::string(VersionText);
+      }
+    }
+  }
+  if (!MaxVersion)
+    return "";
+  SmallString<128> P(Base);
+  llvm::sys::path::append(P, MaxVersionString);
+  return std::string(P.str());
 }
 
 void ToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,

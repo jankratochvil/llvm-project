@@ -425,7 +425,7 @@ namespace llvm {
       MVT EltVT = getVectorElementType();
       auto EltCnt = getVectorElementCount();
       assert(EltCnt.isKnownEven() && "Splitting vector, but not in half!");
-      return getVectorVT(EltVT, EltCnt / 2);
+      return getVectorVT(EltVT, EltCnt.divideCoefficientBy(2));
     }
 
     /// Returns true if the given vector is a power of 2.
@@ -921,6 +921,12 @@ namespace llvm {
       case v2048f32:  return TypeSize::Fixed(65536);
       case exnref: return TypeSize::Fixed(0); // opaque type
       }
+    }
+
+    /// Return the size of the specified fixed width value type in bits. The
+    /// function will assert if the type is scalable.
+    uint64_t getFixedSizeInBits() const {
+      return getSizeInBits().getFixedSize();
     }
 
     uint64_t getScalarSizeInBits() const {

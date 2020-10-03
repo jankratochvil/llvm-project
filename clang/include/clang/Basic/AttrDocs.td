@@ -75,7 +75,7 @@ relative ordering of values is important. For example:
   __attribute__((init_priority(200))) SomeType Obj1;
   __attribute__((init_priority(101))) SomeType Obj2;
 
-``Obj1`` will be initialized *before* ``Obj2`` despite the usual order of
+``Obj2`` will be initialized *before* ``Obj1`` despite the usual order of
 initialization being the opposite.
 
 This attribute is only supported for C++ and Objective-C++ and is ignored in
@@ -2949,7 +2949,7 @@ Attribute ``trivial_abi`` has no effect in the following cases:
 - Copy constructors and move constructors of the class are all deleted.
 - The class has a base class that is non-trivial for the purposes of calls.
 - The class has a non-static data member whose type is non-trivial for the
-purposes of calls, which includes:
+  purposes of calls, which includes:
 
   - classes that are non-trivial for the purposes of calls
   - __weak-qualified types in Objective-C++
@@ -3694,11 +3694,10 @@ deprecated, only exists for compatibility purposes, and should not be used in
 new code.
 
 * ``swift_newtype(struct)`` means that a Swift struct will be created for this
-typedef.
+  typedef.
 
 * ``swift_newtype(enum)`` means that a Swift enum will be created for this
-ypedef.
-
+  typedef.
 
   .. code-block:: c
 
@@ -4618,6 +4617,22 @@ methods defined in the block are considered to be declared as direct unless
 they have been previously declared as non-direct in any interface of the class.
 This includes the implicit method definitions introduced by synthesized
 properties, including auto-synthesized properties.
+  }];
+}
+
+def ObjCNonRuntimeProtocolDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``objc_non_runtime_protocol`` attribute can be used to mark that an
+Objective-C protocol is only used during static type-checking and doesn't need
+to be represented dynamically. This avoids several small code-size and run-time
+overheads associated with handling the protocol's metadata. A non-runtime
+protocol cannot be used as the operand of a ``@protocol`` expression, and
+dynamic attempts to find it with ``objc_getProtocol`` will fail.
+
+If a non-runtime protocol inherits from any ordinary protocols, classes and
+derived protocols that declare conformance to the non-runtime protocol will
+dynamically list their conformance to those bare protocols.
   }];
 }
 
