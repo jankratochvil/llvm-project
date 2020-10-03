@@ -132,7 +132,7 @@ extern "C" void *LLDBSwigPythonCreateScriptedStopHook(
     const char *session_dictionary_name, lldb_private::StructuredDataImpl *args,
     lldb_private::Status &error);
 
-extern "C" unsigned int
+extern "C" bool
 LLDBSwigPythonStopHookCallHandleStop(void *implementor,
                                      lldb::ExecutionContextRefSP exc_ctx,
                                      lldb::StreamSP stream);
