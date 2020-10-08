@@ -245,12 +245,6 @@ private:
   lldb::TypeSP ParsePointerToMemberType(const lldb_private::SymbolContext &sc,
                                         const DWARFDIE &die,
                                         const ParsedDWARFTypeAttributes &attrs);
-
-  /// Complete a type from debug info, or mark it as forcefully completed if
-  /// there is no of the type in the current Module. Call this function in
-  /// contexts where the usual C++ rules require a type to be complete (base
-  /// class, member, etc.).
-  void CompleteType(lldb_private::CompilerType type);
 };
 
 /// Parsed form of all attributes that are relevant for type reconstruction.

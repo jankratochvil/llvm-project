@@ -88,6 +88,8 @@ OutputSection *Chunk::getOutputSection() const {
   return osidx == 0 ? nullptr : outputSections[osidx - 1];
 }
 
+void OutputSection::clear() { outputSections.clear(); }
+
 namespace {
 
 class DebugDirectoryChunk : public NonSectionChunk {
@@ -1371,8 +1373,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   pe->MinorImageVersion = config->minorImageVersion;
   pe->MajorOperatingSystemVersion = config->majorOSVersion;
   pe->MinorOperatingSystemVersion = config->minorOSVersion;
-  pe->MajorSubsystemVersion = config->majorOSVersion;
-  pe->MinorSubsystemVersion = config->minorOSVersion;
+  pe->MajorSubsystemVersion = config->majorSubsystemVersion;
+  pe->MinorSubsystemVersion = config->minorSubsystemVersion;
   pe->Subsystem = config->subsystem;
   pe->SizeOfImage = sizeOfImage;
   pe->SizeOfHeaders = sizeOfHeaders;

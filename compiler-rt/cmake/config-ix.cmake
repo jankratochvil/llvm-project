@@ -133,17 +133,18 @@ check_library_exists(pthread pthread_create "" COMPILER_RT_HAS_LIBPTHREAD)
 check_library_exists(execinfo backtrace "" COMPILER_RT_HAS_LIBEXECINFO)
 
 # Look for terminfo library, used in unittests that depend on LLVMSupport.
+if(LLVM_ENABLE_TERMINFO STREQUAL FORCE_ON)
+  set(MAYBE_REQUIRED REQUIRED)
+else()
+  set(MAYBE_REQUIRED)
+endif()
 if(LLVM_ENABLE_TERMINFO)
-  foreach(library terminfo tinfo curses ncurses ncursesw)
-    string(TOUPPER ${library} library_suffix)
-    check_library_exists(
-      ${library} setupterm "" COMPILER_RT_HAS_TERMINFO_${library_suffix})
-    if(COMPILER_RT_HAS_TERMINFO_${library_suffix})
-      set(COMPILER_RT_HAS_TERMINFO TRUE)
-      set(COMPILER_RT_TERMINFO_LIB "${library}")
-      break()
-    endif()
-  endforeach()
+  find_library(COMPILER_RT_TERMINFO_LIB NAMES terminfo tinfo curses ncurses ncursesw ${MAYBE_REQUIRED})
+endif()
+if(COMPILER_RT_TERMINFO_LIB)
+  set(LLVM_ENABLE_TERMINFO 1)
+else()
+  set(LLVM_ENABLE_TERMINFO 0)
 endif()
 
 if (ANDROID AND COMPILER_RT_HAS_LIBDL)
@@ -293,7 +294,7 @@ endif()
 
 set(ALL_SANITIZER_COMMON_SUPPORTED_ARCH ${X86} ${X86_64} ${PPC64} ${RISCV64}
     ${ARM32} ${ARM64} ${MIPS32} ${MIPS64} ${S390X} ${SPARC} ${SPARCV9})
-set(ALL_ASAN_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64}
+set(ALL_ASAN_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64} ${RISCV64}
     ${MIPS32} ${MIPS64} ${PPC64} ${S390X} ${SPARC} ${SPARCV9})
 set(ALL_CRT_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64} ${RISCV32} ${RISCV64})
 set(ALL_DFSAN_SUPPORTED_ARCH ${X86_64} ${MIPS64} ${ARM64})

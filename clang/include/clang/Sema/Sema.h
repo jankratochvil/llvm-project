@@ -587,13 +587,13 @@ public:
   PragmaStack<StringLiteral *> CodeSegStack;
 
   // This stack tracks the current state of Sema.CurFPFeatures.
-  PragmaStack<FPOptionsOverride::storage_type> FpPragmaStack;
+  PragmaStack<FPOptionsOverride> FpPragmaStack;
   FPOptionsOverride CurFPFeatureOverrides() {
     FPOptionsOverride result;
     if (!FpPragmaStack.hasValue()) {
       result = FPOptionsOverride();
     } else {
-      result = FPOptionsOverride(FpPragmaStack.CurrentValue);
+      result = FpPragmaStack.CurrentValue;
     }
     return result;
   }
@@ -1405,12 +1405,12 @@ public:
       S.CurFPFeatures = OldFPFeaturesState;
       S.FpPragmaStack.CurrentValue = OldOverrides;
     }
-    FPOptionsOverride::storage_type getOverrides() { return OldOverrides; }
+    FPOptionsOverride getOverrides() { return OldOverrides; }
 
   private:
     Sema& S;
     FPOptions OldFPFeaturesState;
-    FPOptionsOverride::storage_type OldOverrides;
+    FPOptionsOverride OldOverrides;
   };
 
   void addImplicitTypedef(StringRef Name, QualType T);
@@ -1834,6 +1834,16 @@ public:
     }
   };
 
+  /// Do a check to make sure \p Name looks like a legal argument for the
+  /// swift_name attribute applied to decl \p D.  Raise a diagnostic if the name
+  /// is invalid for the given declaration.
+  ///
+  /// \p AL is used to provide caret diagnostics in case of a malformed name.
+  ///
+  /// \returns true if the name is a valid swift name for \p D, false otherwise.
+  bool DiagnoseSwiftName(Decl *D, StringRef Name, SourceLocation Loc,
+                         const ParsedAttr &AL);
+
   /// A derivative of BoundTypeDiagnoser for which the diagnostic's type
   /// parameter is preceded by a 0/1 enum that is 1 if the type is sizeless.
   /// For example, a diagnostic with no other parameters would generally have
@@ -1911,6 +1921,12 @@ public:
   void makeMergedDefinitionVisible(NamedDecl *ND);
 
   bool isModuleVisible(const Module *M, bool ModulePrivate = false);
+
+  // When loading a non-modular PCH files, this is used to restore module
+  // visibility.
+  void makeModuleVisible(Module *Mod, SourceLocation ImportLoc) {
+    VisibleModules.setVisible(Mod, ImportLoc);
+  }
 
   /// Determine whether a declaration is visible to name lookup.
   bool isVisible(const NamedDecl *D) {
@@ -1997,10 +2013,7 @@ public:
   bool RequireCompleteSizedType(SourceLocation Loc, QualType T, unsigned DiagID,
                                 const Ts &... Args) {
     SizelessTypeDiagnoser<Ts...> Diagnoser(DiagID, Args...);
-    CompleteTypeKind Kind = CompleteTypeKind::Normal;
-    if (T->isVLST())
-      Kind = CompleteTypeKind::AcceptSizeless;
-    return RequireCompleteType(Loc, T, Kind, Diagnoser);
+    return RequireCompleteType(Loc, T, CompleteTypeKind::Normal, Diagnoser);
   }
 
   void completeExprArrayBound(Expr *E);
@@ -2018,10 +2031,7 @@ public:
   bool RequireCompleteSizedExprType(Expr *E, unsigned DiagID,
                                     const Ts &... Args) {
     SizelessTypeDiagnoser<Ts...> Diagnoser(DiagID, Args...);
-    CompleteTypeKind Kind = CompleteTypeKind::Normal;
-    if (E->getType()->isVLST())
-      Kind = CompleteTypeKind::AcceptSizeless;
-    return RequireCompleteExprType(E, Kind, Diagnoser);
+    return RequireCompleteExprType(E, CompleteTypeKind::Normal, Diagnoser);
   }
 
   bool RequireLiteralType(SourceLocation Loc, QualType T,
@@ -3059,6 +3069,8 @@ public:
   SpeculativeLoadHardeningAttr *
   mergeSpeculativeLoadHardeningAttr(Decl *D,
                                     const SpeculativeLoadHardeningAttr &AL);
+  SwiftNameAttr *mergeSwiftNameAttr(Decl *D, const SwiftNameAttr &SNA,
+                                    StringRef Name);
   OptimizeNoneAttr *mergeOptimizeNoneAttr(Decl *D,
                                           const AttributeCommonInfo &CI);
   InternalLinkageAttr *mergeInternalLinkageAttr(Decl *D, const ParsedAttr &AL);
@@ -3188,6 +3200,8 @@ public:
   bool CanPerformAggregateInitializationForOverloadResolution(
       const InitializedEntity &Entity, InitListExpr *From);
 
+  bool IsStringInit(Expr *Init, const ArrayType *AT);
+
   bool CanPerformCopyInitialization(const InitializedEntity &Entity,
                                     ExprResult Init);
   ExprResult PerformCopyInitialization(const InitializedEntity &Entity,
@@ -3213,7 +3227,7 @@ public:
     CCEK_CaseValue,   ///< Expression in a case label.
     CCEK_Enumerator,  ///< Enumerator value with fixed underlying type.
     CCEK_TemplateArg, ///< Value of a non-type template parameter.
-    CCEK_NewExpr,     ///< Constant expression in a noptr-new-declarator.
+    CCEK_ArrayBound,  ///< Array bound in array declarator or new-expression.
     CCEK_ConstexprIf, ///< Condition in a constexpr if statement.
     CCEK_ExplicitBool ///< Condition in an explicit(bool) specifier.
   };
@@ -3813,6 +3827,7 @@ public:
                               RedeclarationKind Redecl
                                 = NotForRedeclaration);
   bool LookupBuiltin(LookupResult &R);
+  void LookupNecessaryTypesForBuiltin(Scope *S, unsigned ID);
   bool LookupName(LookupResult &R, Scope *S,
                   bool AllowBuiltinCreation = false);
   bool LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
@@ -3972,6 +3987,8 @@ public:
   ObjCInterfaceDecl *getObjCInterfaceDecl(IdentifierInfo *&Id,
                                           SourceLocation IdLoc,
                                           bool TypoCorrection = false);
+  FunctionDecl *CreateBuiltin(IdentifierInfo *II, QualType Type, unsigned ID,
+                              SourceLocation Loc);
   NamedDecl *LazilyCreateBuiltin(IdentifierInfo *II, unsigned ID,
                                  Scope *S, bool ForRedeclaration,
                                  SourceLocation Loc);
@@ -4380,16 +4397,17 @@ public:
 
   class ConditionResult;
   StmtResult ActOnIfStmt(SourceLocation IfLoc, bool IsConstexpr,
-                         Stmt *InitStmt,
-                         ConditionResult Cond, Stmt *ThenVal,
-                         SourceLocation ElseLoc, Stmt *ElseVal);
+                         SourceLocation LParenLoc, Stmt *InitStmt,
+                         ConditionResult Cond, SourceLocation RParenLoc,
+                         Stmt *ThenVal, SourceLocation ElseLoc, Stmt *ElseVal);
   StmtResult BuildIfStmt(SourceLocation IfLoc, bool IsConstexpr,
-                         Stmt *InitStmt,
-                         ConditionResult Cond, Stmt *ThenVal,
-                         SourceLocation ElseLoc, Stmt *ElseVal);
+                         SourceLocation LParenLoc, Stmt *InitStmt,
+                         ConditionResult Cond, SourceLocation RParenLoc,
+                         Stmt *ThenVal, SourceLocation ElseLoc, Stmt *ElseVal);
   StmtResult ActOnStartOfSwitchStmt(SourceLocation SwitchLoc,
-                                    Stmt *InitStmt,
-                                    ConditionResult Cond);
+                                    SourceLocation LParenLoc, Stmt *InitStmt,
+                                    ConditionResult Cond,
+                                    SourceLocation RParenLoc);
   StmtResult ActOnFinishSwitchStmt(SourceLocation SwitchLoc,
                                            Stmt *Switch, Stmt *Body);
   StmtResult ActOnWhileStmt(SourceLocation WhileLoc, SourceLocation LParenLoc,
@@ -7235,6 +7253,8 @@ public:
                             NonTypeTemplateParmDecl *ConstrainedParameter,
                             SourceLocation EllipsisLoc);
 
+  bool RequireStructuralType(QualType T, SourceLocation Loc);
+
   QualType CheckNonTypeTemplateParameterType(TypeSourceInfo *&TSI,
                                              SourceLocation Loc);
   QualType CheckNonTypeTemplateParameterType(QualType T, SourceLocation Loc);
@@ -7342,11 +7362,17 @@ public:
       SourceLocation TemplateKWLoc, TemplateParameterList *TemplateParams,
       StorageClass SC, bool IsPartialSpecialization);
 
+  /// Get the specialization of the given variable template corresponding to
+  /// the specified argument list, or a null-but-valid result if the arguments
+  /// are dependent.
   DeclResult CheckVarTemplateId(VarTemplateDecl *Template,
                                 SourceLocation TemplateLoc,
                                 SourceLocation TemplateNameLoc,
                                 const TemplateArgumentListInfo &TemplateArgs);
 
+  /// Form a reference to the specialization of the given variable template
+  /// corresponding to the specified argument list, or a null-but-valid result
+  /// if the arguments are dependent.
   ExprResult CheckVarTemplateId(const CXXScopeSpec &SS,
                                 const DeclarationNameInfo &NameInfo,
                                 VarTemplateDecl *Template,
@@ -9169,10 +9195,6 @@ public:
                              bool InstantiatingVarTemplate = false,
                              VarTemplateSpecializationDecl *PrevVTSD = nullptr);
 
-  VarDecl *getVarTemplateSpecialization(
-      VarTemplateDecl *VarTempl, const TemplateArgumentListInfo *TemplateArgs,
-      const DeclarationNameInfo &MemberNameInfo, SourceLocation TemplateKWLoc);
-
   void InstantiateVariableInitializer(
       VarDecl *Var, VarDecl *OldVar,
       const MultiLevelTemplateArgumentList &TemplateArgs);
@@ -9746,7 +9768,7 @@ public:
   /// \#pragma STDC FENV_ACCESS
   void ActOnPragmaFEnvAccess(SourceLocation Loc, bool IsEnabled);
 
-  /// Called to set rounding mode for floating point operations.
+  /// Called to set constant rounding mode for floating point operations.
   void setRoundingMode(SourceLocation Loc, llvm::RoundingMode);
 
   /// Called to set exception behavior for floating point operations.
@@ -9965,7 +9987,7 @@ public:
 private:
   void *VarDataSharingAttributesStack;
   /// Number of nested '#pragma omp declare target' directives.
-  unsigned DeclareTargetNestingLevel = 0;
+  SmallVector<SourceLocation, 4> DeclareTargetNesting;
   /// Initialization of data-sharing attributes stack.
   void InitDataSharingAttributesStack();
   void DestroyDataSharingAttributesStack();
@@ -10016,21 +10038,27 @@ private:
     OMPDeclareVariantScope(OMPTraitInfo &TI);
   };
 
+  /// Return the OMPTraitInfo for the surrounding scope, if any.
+  OMPTraitInfo *getOMPTraitInfoForSurroundingScope() {
+    return OMPDeclareVariantScopes.empty() ? nullptr
+                                           : OMPDeclareVariantScopes.back().TI;
+  }
+
   /// The current `omp begin/end declare variant` scopes.
   SmallVector<OMPDeclareVariantScope, 4> OMPDeclareVariantScopes;
 
   /// The declarator \p D defines a function in the scope \p S which is nested
   /// in an `omp begin/end declare variant` scope. In this method we create a
   /// declaration for \p D and rename \p D according to the OpenMP context
-  /// selector of the surrounding scope.
-  FunctionDecl *
-  ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(Scope *S,
-                                                            Declarator &D);
+  /// selector of the surrounding scope. Return all base functions in \p Bases.
+  void ActOnStartOfFunctionDefinitionInOpenMPDeclareVariantScope(
+      Scope *S, Declarator &D, MultiTemplateParamsArg TemplateParameterLists,
+      SmallVectorImpl<FunctionDecl *> &Bases);
 
-  /// Register \p FD as specialization of \p BaseFD in the current `omp
-  /// begin/end declare variant` scope.
+  /// Register \p D as specialization of all base functions in \p Bases in the
+  /// current `omp begin/end declare variant` scope.
   void ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(
-      FunctionDecl *FD, FunctionDecl *BaseFD);
+      Decl *D, SmallVectorImpl<FunctionDecl *> &Bases);
 
 public:
 
@@ -10225,7 +10253,7 @@ public:
                                      SourceLocation Loc);
   /// Return true inside OpenMP declare target region.
   bool isInOpenMPDeclareTargetContext() const {
-    return DeclareTargetNestingLevel > 0;
+    return !DeclareTargetNesting.empty();
   }
   /// Return true inside OpenMP target region.
   bool isInOpenMPTargetExecutionDirective() const;
@@ -11222,10 +11250,6 @@ public:
                                        AssignmentAction Action,
                                        bool AllowExplicit = false);
   ExprResult PerformImplicitConversion(Expr *From, QualType ToType,
-                                       AssignmentAction Action,
-                                       bool AllowExplicit,
-                                       ImplicitConversionSequence& ICS);
-  ExprResult PerformImplicitConversion(Expr *From, QualType ToType,
                                        const ImplicitConversionSequence& ICS,
                                        AssignmentAction Action,
                                        CheckedConversionKind CCK
@@ -11585,9 +11609,12 @@ public:
 
     VerifyICEDiagnoser(bool Suppress = false) : Suppress(Suppress) { }
 
-    virtual void diagnoseNotICE(Sema &S, SourceLocation Loc, SourceRange SR) =0;
-    virtual void diagnoseFold(Sema &S, SourceLocation Loc, SourceRange SR);
-    virtual ~VerifyICEDiagnoser() { }
+    virtual SemaDiagnosticBuilder
+    diagnoseNotICEType(Sema &S, SourceLocation Loc, QualType T);
+    virtual SemaDiagnosticBuilder diagnoseNotICE(Sema &S,
+                                                 SourceLocation Loc) = 0;
+    virtual SemaDiagnosticBuilder diagnoseFold(Sema &S, SourceLocation Loc);
+    virtual ~VerifyICEDiagnoser() {}
   };
 
   /// VerifyIntegerConstantExpression - Verifies that an expression is an ICE,
@@ -12189,7 +12216,6 @@ private:
   bool CheckX86BuiltinTileArguments(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckX86BuiltinTileArgumentsRange(CallExpr *TheCall,
                                          ArrayRef<int> ArgNums);
-  bool CheckX86BuiltinTileArgumentsRange(CallExpr *TheCall, int ArgNum);
   bool CheckX86BuiltinTileDuplicate(CallExpr *TheCall, ArrayRef<int> ArgNums);
   bool CheckX86BuiltinTileRangeAndDuplicate(CallExpr *TheCall,
                                             ArrayRef<int> ArgNums);
@@ -12414,6 +12440,7 @@ public:
 
   /// The struct behind the CFErrorRef pointer.
   RecordDecl *CFError = nullptr;
+  bool isCFError(RecordDecl *D);
 
   /// Retrieve the identifier "NSError".
   IdentifierInfo *getNSErrorIdent();

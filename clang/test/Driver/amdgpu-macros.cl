@@ -324,3 +324,64 @@
 // GFX1012-DAG: #define __gfx1012__ 1
 // GFX1030-DAG: #define __gfx1030__ 1
 // GFX1031-DAG: #define __gfx1031__ 1
+
+// GFX600-DAG: #define __amdgcn_processor__ "gfx600"
+// GFX601-DAG: #define __amdgcn_processor__ "gfx601"
+// GFX700-DAG: #define __amdgcn_processor__ "gfx700"
+// GFX701-DAG: #define __amdgcn_processor__ "gfx701"
+// GFX702-DAG: #define __amdgcn_processor__ "gfx702"
+// GFX703-DAG: #define __amdgcn_processor__ "gfx703"
+// GFX704-DAG: #define __amdgcn_processor__ "gfx704"
+// GFX801-DAG: #define __amdgcn_processor__ "gfx801"
+// GFX802-DAG: #define __amdgcn_processor__ "gfx802"
+// GFX803-DAG: #define __amdgcn_processor__ "gfx803"
+// GFX810-DAG: #define __amdgcn_processor__ "gfx810"
+// GFX900-DAG: #define __amdgcn_processor__ "gfx900"
+// GFX902-DAG: #define __amdgcn_processor__ "gfx902"
+// GFX904-DAG: #define __amdgcn_processor__ "gfx904"
+// GFX906-DAG: #define __amdgcn_processor__ "gfx906"
+// GFX908-DAG: #define __amdgcn_processor__ "gfx908"
+// GFX909-DAG: #define __amdgcn_processor__ "gfx909"
+// GFX1010-DAG: #define __amdgcn_processor__ "gfx1010"
+// GFX1011-DAG: #define __amdgcn_processor__ "gfx1011"
+// GFX1012-DAG: #define __amdgcn_processor__ "gfx1012"
+// GFX1030-DAG: #define __amdgcn_processor__ "gfx1030"
+// GFX1031-DAG: #define __amdgcn_processor__ "gfx1031"
+
+// GFX600-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
+// GFX601-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
+// GFX700-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
+// GFX701-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
+// GFX702-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
+// GFX703-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
+// GFX704-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
+// GFX801-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
+// GFX802-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
+// GFX803-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
+// GFX810-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
+// GFX900-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
+// GFX902-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
+// GFX904-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
+// GFX906-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
+// GFX908-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
+// GFX909-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
+// GFX1010-DAG: #define __AMDGCN_WAVEFRONT_SIZE 32
+// GFX1011-DAG: #define __AMDGCN_WAVEFRONT_SIZE 32
+// GFX1012-DAG: #define __AMDGCN_WAVEFRONT_SIZE 32
+// GFX1030-DAG: #define __AMDGCN_WAVEFRONT_SIZE 32
+// GFX1031-DAG: #define __AMDGCN_WAVEFRONT_SIZE 32
+
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx906 -mwavefrontsize64 \
+// RUN:   %s 2>&1 | FileCheck --check-prefixes=WAVE64 %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1010 -mwavefrontsize64 \
+// RUN:   %s 2>&1 | FileCheck --check-prefixes=WAVE64 %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx906 -mwavefrontsize64 \
+// RUN:   -mno-wavefrontsize64 %s 2>&1 | FileCheck --check-prefixes=WAVE64 %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1010 -mwavefrontsize64 \
+// RUN:   -mno-wavefrontsize64 %s 2>&1 | FileCheck --check-prefixes=WAVE32 %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx906 -mno-wavefrontsize64 \
+// RUN:   -mwavefrontsize64 %s 2>&1 | FileCheck --check-prefixes=WAVE64 %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1010 -mno-wavefrontsize64 \
+// RUN:   -mwavefrontsize64 %s 2>&1 | FileCheck --check-prefixes=WAVE64 %s
+// WAVE64-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
+// WAVE32-DAG: #define __AMDGCN_WAVEFRONT_SIZE 32

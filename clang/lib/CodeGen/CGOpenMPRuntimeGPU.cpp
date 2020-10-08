@@ -35,7 +35,7 @@ enum OpenMPRTLFunctionNVPTX {
   /// Call to void __kmpc_kernel_deinit(int16_t IsOMPRuntimeInitialized);
   OMPRTL_NVPTX__kmpc_kernel_deinit,
   /// Call to void __kmpc_spmd_kernel_init(kmp_int32 thread_limit,
-  /// int16_t RequiresOMPRuntime, int16_t RequiresDataSharing);
+  /// int16_t RequiresOMPRuntime);
   OMPRTL_NVPTX__kmpc_spmd_kernel_init,
   /// Call to void __kmpc_spmd_kernel_deinit_v2(int16_t RequiresOMPRuntime);
   OMPRTL_NVPTX__kmpc_spmd_kernel_deinit_v2,
@@ -1345,8 +1345,7 @@ void CGOpenMPRuntimeGPU::emitSPMDEntryHeader(
 
   llvm::Value *Args[] = {getThreadLimit(CGF, /*IsInSPMDExecutionMode=*/true),
                          /*RequiresOMPRuntime=*/
-                         Bld.getInt16(RequiresFullRuntime ? 1 : 0),
-                         /*RequiresDataSharing=*/Bld.getInt16(0)};
+                         Bld.getInt16(RequiresFullRuntime ? 1 : 0)};
   CGF.EmitRuntimeCall(
       createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_spmd_kernel_init), Args);
 
@@ -1561,7 +1560,7 @@ CGOpenMPRuntimeGPU::createNVPTXRuntimeFunction(unsigned Function) {
   case OMPRTL_NVPTX__kmpc_spmd_kernel_init: {
     // Build void __kmpc_spmd_kernel_init(kmp_int32 thread_limit,
     // int16_t RequiresOMPRuntime, int16_t RequiresDataSharing);
-    llvm::Type *TypeParams[] = {CGM.Int32Ty, CGM.Int16Ty, CGM.Int16Ty};
+    llvm::Type *TypeParams[] = {CGM.Int32Ty, CGM.Int16Ty};
     auto *FnTy =
         llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
     RTLFn = CGM.CreateRuntimeFunction(FnTy, "__kmpc_spmd_kernel_init");
@@ -2845,8 +2844,12 @@ static llvm::Value *castValueToType(CodeGenFunction &CGF, llvm::Value *Val,
   Address CastItem = CGF.CreateMemTemp(CastTy);
   Address ValCastItem = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
       CastItem, Val->getType()->getPointerTo(CastItem.getAddressSpace()));
-  CGF.EmitStoreOfScalar(Val, ValCastItem, /*Volatile=*/false, ValTy);
-  return CGF.EmitLoadOfScalar(CastItem, /*Volatile=*/false, CastTy, Loc);
+  CGF.EmitStoreOfScalar(Val, ValCastItem, /*Volatile=*/false, ValTy,
+                        LValueBaseInfo(AlignmentSource::Type),
+                        TBAAAccessInfo());
+  return CGF.EmitLoadOfScalar(CastItem, /*Volatile=*/false, CastTy, Loc,
+                              LValueBaseInfo(AlignmentSource::Type),
+                              TBAAAccessInfo());
 }
 
 /// This function creates calls to one of two shuffle functions to copy
@@ -2933,9 +2936,14 @@ static void shuffleAndStore(CodeGenFunction &CGF, Address SrcAddr,
                        ThenBB, ExitBB);
       CGF.EmitBlock(ThenBB);
       llvm::Value *Res = createRuntimeShuffleFunction(
-          CGF, CGF.EmitLoadOfScalar(Ptr, /*Volatile=*/false, IntType, Loc),
+          CGF,
+          CGF.EmitLoadOfScalar(Ptr, /*Volatile=*/false, IntType, Loc,
+                               LValueBaseInfo(AlignmentSource::Type),
+                               TBAAAccessInfo()),
           IntType, Offset, Loc);
-      CGF.EmitStoreOfScalar(Res, ElemPtr, /*Volatile=*/false, IntType);
+      CGF.EmitStoreOfScalar(Res, ElemPtr, /*Volatile=*/false, IntType,
+                            LValueBaseInfo(AlignmentSource::Type),
+                            TBAAAccessInfo());
       Address LocalPtr = Bld.CreateConstGEP(Ptr, 1);
       Address LocalElemPtr = Bld.CreateConstGEP(ElemPtr, 1);
       PhiSrc->addIncoming(LocalPtr.getPointer(), ThenBB);
@@ -2944,9 +2952,14 @@ static void shuffleAndStore(CodeGenFunction &CGF, Address SrcAddr,
       CGF.EmitBlock(ExitBB);
     } else {
       llvm::Value *Res = createRuntimeShuffleFunction(
-          CGF, CGF.EmitLoadOfScalar(Ptr, /*Volatile=*/false, IntType, Loc),
+          CGF,
+          CGF.EmitLoadOfScalar(Ptr, /*Volatile=*/false, IntType, Loc,
+                               LValueBaseInfo(AlignmentSource::Type),
+                               TBAAAccessInfo()),
           IntType, Offset, Loc);
-      CGF.EmitStoreOfScalar(Res, ElemPtr, /*Volatile=*/false, IntType);
+      CGF.EmitStoreOfScalar(Res, ElemPtr, /*Volatile=*/false, IntType,
+                            LValueBaseInfo(AlignmentSource::Type),
+                            TBAAAccessInfo());
       Ptr = Bld.CreateConstGEP(Ptr, 1);
       ElemPtr = Bld.CreateConstGEP(ElemPtr, 1);
     }
@@ -3100,12 +3113,14 @@ static void emitReductionListCopy(
     } else {
       switch (CGF.getEvaluationKind(Private->getType())) {
       case TEK_Scalar: {
-        llvm::Value *Elem =
-            CGF.EmitLoadOfScalar(SrcElementAddr, /*Volatile=*/false,
-                                 Private->getType(), Private->getExprLoc());
+        llvm::Value *Elem = CGF.EmitLoadOfScalar(
+            SrcElementAddr, /*Volatile=*/false, Private->getType(),
+            Private->getExprLoc(), LValueBaseInfo(AlignmentSource::Type),
+            TBAAAccessInfo());
         // Store the source element value to the dest element address.
-        CGF.EmitStoreOfScalar(Elem, DestElementAddr, /*Volatile=*/false,
-                              Private->getType());
+        CGF.EmitStoreOfScalar(
+            Elem, DestElementAddr, /*Volatile=*/false, Private->getType(),
+            LValueBaseInfo(AlignmentSource::Type), TBAAAccessInfo());
         break;
       }
       case TEK_Complex: {
@@ -3250,8 +3265,9 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
   Address AddrReduceListArg = CGF.GetAddrOfLocalVar(&ReduceListArg);
   Address LocalReduceList(
       Bld.CreatePointerBitCastOrAddrSpaceCast(
-          CGF.EmitLoadOfScalar(AddrReduceListArg, /*Volatile=*/false,
-                               C.VoidPtrTy, Loc),
+          CGF.EmitLoadOfScalar(
+              AddrReduceListArg, /*Volatile=*/false, C.VoidPtrTy, Loc,
+              LValueBaseInfo(AlignmentSource::Type), TBAAAccessInfo()),
           CGF.ConvertTypeForMem(ReductionArrayTy)->getPointerTo()),
       CGF.getPointerAlign());
 
@@ -3329,10 +3345,13 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
 
       // elem = *elemptr
       //*MediumPtr = elem
-      llvm::Value *Elem =
-          CGF.EmitLoadOfScalar(ElemPtr, /*Volatile=*/false, CType, Loc);
+      llvm::Value *Elem = CGF.EmitLoadOfScalar(
+          ElemPtr, /*Volatile=*/false, CType, Loc,
+          LValueBaseInfo(AlignmentSource::Type), TBAAAccessInfo());
       // Store the source element value to the dest element address.
-      CGF.EmitStoreOfScalar(Elem, MediumPtr, /*Volatile=*/true, CType);
+      CGF.EmitStoreOfScalar(Elem, MediumPtr, /*Volatile=*/true, CType,
+                            LValueBaseInfo(AlignmentSource::Type),
+                            TBAAAccessInfo());
 
       Bld.CreateBr(MergeBB);
 
@@ -3712,8 +3731,9 @@ static llvm::Value *emitListToGlobalCopyFunction(
     GlobLVal.setAddress(Address(BufferPtr, GlobLVal.getAlignment()));
     switch (CGF.getEvaluationKind(Private->getType())) {
     case TEK_Scalar: {
-      llvm::Value *V = CGF.EmitLoadOfScalar(ElemPtr, /*Volatile=*/false,
-                                            Private->getType(), Loc);
+      llvm::Value *V = CGF.EmitLoadOfScalar(
+          ElemPtr, /*Volatile=*/false, Private->getType(), Loc,
+          LValueBaseInfo(AlignmentSource::Type), TBAAAccessInfo());
       CGF.EmitStoreOfScalar(V, GlobLVal);
       break;
     }
@@ -3916,7 +3936,9 @@ static llvm::Value *emitGlobalToListCopyFunction(
     switch (CGF.getEvaluationKind(Private->getType())) {
     case TEK_Scalar: {
       llvm::Value *V = CGF.EmitLoadOfScalar(GlobLVal, Loc);
-      CGF.EmitStoreOfScalar(V, ElemPtr, /*Volatile=*/false, Private->getType());
+      CGF.EmitStoreOfScalar(V, ElemPtr, /*Volatile=*/false, Private->getType(),
+                            LValueBaseInfo(AlignmentSource::Type),
+                            TBAAAccessInfo());
       break;
     }
     case TEK_Complex: {
@@ -4948,11 +4970,7 @@ bool CGOpenMPRuntimeGPU::hasAllocateAttributeForGlobalVar(const VarDecl *VD,
 static CudaArch getCudaArch(CodeGenModule &CGM) {
   if (!CGM.getTarget().hasFeature("ptx"))
     return CudaArch::UNKNOWN;
-  llvm::StringMap<bool> Features;
-  CGM.getTarget().initFeatureMap(Features, CGM.getDiags(),
-                                 CGM.getTarget().getTargetOpts().CPU,
-                                 CGM.getTarget().getTargetOpts().Features);
-  for (const auto &Feature : Features) {
+  for (const auto &Feature : CGM.getTarget().getTargetOpts().FeatureMap) {
     if (Feature.getValue()) {
       CudaArch Arch = StringToCudaArch(Feature.getKey());
       if (Arch != CudaArch::UNKNOWN)
@@ -5015,6 +5033,7 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(
       case CudaArch::GFX1012:
       case CudaArch::GFX1030:
       case CudaArch::GFX1031:
+      case CudaArch::UNUSED:
       case CudaArch::UNKNOWN:
         break;
       case CudaArch::LAST:
@@ -5076,6 +5095,7 @@ static std::pair<unsigned, unsigned> getSMsBlocksPerSM(CodeGenModule &CGM) {
   case CudaArch::GFX1012:
   case CudaArch::GFX1030:
   case CudaArch::GFX1031:
+  case CudaArch::UNUSED:
   case CudaArch::UNKNOWN:
     break;
   case CudaArch::LAST:

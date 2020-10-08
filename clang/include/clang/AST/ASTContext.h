@@ -61,6 +61,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/TypeSize.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -73,6 +74,8 @@
 
 namespace llvm {
 
+class APFixedPoint;
+class FixedPointSemantics;
 struct fltSemantics;
 template <typename T, unsigned N> class SmallPtrSet;
 
@@ -80,7 +83,6 @@ template <typename T, unsigned N> class SmallPtrSet;
 
 namespace clang {
 
-class APFixedPoint;
 class APValue;
 class ASTMutationListener;
 class ASTRecordLayout;
@@ -98,7 +100,6 @@ class ParentMapContext;
 class DynTypedNode;
 class DynTypedNodeList;
 class Expr;
-class FixedPointSemantics;
 class GlobalDecl;
 class MangleContext;
 class MangleNumberingContext;
@@ -663,6 +664,14 @@ public:
   bool AtomicUsesUnsupportedLibcall(const AtomicExpr *E) const;
 
   const LangOptions& getLangOpts() const { return LangOpts; }
+
+  // If this condition is false, typo correction must be performed eagerly
+  // rather than delayed in many places, as it makes use of dependent types.
+  // the condition is false for clang's C-only codepath, as it doesn't support
+  // dependent types yet.
+  bool isDependenceAllowed() const {
+    return LangOpts.CPlusPlus || LangOpts.RecoveryAST;
+  }
 
   const SanitizerBlacklist &getSanitizerBlacklist() const {
     return *SanitizerBL;
@@ -1300,6 +1309,21 @@ public:
 
   /// Returns a vla type where known sizes are replaced with [*].
   QualType getVariableArrayDecayedType(QualType Ty) const;
+
+  // Convenience struct to return information about a builtin vector type.
+  struct BuiltinVectorTypeInfo {
+    QualType ElementType;
+    llvm::ElementCount EC;
+    unsigned NumVectors;
+    BuiltinVectorTypeInfo(QualType ElementType, llvm::ElementCount EC,
+                          unsigned NumVectors)
+        : ElementType(ElementType), EC(EC), NumVectors(NumVectors) {}
+  };
+
+  /// Returns the element type, element count and number of vectors
+  /// (in case of tuple) for a builtin vector type.
+  BuiltinVectorTypeInfo
+  getBuiltinVectorTypeInfo(const BuiltinType *VecTy) const;
 
   /// Return the unique reference to a scalable vector type of the specified
   /// element type and scalable number of elements.
@@ -1969,9 +1993,9 @@ public:
 
   unsigned char getFixedPointScale(QualType Ty) const;
   unsigned char getFixedPointIBits(QualType Ty) const;
-  FixedPointSemantics getFixedPointSemantics(QualType Ty) const;
-  APFixedPoint getFixedPointMax(QualType Ty) const;
-  APFixedPoint getFixedPointMin(QualType Ty) const;
+  llvm::FixedPointSemantics getFixedPointSemantics(QualType Ty) const;
+  llvm::APFixedPoint getFixedPointMax(QualType Ty) const;
+  llvm::APFixedPoint getFixedPointMin(QualType Ty) const;
 
   DeclarationNameInfo getNameForTemplate(TemplateName Name,
                                          SourceLocation NameLoc) const;
@@ -2042,6 +2066,11 @@ public:
   /// types.
   bool areCompatibleVectorTypes(QualType FirstVec, QualType SecondVec);
 
+  /// Return true if the given types are an SVE builtin and a VectorType that
+  /// is a fixed-length representation of the SVE builtin for a specific
+  /// vector-length.
+  bool areCompatibleSveTypes(QualType FirstType, QualType SecondType);
+
   /// Return true if the type has been explicitly qualified with ObjC ownership.
   /// A type may be implicitly qualified with ownership under ObjC ARC, and in
   /// some cases the compiler treats these differently.
@@ -2098,10 +2127,6 @@ public:
     return getTypeSizeInCharsIfKnown(QualType(Ty, 0));
   }
 
-  /// Returns the bitwidth of \p T, an SVE type attributed with
-  /// 'arm_sve_vector_bits'. Should only be called if T->isVLST().
-  unsigned getBitwidthForAttributedSveType(const Type *T) const;
-
   /// Return the ABI-specified alignment of a (complete) type \p T, in
   /// bits.
   unsigned getTypeAlign(QualType T) const { return getTypeInfo(T).Align; }
@@ -2117,15 +2142,24 @@ public:
   }
   unsigned getTypeUnadjustedAlign(const Type *T) const;
 
-  /// Return the ABI-specified alignment of a type, in bits, or 0 if
+  /// Return the alignment of a type, in bits, or 0 if
   /// the type is incomplete and we cannot determine the alignment (for
-  /// example, from alignment attributes).
-  unsigned getTypeAlignIfKnown(QualType T) const;
+  /// example, from alignment attributes). The returned alignment is the
+  /// Preferred alignment if NeedsPreferredAlignment is true, otherwise is the
+  /// ABI alignment.
+  unsigned getTypeAlignIfKnown(QualType T,
+                               bool NeedsPreferredAlignment = false) const;
 
   /// Return the ABI-specified alignment of a (complete) type \p T, in
   /// characters.
   CharUnits getTypeAlignInChars(QualType T) const;
   CharUnits getTypeAlignInChars(const Type *T) const;
+
+  /// Return the PreferredAlignment of a (complete) type \p T, in
+  /// characters.
+  CharUnits getPreferredTypeAlignInChars(QualType T) const {
+    return toCharUnitsFromBits(getPreferredTypeAlign(T));
+  }
 
   /// getTypeUnadjustedAlignInChars - Return the ABI-specified alignment of a type,
   /// in characters, before alignment adjustments. This method does not work on
@@ -2149,7 +2183,12 @@ public:
   /// the current target, in bits.
   ///
   /// This can be different than the ABI alignment in cases where it is
-  /// beneficial for performance to overalign a data type.
+  /// beneficial for performance or backwards compatibility preserving to
+  /// overalign a data type. (Note: despite the name, the preferred alignment
+  /// is ABI-impacting, and not an optimization.)
+  unsigned getPreferredTypeAlign(QualType T) const {
+    return getPreferredTypeAlign(T.getTypePtr());
+  }
   unsigned getPreferredTypeAlign(const Type *T) const;
 
   /// Return the default alignment for __attribute__((aligned)) on
@@ -3033,6 +3072,9 @@ public:
 
   /// Return a new OMPTraitInfo object owned by this context.
   OMPTraitInfo &getNewOMPTraitInfo();
+
+  /// Whether a C++ static variable may be externalized.
+  bool mayExternalizeStaticVar(const Decl *D) const;
 
   /// Whether a C++ static variable should be externalized.
   bool shouldExternalizeStaticVar(const Decl *D) const;

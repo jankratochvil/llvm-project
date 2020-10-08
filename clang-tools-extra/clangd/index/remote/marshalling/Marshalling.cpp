@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
 
@@ -44,11 +45,6 @@ llvm::Expected<llvm::DenseSet<SymbolID>> getIDs(IDRange IDs) {
   return Result;
 }
 
-llvm::Error makeStringError(llvm::StringRef Message) {
-  return llvm::make_error<llvm::StringError>(Message,
-                                             llvm::inconvertibleErrorCode());
-}
-
 } // namespace
 
 Marshaller::Marshaller(llvm::StringRef RemoteIndexRoot,
@@ -58,14 +54,16 @@ Marshaller::Marshaller(llvm::StringRef RemoteIndexRoot,
     assert(llvm::sys::path::is_absolute(RemoteIndexRoot));
     assert(RemoteIndexRoot ==
            llvm::sys::path::convert_to_slash(RemoteIndexRoot));
-    assert(RemoteIndexRoot.endswith(llvm::sys::path::get_separator()));
     this->RemoteIndexRoot = RemoteIndexRoot.str();
+    if (!RemoteIndexRoot.endswith(llvm::sys::path::get_separator()))
+      *this->RemoteIndexRoot += llvm::sys::path::get_separator();
   }
   if (!LocalIndexRoot.empty()) {
     assert(llvm::sys::path::is_absolute(LocalIndexRoot));
     assert(LocalIndexRoot == llvm::sys::path::convert_to_slash(LocalIndexRoot));
-    assert(LocalIndexRoot.endswith(llvm::sys::path::get_separator()));
     this->LocalIndexRoot = LocalIndexRoot.str();
+    if (!LocalIndexRoot.endswith(llvm::sys::path::get_separator()))
+      *this->LocalIndexRoot += llvm::sys::path::get_separator();
   }
   assert(!RemoteIndexRoot.empty() || !LocalIndexRoot.empty());
 }
@@ -129,7 +127,7 @@ Marshaller::fromProtobuf(const RelationsRequest *Message) {
 
 llvm::Expected<clangd::Symbol> Marshaller::fromProtobuf(const Symbol &Message) {
   if (!Message.has_info() || !Message.has_canonical_declaration())
-    return makeStringError("Missing info or declaration.");
+    return error("Missing info or declaration.");
   clangd::Symbol Result;
   auto ID = SymbolID::fromStr(Message.id());
   if (!ID)
@@ -167,7 +165,7 @@ llvm::Expected<clangd::Symbol> Marshaller::fromProtobuf(const Symbol &Message) {
 
 llvm::Expected<clangd::Ref> Marshaller::fromProtobuf(const Ref &Message) {
   if (!Message.has_location())
-    return makeStringError("Missing location.");
+    return error("Missing location.");
   clangd::Ref Result;
   auto Location = fromProtobuf(Message.location());
   if (!Location)
@@ -183,7 +181,7 @@ Marshaller::fromProtobuf(const Relation &Message) {
   if (!SubjectID)
     return SubjectID.takeError();
   if (!Message.has_object())
-    return makeStringError("Missing Object.");
+    return error("Missing Object.");
   auto Object = fromProtobuf(Message.object());
   if (!Object)
     return Object.takeError();
@@ -298,12 +296,11 @@ llvm::Expected<Relation> Marshaller::toProtobuf(const clangd::SymbolID &Subject,
 llvm::Expected<std::string>
 Marshaller::relativePathToURI(llvm::StringRef RelativePath) {
   assert(LocalIndexRoot);
-  assert(RelativePath == llvm::sys::path::convert_to_slash(
-                             RelativePath, llvm::sys::path::Style::posix));
+  assert(RelativePath == llvm::sys::path::convert_to_slash(RelativePath));
   if (RelativePath.empty())
-    return makeStringError("Empty relative path.");
-  if (llvm::sys::path::is_absolute(RelativePath))
-    return makeStringError("RelativePath is absolute.");
+    return error("Empty relative path.");
+  if (llvm::sys::path::is_absolute(RelativePath, llvm::sys::path::Style::posix))
+    return error("RelativePath '{0}' is absolute.", RelativePath);
   llvm::SmallString<256> FullPath = llvm::StringRef(*LocalIndexRoot);
   llvm::sys::path::append(FullPath, RelativePath);
   auto Result = URI::createFile(FullPath);
@@ -316,10 +313,11 @@ llvm::Expected<std::string> Marshaller::uriToRelativePath(llvm::StringRef URI) {
   if (!ParsedURI)
     return ParsedURI.takeError();
   if (ParsedURI->scheme() != "file")
-    return makeStringError("Can not use URI schemes other than file.");
+    return error("Can not use URI schemes other than file, given: '{0}'.", URI);
   llvm::SmallString<256> Result = ParsedURI->body();
   if (!llvm::sys::path::replace_path_prefix(Result, *RemoteIndexRoot, ""))
-    return makeStringError("File path doesn't start with RemoteIndexRoot.");
+    return error("File path '{0}' doesn't start with '{1}'.", Result.str(),
+                 *RemoteIndexRoot);
   // Make sure the result has UNIX slashes.
   return llvm::sys::path::convert_to_slash(Result,
                                            llvm::sys::path::Style::posix);

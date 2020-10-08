@@ -1442,6 +1442,12 @@ inline CastClass_match<OpTy, Instruction::PtrToInt> m_PtrToInt(const OpTy &Op) {
   return CastClass_match<OpTy, Instruction::PtrToInt>(Op);
 }
 
+/// Matches IntToPtr.
+template <typename OpTy>
+inline CastClass_match<OpTy, Instruction::IntToPtr> m_IntToPtr(const OpTy &Op) {
+  return CastClass_match<OpTy, Instruction::IntToPtr>(Op);
+}
+
 /// Matches Trunc.
 template <typename OpTy>
 inline CastClass_match<OpTy, Instruction::Trunc> m_Trunc(const OpTy &Op) {
@@ -1706,6 +1712,17 @@ template <typename LHS, typename RHS>
 inline MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty> m_UMin(const LHS &L,
                                                              const RHS &R) {
   return MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline match_combine_or<
+    match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, smax_pred_ty>,
+                     MaxMin_match<ICmpInst, LHS, RHS, smin_pred_ty>>,
+    match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty>,
+                     MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty>>>
+m_MaxOrMin(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_CombineOr(m_SMax(L, R), m_SMin(L, R)),
+                     m_CombineOr(m_UMax(L, R), m_UMin(L, R)));
 }
 
 /// Match an 'ordered' floating point maximum function.
@@ -1998,6 +2015,18 @@ inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_FMax(const Opnd0 &Op0,
   return m_Intrinsic<Intrinsic::maxnum>(Op0, Op1);
 }
 
+template <typename Opnd0, typename Opnd1, typename Opnd2>
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2>::Ty
+m_FShl(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {
+  return m_Intrinsic<Intrinsic::fshl>(Op0, Op1, Op2);
+}
+
+template <typename Opnd0, typename Opnd1, typename Opnd2>
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1, Opnd2>::Ty
+m_FShr(const Opnd0 &Op0, const Opnd1 &Op1, const Opnd2 &Op2) {
+  return m_Intrinsic<Intrinsic::fshr>(Op0, Op1, Op2);
+}
+
 //===----------------------------------------------------------------------===//
 // Matchers for two-operands operators with the operators in either order
 //
@@ -2098,6 +2127,17 @@ template <typename LHS, typename RHS>
 inline MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty, true>
 m_c_UMax(const LHS &L, const RHS &R) {
   return MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty, true>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline match_combine_or<
+    match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, smax_pred_ty, true>,
+                     MaxMin_match<ICmpInst, LHS, RHS, smin_pred_ty, true>>,
+    match_combine_or<MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty, true>,
+                     MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty, true>>>
+m_c_MaxOrMin(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_CombineOr(m_c_SMax(L, R), m_c_SMin(L, R)),
+                     m_CombineOr(m_c_UMax(L, R), m_c_UMin(L, R)));
 }
 
 /// Matches FAdd with LHS and RHS in either order.

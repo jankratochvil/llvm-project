@@ -417,7 +417,9 @@ static void instantiateOMPDeclareVariantAttr(
   if (TI.anyScoreOrCondition(SubstScoreOrConditionExpr))
     return;
 
-  // Check function/variant ref.
+  Expr *E = VariantFuncRef.get();
+  // Check function/variant ref for `omp declare variant` but not for `omp
+  // begin declare variant` (which use implicit attributes).
   Optional<std::pair<FunctionDecl *, Expr *>> DeclVarData =
       S.checkOpenMPDeclareVariantFunction(S.ConvertDeclToDeclGroup(New),
                                           VariantFuncRef.get(), TI,
@@ -426,9 +428,42 @@ static void instantiateOMPDeclareVariantAttr(
   if (!DeclVarData)
     return;
 
-  S.ActOnOpenMPDeclareVariantDirective(DeclVarData.getValue().first,
-                                       DeclVarData.getValue().second, TI,
-                                       Attr.getRange());
+  E = DeclVarData.getValue().second;
+  FD = DeclVarData.getValue().first;
+
+  if (auto *VariantDRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts())) {
+    if (auto *VariantFD = dyn_cast<FunctionDecl>(VariantDRE->getDecl())) {
+      if (auto *VariantFTD = VariantFD->getDescribedFunctionTemplate()) {
+        if (!VariantFTD->isThisDeclarationADefinition())
+          return;
+        Sema::TentativeAnalysisScope Trap(S);
+        const TemplateArgumentList *TAL = TemplateArgumentList::CreateCopy(
+            S.Context, TemplateArgs.getInnermost());
+
+        auto *SubstFD = S.InstantiateFunctionDeclaration(VariantFTD, TAL,
+                                                         New->getLocation());
+        if (!SubstFD)
+          return;
+        QualType NewType = S.Context.mergeFunctionTypes(
+            SubstFD->getType(), FD->getType(),
+            /* OfBlockPointer */ false,
+            /* Unqualified */ false, /* AllowCXX */ true);
+        if (NewType.isNull())
+          return;
+        S.InstantiateFunctionDefinition(
+            New->getLocation(), SubstFD, /* Recursive */ true,
+            /* DefinitionRequired */ false, /* AtEndOfTU */ false);
+        SubstFD->setInstantiationIsPending(!SubstFD->isDefined());
+        E = DeclRefExpr::Create(S.Context, NestedNameSpecifierLoc(),
+                                SourceLocation(), SubstFD,
+                                /* RefersToEnclosingVariableOrCapture */ false,
+                                /* NameLoc */ SubstFD->getLocation(),
+                                SubstFD->getType(), ExprValueKind::VK_RValue);
+      }
+    }
+  }
+
+  S.ActOnOpenMPDeclareVariantDirective(FD, E, TI, Attr.getRange());
 }
 
 static void instantiateDependentAMDGPUFlatWorkGroupSizeAttr(
@@ -2053,6 +2088,13 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     // typedef (C++ [dcl.typedef]p4).
     if (Previous.isSingleTagDecl())
       Previous.clear();
+
+    // Filter out previous declarations that don't match the scope. The only
+    // effect this has is to remove declarations found in inline namespaces
+    // for friend declarations with unqualified names.
+    SemaRef.FilterLookupForScope(Previous, DC, /*Scope*/ nullptr,
+                                 /*ConsiderLinkage*/ true,
+                                 QualifierLoc.hasQualifier());
   }
 
   SemaRef.CheckFunctionDeclaration(/*Scope*/ nullptr, Function, Previous,
@@ -2879,7 +2921,7 @@ TemplateDeclInstantiator::VisitTemplateTemplateParmDecl(
     if (!TName.isNull())
       Param->setDefaultArgument(
           SemaRef.Context,
-          TemplateArgumentLoc(TemplateArgument(TName),
+          TemplateArgumentLoc(SemaRef.Context, TemplateArgument(TName),
                               D->getDefaultArgument().getTemplateQualifierLoc(),
                               D->getDefaultArgument().getTemplateNameLoc()));
   }
@@ -5134,15 +5176,6 @@ void Sema::InstantiateVariableDefinition(SourceLocation PointOfInstantiation,
   VarTemplateSpecializationDecl *VarSpec =
       dyn_cast<VarTemplateSpecializationDecl>(Var);
   if (VarSpec) {
-    // If this is a variable template specialization, make sure that it is
-    // non-dependent.
-    bool InstantiationDependent = false;
-    assert(!TemplateSpecializationType::anyDependentTemplateArguments(
-               VarSpec->getTemplateArgsInfo(), InstantiationDependent) &&
-           "Only instantiate variable template specializations that are "
-           "not type-dependent");
-    (void)InstantiationDependent;
-
     // If this is a static data member template, there might be an
     // uninstantiated initializer on the declaration. If so, instantiate
     // it now.
@@ -5963,16 +5996,7 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
         return nullptr;
       DeclContext::lookup_result Found = ParentDC->lookup(Name);
 
-      if (auto *VTSD = dyn_cast<VarTemplateSpecializationDecl>(D)) {
-        VarTemplateDecl *Templ = cast_or_null<VarTemplateDecl>(
-            findInstantiationOf(Context, VTSD->getSpecializedTemplate(),
-                                Found.begin(), Found.end()));
-        if (!Templ)
-          return nullptr;
-        Result = getVarTemplateSpecialization(
-            Templ, &VTSD->getTemplateArgsInfo(), NewNameInfo, SourceLocation());
-      } else
-        Result = findInstantiationOf(Context, D, Found.begin(), Found.end());
+      Result = findInstantiationOf(Context, D, Found.begin(), Found.end());
     } else {
       // Since we don't have a name for the entity we're looking for,
       // our only option is to walk through all of the declarations to
