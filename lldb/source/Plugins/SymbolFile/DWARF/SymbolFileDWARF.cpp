@@ -1452,7 +1452,7 @@ Type *SymbolFileDWARF::ResolveTypeUID(DWARFCompileUnit *main_unit,
 Type *SymbolFileDWARF::ResolveTypeUID(DWARFCompileUnit *main_unit,
                                       const DWARFDIE &die,
                                       bool assert_not_being_parsed) {
-  { SymbolFileDWARF *dwarf = &die.MainDWARFUnit(main_unit)->GetSymbolFileDWARF();
+  { SymbolFileDWARF *dwarf = &die.GetMainDWARFUnit(main_unit)->GetSymbolFileDWARF();
     if (dwarf != this)
       return dwarf->ResolveTypeUID(main_unit, die, assert_not_being_parsed);
   }
@@ -1568,7 +1568,7 @@ Type *SymbolFileDWARF::ResolveType(DWARFCompileUnit *main_unit,
                                    const DWARFDIE &die,
                                    bool assert_not_being_parsed,
                                    bool resolve_function_context) {
-  { SymbolFileDWARF *dwarf = &die.MainDWARFUnit(main_unit)->GetSymbolFileDWARF();
+  { SymbolFileDWARF *dwarf = &die.GetMainDWARFUnit(main_unit)->GetSymbolFileDWARF();
     if (dwarf != this)
       return dwarf->ResolveType(main_unit, die, assert_not_being_parsed, resolve_function_context);
   }
@@ -2352,7 +2352,7 @@ bool SymbolFileDWARF::DIEInDeclContext(const CompilerDeclContext &decl_ctx,
 
   if (die) {
     if (DWARFASTParser *dwarf_ast =
-            GetDWARFParser(*die.MainDWARFUnit(main_unit))) {
+            GetDWARFParser(*die.GetMainDWARFUnit(main_unit))) {
       if (CompilerDeclContext actual_decl_ctx =
               dwarf_ast->GetDeclContextContainingUIDFromDWARF(main_unit, die))
         return decl_ctx.IsContainedInLookup(actual_decl_ctx);
@@ -2610,7 +2610,7 @@ SymbolFileDWARF::FindNamespace(ConstString name,
     if (!DIEInDeclContext(parent_decl_ctx, main_unit, die))
       return true; // The containing decl contexts don't match
 
-    DWARFASTParser *dwarf_ast = GetDWARFParser(*die.MainDWARFUnit(main_unit));
+    DWARFASTParser *dwarf_ast = GetDWARFParser(*die.GetMainDWARFUnit(main_unit));
     if (!dwarf_ast)
       return true;
 
@@ -3038,7 +3038,7 @@ TypeSP SymbolFileDWARF::ParseType(const SymbolContext &sc, const DWARFDIE &die,
   DWARFCompileUnit *main_unit = GetDWARFCompileUnit(sc.comp_unit);
   SymbolFileDWARF *dwarf =
       llvm::cast<SymbolFileDWARF>(sc.module_sp->GetSymbolFile());
-  auto type_system_or_err = dwarf->GetTypeSystemForLanguage(GetLanguage(*die.MainDWARFUnit(main_unit)));
+  auto type_system_or_err = dwarf->GetTypeSystemForLanguage(GetLanguage(*die.GetMainDWARFUnit(main_unit)));
   if (auto err = type_system_or_err.takeError()) {
     LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
                    std::move(err), "Unable to parse type");
@@ -4007,14 +4007,14 @@ DWARFASTParser *SymbolFileDWARF::GetDWARFParser(DWARFUnit &unit) {
 
 CompilerDecl SymbolFileDWARF::GetDecl(DWARFCompileUnit *main_unit,
                                       const DWARFDIE &die) {
-  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.MainDWARFUnit(main_unit)))
+  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.GetMainDWARFUnit(main_unit)))
     return dwarf_ast->GetDeclForUIDFromDWARF(main_unit, die);
   return CompilerDecl();
 }
 
 CompilerDeclContext SymbolFileDWARF::GetDeclContext(DWARFCompileUnit *main_unit,
                                                     const DWARFDIE &die) {
-  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.MainDWARFUnit(main_unit)))
+  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.GetMainDWARFUnit(main_unit)))
     return dwarf_ast->GetDeclContextForUIDFromDWARF(main_unit, die);
   return CompilerDeclContext();
 }
@@ -4022,7 +4022,7 @@ CompilerDeclContext SymbolFileDWARF::GetDeclContext(DWARFCompileUnit *main_unit,
 CompilerDeclContext
 SymbolFileDWARF::GetContainingDeclContext(DWARFCompileUnit *main_unit,
                                           const DWARFDIE &die) {
-  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.MainDWARFUnit(main_unit)))
+  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.GetMainDWARFUnit(main_unit)))
     return dwarf_ast->GetDeclContextContainingUIDFromDWARF(main_unit, die);
   return CompilerDeclContext();
 }
