@@ -644,7 +644,7 @@ DWARFDebugInfo &SymbolFileDWARF::DebugInfo() {
 }
 
 MainDWARFCompileUnit *
-SymbolFileDWARF::GetMainDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) {
+SymbolFileDWARF::GetMainDWARFCompileUnit(CompileUnit *comp_unit) {
   if (!comp_unit)
     return nullptr;
 
@@ -660,6 +660,8 @@ SymbolFileDWARF::GetMainDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) {
     dwarf_cu->SetUserData(comp_unit);
   else
     lldbassert(dwarf_cu->GetUserData() == comp_unit);
+
+  // It must be DWARFCompileUnit when it created a CompileUnit.
   return llvm::cast<MainDWARFCompileUnit>(dwarf_cu);
 }
 
