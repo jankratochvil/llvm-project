@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/SymbolFile/DWARF/AppleDWARFIndex.h"
+#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
 #include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
@@ -78,14 +79,14 @@ void AppleDWARFIndex::GetGlobalVariables(
 }
 
 void AppleDWARFIndex::GetGlobalVariables(
-    const DWARFUnit &cu,
+    const DWARFCompileUnit &main_unit,
     llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
         callback) {
   if (!m_apple_names_up)
     return;
 
   DWARFMappedHash::DIEInfoArray hash_data;
-  m_apple_names_up->AppendAllDIEsInRange(cu.GetOffset(), cu.GetNextUnitOffset(),
+  m_apple_names_up->AppendAllDIEsInRange(main_unit.GetOffset(), main_unit.GetNextUnitOffset(),
                                          hash_data);
   DWARFMappedHash::ExtractDIEArray(hash_data, DIERefCallback(callback));
 }
