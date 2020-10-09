@@ -783,7 +783,7 @@ Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
 
   DWARFCompileUnit *main_unit = GetDWARFCompileUnit(&comp_unit);
 
-  auto type_system_or_err = GetTypeSystemForLanguage(GetLanguage(*die.MainDWARFUnit(main_unit)));
+  auto type_system_or_err = GetTypeSystemForLanguage(GetLanguage(*die.GetMainDWARFUnit(main_unit)));
   if (auto err = type_system_or_err.takeError()) {
     LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
                    std::move(err), "Unable to parse function");
@@ -1572,7 +1572,7 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
           dwarf_die.GetID(nullptr), dwarf_die.GetTagAsCString(),
           type->GetName().AsCString());
     assert(compiler_type);
-    if (DWARFASTParser *dwarf_ast = GetDWARFParser(*dwarf_die.MainDWARFUnit(main_unit)))
+    if (DWARFASTParser *dwarf_ast = GetDWARFParser(*dwarf_die.GetMainDWARFUnit(main_unit)))
       return dwarf_ast->CompleteTypeFromDWARF(dwarf_die, type, compiler_type);
   }
   return false;
@@ -2368,7 +2368,7 @@ bool SymbolFileDWARF::DIEInDeclContext(const CompilerDeclContext &decl_ctx,
 
   if (die) {
     if (DWARFASTParser *dwarf_ast =
-            GetDWARFParser(*die.MainDWARFUnit(main_unit))) {
+            GetDWARFParser(*die.GetMainDWARFUnit(main_unit))) {
       if (CompilerDeclContext actual_decl_ctx =
               dwarf_ast->GetDeclContextContainingUIDFromDWARF(main_unit, die))
         return decl_ctx.IsContainedInLookup(actual_decl_ctx);
@@ -2578,7 +2578,7 @@ void SymbolFileDWARF::FindTypes(
     return;
 
   m_index->GetTypes(name, [&](DWARFCompileUnit *main_unit, DWARFDIE die) {
-    if (!languages[GetLanguage(*die.MainDWARFUnit(main_unit))])
+    if (!languages[GetLanguage(*die.GetMainDWARFUnit(main_unit))])
       return true;
 
     llvm::SmallVector<CompilerContext, 4> die_context;
@@ -2626,7 +2626,7 @@ SymbolFileDWARF::FindNamespace(ConstString name,
     if (!DIEInDeclContext(parent_decl_ctx, main_unit, die))
       return true; // The containing decl contexts don't match
 
-    DWARFASTParser *dwarf_ast = GetDWARFParser(*die.MainDWARFUnit(main_unit));
+    DWARFASTParser *dwarf_ast = GetDWARFParser(*die.GetMainDWARFUnit(main_unit));
     if (!dwarf_ast)
       return true;
 
@@ -2968,7 +2968,7 @@ TypeSP SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(
         // looking for. We don't want to find a "Foo" type from Java if we
         // are looking for a "Foo" type for C, C++, ObjC, or ObjC++.
         if (type_system &&
-            !type_system->SupportsLanguage(GetLanguage(*type_die.MainDWARFUnit(main_unit))))
+            !type_system->SupportsLanguage(GetLanguage(*type_die.GetMainDWARFUnit(main_unit))))
           return true;
         bool try_resolving_type = false;
 
@@ -3054,7 +3054,7 @@ TypeSP SymbolFileDWARF::ParseType(const SymbolContext &sc, const DWARFDIE &die,
   DWARFCompileUnit *main_unit = GetDWARFCompileUnit(sc.comp_unit);
   SymbolFileDWARF *dwarf =
       llvm::cast<SymbolFileDWARF>(sc.module_sp->GetSymbolFile());
-  auto type_system_or_err = dwarf->GetTypeSystemForLanguage(GetLanguage(*die.MainDWARFUnit(main_unit)));
+  auto type_system_or_err = dwarf->GetTypeSystemForLanguage(GetLanguage(*die.GetMainDWARFUnit(main_unit)));
   if (auto err = type_system_or_err.takeError()) {
     LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
                    std::move(err), "Unable to parse type");
@@ -3388,7 +3388,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
     // declaration context.
     if ((parent_tag == DW_TAG_compile_unit ||
          parent_tag == DW_TAG_partial_unit) &&
-        Language::LanguageIsCPlusPlus(GetLanguage(*die.MainDWARFUnit(main_unit))))
+        Language::LanguageIsCPlusPlus(GetLanguage(*die.GetMainDWARFUnit(main_unit))))
       mangled =
           GetDWARFDeclContext(main_unit, die).GetQualifiedNameAsConstString().GetCString();
   }
@@ -4027,14 +4027,14 @@ DWARFASTParser *SymbolFileDWARF::GetDWARFParser(DWARFUnit &unit) {
 
 CompilerDecl SymbolFileDWARF::GetDecl(DWARFCompileUnit *main_unit,
                                       const DWARFDIE &die) {
-  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.MainDWARFUnit(main_unit)))
+  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.GetMainDWARFUnit(main_unit)))
     return dwarf_ast->GetDeclForUIDFromDWARF(main_unit, die);
   return CompilerDecl();
 }
 
 CompilerDeclContext SymbolFileDWARF::GetDeclContext(DWARFCompileUnit *main_unit,
                                                     const DWARFDIE &die) {
-  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.MainDWARFUnit(main_unit)))
+  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.GetMainDWARFUnit(main_unit)))
     return dwarf_ast->GetDeclContextForUIDFromDWARF(main_unit, die);
   return CompilerDeclContext();
 }
@@ -4042,7 +4042,7 @@ CompilerDeclContext SymbolFileDWARF::GetDeclContext(DWARFCompileUnit *main_unit,
 CompilerDeclContext
 SymbolFileDWARF::GetContainingDeclContext(DWARFCompileUnit *main_unit,
                                           const DWARFDIE &die) {
-  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.MainDWARFUnit(main_unit)))
+  if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.GetMainDWARFUnit(main_unit)))
     return dwarf_ast->GetDeclContextContainingUIDFromDWARF(main_unit, die);
   return CompilerDeclContext();
 }
@@ -4052,7 +4052,7 @@ DWARFDeclContext SymbolFileDWARF::GetDWARFDeclContext(DWARFCompileUnit *main_uni
     return {};
   DWARFDeclContext dwarf_decl_ctx =
       die.GetDIE()->GetDWARFDeclContext(die.GetCU()); // DIE.GetCU(), not main_unit.
-  dwarf_decl_ctx.SetLanguage(GetLanguage(*die.MainDWARFUnit(main_unit)));
+  dwarf_decl_ctx.SetLanguage(GetLanguage(*die.GetMainDWARFUnit(main_unit)));
   return dwarf_decl_ctx;
 }
 
