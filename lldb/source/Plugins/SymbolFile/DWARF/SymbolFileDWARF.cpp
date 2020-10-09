@@ -3163,7 +3163,7 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
         return num_variables;
       }
     } else if (sc.comp_unit) {
-      DWARFUnit *dwarf_cu = DebugInfo().GetUnitAtIndex(sc.comp_unit->GetID());
+      DWARFCompileUnit *dwarf_cu = llvm::dyn_cast_or_null<DWARFCompileUnit>(DebugInfo().GetUnitAtIndex(sc.comp_unit->GetID()));
 
       if (dwarf_cu == nullptr)
         return 0;
