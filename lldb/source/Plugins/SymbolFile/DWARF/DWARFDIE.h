@@ -105,7 +105,7 @@ public:
 
 protected:
   DWARFCompileUnit *
-  MainDWARFCompileUnitOrNull(DWARFCompileUnit *main_unit) const;
+  GetMainDWARFCompileUnitOrNull(DWARFCompileUnit *main_unit) const;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDIE_H
