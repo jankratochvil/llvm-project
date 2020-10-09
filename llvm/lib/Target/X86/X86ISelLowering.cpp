@@ -3754,7 +3754,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
       // same, so the size of funclets' (mostly empty) frames is dictated by
       // how far this slot is from the bottom (since they allocate just enough
       // space to accommodate holding this slot at the correct offset).
-      int PSPSymFI = MFI.CreateStackObject(8, Align(8), /*isSS=*/false);
+      int PSPSymFI = MFI.CreateStackObject(8, Align(8), /*isSpillSlot=*/false);
       EHInfo->PSPSymFrameIdx = PSPSymFI;
     }
   }
@@ -24315,7 +24315,8 @@ SDValue X86TargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
   SDVTList VTs = DAG.getVTList(getPointerTy(DAG.getDataLayout()), MVT::Other);
   SDValue VAARG = DAG.getMemIntrinsicNode(
       X86ISD::VAARG_64, dl, VTs, InstOps, MVT::i64, MachinePointerInfo(SV),
-      /*Align=*/None, MachineMemOperand::MOLoad | MachineMemOperand::MOStore);
+      /*Alignment=*/None,
+      MachineMemOperand::MOLoad | MachineMemOperand::MOStore);
   Chain = VAARG.getValue(1);
 
   // Load the next argument and return it
@@ -33764,7 +33765,6 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::LCMPXCHG16B_NO_RBX: {
     const X86RegisterInfo *TRI = Subtarget.getRegisterInfo();
     Register BasePtr = TRI->getBaseRegister();
-    X86AddressMode AM = getAddressFromInstr(&MI, 0);
     if (TRI->hasBasePointer(*MF) &&
         (BasePtr == X86::RBX || BasePtr == X86::EBX)) {
       if (!BB->isLiveIn(BasePtr))
@@ -33775,15 +33775,20 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
       BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), SaveRBX)
           .addReg(X86::RBX);
       Register Dst = MF->getRegInfo().createVirtualRegister(&X86::GR64RegClass);
-      addFullAddress(
-          BuildMI(*BB, MI, DL, TII->get(X86::LCMPXCHG16B_SAVE_RBX), Dst), AM)
-          .add(MI.getOperand(X86::AddrNumOperands))
-          .addReg(SaveRBX);
+      MachineInstrBuilder MIB =
+          BuildMI(*BB, MI, DL, TII->get(X86::LCMPXCHG16B_SAVE_RBX), Dst);
+      for (unsigned Idx = 0; Idx < X86::AddrNumOperands; ++Idx)
+        MIB.add(MI.getOperand(Idx));
+      MIB.add(MI.getOperand(X86::AddrNumOperands));
+      MIB.addReg(SaveRBX);
     } else {
       // Simple case, just copy the virtual register to RBX.
       BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), X86::RBX)
           .add(MI.getOperand(X86::AddrNumOperands));
-      addFullAddress(BuildMI(*BB, MI, DL, TII->get(X86::LCMPXCHG16B)), AM);
+      MachineInstrBuilder MIB =
+          BuildMI(*BB, MI, DL, TII->get(X86::LCMPXCHG16B));
+      for (unsigned Idx = 0; Idx < X86::AddrNumOperands; ++Idx)
+        MIB.add(MI.getOperand(Idx));
     }
     MI.eraseFromParent();
     return BB;
