@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/SymbolFile/DWARF/AppleDWARFIndex.h"
+#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
 #include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
