@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/SymbolFile/DWARF/DebugNamesDWARFIndex.h"
+#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDwo.h"
