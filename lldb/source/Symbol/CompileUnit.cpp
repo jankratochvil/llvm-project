@@ -374,5 +374,5 @@ MainDWARFCompileUnit *CompileUnit::GetMainDWARFCompileUnit() {
   SymbolFile *symfile = GetModule()->GetSymbolFile();
   if (!symfile)
     return nullptr;
-  return symfile->GetDWARFCompileUnit(this);
+  return symfile->GetMainDWARFCompileUnit(this);
 }
