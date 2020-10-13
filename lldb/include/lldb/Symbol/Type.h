@@ -58,6 +58,7 @@ public:
   Type *operator->() { return GetType(); }
 
   Type *GetType();
+  SymbolFile &GetSymbolFile() const { return m_symbol_file; }
 
 protected:
   SymbolFile &m_symbol_file;
