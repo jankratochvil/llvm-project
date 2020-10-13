@@ -19,9 +19,10 @@ func @main() {
   //      CHECK: Unranked Memref base@ = {{0x[-9a-f]*}}
   // CHECK-SAME: rank = 2 offset = 0 sizes = [2, 4] strides = [4, 1] data =
   // CHECK-NEXT: [1038,   1044,   1050,   1056]
-  // CHECK-NEXT: [1065,   1074,   1083,   1092]
+  // CHECK-NEXT: [1083,   1098,   1113,   1128]
 
   return
 }
 
 func @print_memref_f32(%ptr : tensor<*xf32>)
+
