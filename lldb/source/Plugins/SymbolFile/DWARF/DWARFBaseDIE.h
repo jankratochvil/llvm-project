@@ -17,10 +17,12 @@
 class DIERef;
 class DWARFASTParser;
 class DWARFAttributes;
+class DWARFCompileUnit;
 class DWARFUnit;
 class DWARFDebugInfoEntry;
 class DWARFDeclContext;
 class SymbolFileDWARF;
+class DWARFCompileUnit;
 
 class DWARFBaseDIE {
 public:
@@ -85,12 +87,6 @@ public:
   const char *GetTagAsCString() const;
 
   dw_offset_t GetOffset() const;
-
-  // Get the LLDB user ID for this DIE. This is often just the DIE offset,
-  // but it might have a SymbolFileDWARF::GetID() in the high 32 bits if
-  // we are doing Darwin DWARF in .o file, or DWARF stand alone debug
-  // info.
-  lldb::user_id_t GetID() const;
 
   const char *GetName() const;
 

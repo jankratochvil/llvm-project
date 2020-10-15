@@ -8,8 +8,10 @@
 
 #include "DWARFBaseDIE.h"
 
-#include "DWARFUnit.h"
+#include "DWARFCompileUnit.h"
 #include "DWARFDebugInfoEntry.h"
+#include "DWARFTypeUnit.h"
+#include "DWARFUnit.h"
 #include "SymbolFileDWARF.h"
 
 #include "lldb/Core/Module.h"
@@ -59,12 +61,6 @@ uint64_t DWARFBaseDIE::GetAttributeValueAsAddress(const dw_attr_t attr,
     return m_die->GetAttributeValueAsAddress(GetCU(), attr, fail_value);
   else
     return fail_value;
-}
-
-lldb::user_id_t DWARFBaseDIE::GetID() const {
-  if (IsValid())
-    return GetDWARF()->GetUID(*this);
-  return LLDB_INVALID_UID;
 }
 
 const char *DWARFBaseDIE::GetName() const {

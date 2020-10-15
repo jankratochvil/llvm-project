@@ -91,7 +91,7 @@ TEST_F(DWARFASTParserClangTests,
   TypeSystemClang ast_ctx("dummy ASTContext", HostInfoBase::GetTargetTriple());
   DWARFASTParserClangStub ast_parser(ast_ctx);
 
-  DWARFUnit *unit = t.GetDwarfUnit().get();
+  DWARFCompileUnit *unit = llvm::cast<DWARFCompileUnit>(t.GetDwarfUnit().get());
   const DWARFDebugInfoEntry *die_first = unit->DIE().GetDIE();
   const DWARFDebugInfoEntry *die_child0 = die_first->GetFirstChild();
   const DWARFDebugInfoEntry *die_child1 = die_child0->GetSibling();
@@ -104,7 +104,7 @@ TEST_F(DWARFASTParserClangTests,
       (clang::DeclContext *)1LL, (clang::DeclContext *)2LL,
       (clang::DeclContext *)2LL, (clang::DeclContext *)3LL};
   for (int i = 0; i < 4; ++i)
-    ast_parser.LinkDeclContextToDIE(decl_ctxs[i], dies[i]);
+    ast_parser.LinkDeclContextToDIE(decl_ctxs[i], unit, dies[i]);
   ast_parser.EnsureAllDIEsInDeclContextHaveBeenParsed(
       CompilerDeclContext(nullptr, decl_ctxs[1]));
 

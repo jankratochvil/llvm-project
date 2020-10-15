@@ -22,12 +22,12 @@ void NameToDIE::Finalize() {
   m_map.SizeToFit();
 }
 
-void NameToDIE::Insert(ConstString name, const DIERef &die_ref) {
-  m_map.Append(name, die_ref);
+void NameToDIE::Insert(ConstString name, user_id_t uid) {
+  m_map.Append(name, uid);
 }
 
 bool NameToDIE::Find(ConstString name,
-                     llvm::function_ref<bool(DIERef ref)> callback) const {
+                     llvm::function_ref<bool(user_id_t uid)> callback) const {
   for (const auto &entry : m_map.equal_range(name))
     if (!callback(entry.value))
       return false;
@@ -35,7 +35,7 @@ bool NameToDIE::Find(ConstString name,
 }
 
 bool NameToDIE::Find(const RegularExpression &regex,
-                     llvm::function_ref<bool(DIERef ref)> callback) const {
+                     llvm::function_ref<bool(user_id_t uid)> callback) const {
   for (const auto &entry : m_map)
     if (regex.Execute(entry.cstring.GetCString())) {
       if (!callback(entry.value))
@@ -46,31 +46,35 @@ bool NameToDIE::Find(const RegularExpression &regex,
 
 void NameToDIE::FindAllEntriesForUnit(
     const DWARFUnit &unit,
-    llvm::function_ref<bool(DIERef ref)> callback) const {
+    llvm::function_ref<bool(user_id_t uid)> callback) const {
   const uint32_t size = m_map.GetSize();
   for (uint32_t i = 0; i < size; ++i) {
-    const DIERef &die_ref = m_map.GetValueAtIndexUnchecked(i);
-    if (unit.GetSymbolFileDWARF().GetDwoNum() == die_ref.dwo_num() &&
-        unit.GetDebugSection() == die_ref.section() &&
-        unit.GetOffset() <= die_ref.die_offset() &&
-        die_ref.die_offset() < unit.GetNextUnitOffset()) {
-      if (!callback(die_ref))
+    user_id_t uid = m_map.GetValueAtIndexUnchecked(i);
+    if (unit.ContainsUID(uid)) {
+      if (!callback(uid))
         return;
     }
   }
 }
 
 void NameToDIE::Dump(Stream *s) {
+  llvm::raw_ostream &OS = s->AsRawOstream();
   const uint32_t size = m_map.GetSize();
   for (uint32_t i = 0; i < size; ++i) {
-    s->Format("{0} \"{1}\"\n", m_map.GetValueAtIndexUnchecked(i),
-              m_map.GetCStringAtIndexUnchecked(i));
+    user_id_t uid = m_map.GetValueAtIndexUnchecked(i);
+    uint32_t upper = (uid >> 32) & 0x1fffffff;
+    if (upper != 0x1fffffff)
+      OS << llvm::format_hex_no_prefix(upper, 8) << "/";
+    OS << (uid & (1ULL << 63) ? "TYPE" : "INFO");
+    // FIXME: DWZ
+    OS << "/" << llvm::format_hex_no_prefix(uid & 0xffffffff, 8) << " \""
+       << m_map.GetCStringAtIndexUnchecked(i).GetStringRef() << "\"\n";
   }
 }
 
 void NameToDIE::ForEach(
-    std::function<bool(ConstString name, const DIERef &die_ref)> const
-        &callback) const {
+    std::function<bool(ConstString name, user_id_t uid)> const &callback)
+    const {
   const uint32_t size = m_map.GetSize();
   for (uint32_t i = 0; i < size; ++i) {
     if (!callback(m_map.GetCStringAtIndexUnchecked(i),

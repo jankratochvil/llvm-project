@@ -99,3 +99,14 @@ void DWARFCompileUnit::BuildAddressRangeTable(
     }
   }
 }
+
+DWARFCompileUnit &DWARFCompileUnit::GetNonSkeletonUnit() {
+  return llvm::cast<DWARFCompileUnit>(DWARFUnit::GetNonSkeletonUnit());
+}
+
+DWARFCompileUnit *
+DWARFCompileUnit::GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) {
+  if (!main_unit)
+    main_unit = this;
+  return main_unit;
+}

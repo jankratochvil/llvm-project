@@ -8,6 +8,7 @@
 
 #include "Plugins/SymbolFile/DWARF/ManualDWARFIndex.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
+#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
@@ -122,24 +123,26 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
   }
 
   const LanguageType cu_language = SymbolFileDWARF::GetLanguage(unit);
+  DWARFCompileUnit *main_unit = llvm::dyn_cast<DWARFCompileUnit>(&unit);
 
-  IndexUnitImpl(unit, cu_language, set);
+  IndexUnitImpl(unit, main_unit, cu_language, set);
 
   if (SymbolFileDWARFDwo *dwo_symbol_file = unit.GetDwoSymbolFile()) {
     // Type units in a dwp file are indexed separately, so we just need to
     // process the split unit here. However, if the split unit is in a dwo file,
     // then we need to process type units here.
     if (dwo_symbol_file == dwp) {
-      IndexUnitImpl(unit.GetNonSkeletonUnit(), cu_language, set);
+      IndexUnitImpl(unit.GetNonSkeletonUnit(), main_unit, cu_language, set);
     } else {
       DWARFDebugInfo &dwo_info = dwo_symbol_file->DebugInfo();
       for (size_t i = 0; i < dwo_info.GetNumUnits(); ++i)
-        IndexUnitImpl(*dwo_info.GetUnitAtIndex(i), cu_language, set);
+        IndexUnitImpl(*dwo_info.GetUnitAtIndex(i), main_unit, cu_language, set);
     }
   }
 }
 
 void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
+                                     DWARFCompileUnit *main_unit,
                                      const LanguageType cu_language,
                                      IndexSet &set) {
   for (const DWARFDebugInfoEntry &die : unit.dies()) {
@@ -224,7 +227,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
       }
     }
 
-    DIERef ref = *DWARFDIE(&unit, &die).GetDIERef();
+    user_id_t uid = DWARFDIE(&unit, &die).GetID(main_unit);
     switch (tag) {
     case DW_TAG_inlined_subroutine:
     case DW_TAG_subprogram:
@@ -242,17 +245,17 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
               ConstString objc_fullname_no_category_name(
                   objc_method.GetFullNameWithoutCategory(true));
               ConstString class_name_no_category(objc_method.GetClassName());
-              set.function_fullnames.Insert(ConstString(name), ref);
+              set.function_fullnames.Insert(ConstString(name), uid);
               if (class_name_with_category)
-                set.objc_class_selectors.Insert(class_name_with_category, ref);
+                set.objc_class_selectors.Insert(class_name_with_category, uid);
               if (class_name_no_category &&
                   class_name_no_category != class_name_with_category)
-                set.objc_class_selectors.Insert(class_name_no_category, ref);
+                set.objc_class_selectors.Insert(class_name_no_category, uid);
               if (objc_selector_name)
-                set.function_selectors.Insert(objc_selector_name, ref);
+                set.function_selectors.Insert(objc_selector_name, uid);
               if (objc_fullname_no_category_name)
                 set.function_fullnames.Insert(objc_fullname_no_category_name,
-                                              ref);
+                                              uid);
             }
           }
           // If we have a mangled name, then the DW_AT_name attribute is
@@ -260,12 +263,12 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
           bool is_method = DWARFDIE(&unit, &die).IsMethod();
 
           if (is_method)
-            set.function_methods.Insert(ConstString(name), ref);
+            set.function_methods.Insert(ConstString(name), uid);
           else
-            set.function_basenames.Insert(ConstString(name), ref);
+            set.function_basenames.Insert(ConstString(name), uid);
 
           if (!is_method && !mangled_cstr && !is_objc_method)
-            set.function_fullnames.Insert(ConstString(name), ref);
+            set.function_fullnames.Insert(ConstString(name), uid);
         }
         if (mangled_cstr) {
           // Make sure our mangled name isn't the same string table entry as
@@ -275,7 +278,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
           if (name && name != mangled_cstr &&
               ((mangled_cstr[0] == '_') ||
                (::strcmp(name, mangled_cstr) != 0))) {
-            set.function_fullnames.Insert(ConstString(mangled_cstr), ref);
+            set.function_fullnames.Insert(ConstString(mangled_cstr), uid);
           }
         }
       }
@@ -293,19 +296,19 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
     case DW_TAG_union_type:
     case DW_TAG_unspecified_type:
       if (name && !is_declaration)
-        set.types.Insert(ConstString(name), ref);
+        set.types.Insert(ConstString(name), uid);
       if (mangled_cstr && !is_declaration)
-        set.types.Insert(ConstString(mangled_cstr), ref);
+        set.types.Insert(ConstString(mangled_cstr), uid);
       break;
 
     case DW_TAG_namespace:
       if (name)
-        set.namespaces.Insert(ConstString(name), ref);
+        set.namespaces.Insert(ConstString(name), uid);
       break;
 
     case DW_TAG_variable:
       if (name && has_location_or_const_value && is_global_or_static_variable) {
-        set.globals.Insert(ConstString(name), ref);
+        set.globals.Insert(ConstString(name), uid);
         // Be sure to include variables by their mangled and demangled names if
         // they have any since a variable can have a basename "i", a mangled
         // named "_ZN12_GLOBAL__N_11iE" and a demangled mangled name
@@ -317,7 +320,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
         // entries
         if (mangled_cstr && name != mangled_cstr &&
             ((mangled_cstr[0] == '_') || (::strcmp(name, mangled_cstr) != 0))) {
-          set.globals.Insert(ConstString(mangled_cstr), ref);
+          set.globals.Insert(ConstString(mangled_cstr), uid);
         }
       }
       break;
@@ -329,87 +332,101 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
 }
 
 void ManualDWARFIndex::GetGlobalVariables(
-    ConstString basename, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    ConstString basename,
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+        callback) {
   Index();
   m_set.globals.Find(basename,
-                     DIERefCallback(callback, basename.GetStringRef()));
+                     DIEUIDCallback(callback, basename.GetStringRef()));
 }
 
 void ManualDWARFIndex::GetGlobalVariables(
     const RegularExpression &regex,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+        callback) {
   Index();
-  m_set.globals.Find(regex, DIERefCallback(callback, regex.GetText()));
+  m_set.globals.Find(regex, DIEUIDCallback(callback, regex.GetText()));
 }
 
 void ManualDWARFIndex::GetGlobalVariables(
-    const DWARFUnit &unit, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    const DWARFCompileUnit &main_unit,
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+        callback) {
   Index();
-  m_set.globals.FindAllEntriesForUnit(unit, DIERefCallback(callback));
+  m_set.globals.FindAllEntriesForUnit(main_unit, DIEUIDCallback(callback));
 }
 
 void ManualDWARFIndex::GetObjCMethods(
-    ConstString class_name, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    ConstString class_name,
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+        callback) {
   Index();
   m_set.objc_class_selectors.Find(
-      class_name, DIERefCallback(callback, class_name.GetStringRef()));
+      class_name, DIEUIDCallback(callback, class_name.GetStringRef()));
 }
 
 void ManualDWARFIndex::GetCompleteObjCClass(
     ConstString class_name, bool must_be_implementation,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+        callback) {
   Index();
   m_set.types.Find(class_name,
-                   DIERefCallback(callback, class_name.GetStringRef()));
+                   DIEUIDCallback(callback, class_name.GetStringRef()));
 }
 
 void ManualDWARFIndex::GetTypes(
-    ConstString name, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    ConstString name,
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+        callback) {
   Index();
-  m_set.types.Find(name, DIERefCallback(callback, name.GetStringRef()));
+  m_set.types.Find(name, DIEUIDCallback(callback, name.GetStringRef()));
 }
 
 void ManualDWARFIndex::GetTypes(
     const DWARFDeclContext &context,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+        callback) {
   Index();
   auto name = context[0].name;
   m_set.types.Find(ConstString(name),
-                   DIERefCallback(callback, llvm::StringRef(name)));
+                   DIEUIDCallback(callback, llvm::StringRef(name)));
 }
 
 void ManualDWARFIndex::GetNamespaces(
-    ConstString name, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    ConstString name,
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+        callback) {
   Index();
-  m_set.namespaces.Find(name, DIERefCallback(callback, name.GetStringRef()));
+  m_set.namespaces.Find(name, DIEUIDCallback(callback, name.GetStringRef()));
 }
 
 void ManualDWARFIndex::GetFunctions(
     ConstString name, SymbolFileDWARF &dwarf,
     const CompilerDeclContext &parent_decl_ctx, uint32_t name_type_mask,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+        callback) {
   Index();
 
   if (name_type_mask & eFunctionNameTypeFull) {
     if (!m_set.function_fullnames.Find(
-            name, DIERefCallback(
-                      [&](DWARFDIE die) {
+            name, DIEUIDCallback(
+                      [&](DWARFCompileUnit *main_unit, DWARFDIE die) {
                         if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx,
-                                                               die))
+                                                               main_unit, die))
                           return true;
-                        return callback(die);
+                        return callback(main_unit, die);
                       },
                       name.GetStringRef())))
       return;
   }
   if (name_type_mask & eFunctionNameTypeBase) {
     if (!m_set.function_basenames.Find(
-            name, DIERefCallback(
-                      [&](DWARFDIE die) {
+            name, DIEUIDCallback(
+                      [&](DWARFCompileUnit *main_unit, DWARFDIE die) {
                         if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx,
-                                                               die))
+                                                               main_unit, die))
                           return true;
-                        return callback(die);
+                        return callback(main_unit, die);
                       },
                       name.GetStringRef())))
       return;
@@ -417,28 +434,29 @@ void ManualDWARFIndex::GetFunctions(
 
   if (name_type_mask & eFunctionNameTypeMethod && !parent_decl_ctx.IsValid()) {
     if (!m_set.function_methods.Find(
-            name, DIERefCallback(callback, name.GetStringRef())))
+            name, DIEUIDCallback(callback, name.GetStringRef())))
       return;
   }
 
   if (name_type_mask & eFunctionNameTypeSelector &&
       !parent_decl_ctx.IsValid()) {
     if (!m_set.function_selectors.Find(
-            name, DIERefCallback(callback, name.GetStringRef())))
+            name, DIEUIDCallback(callback, name.GetStringRef())))
       return;
   }
 }
 
 void ManualDWARFIndex::GetFunctions(
     const RegularExpression &regex,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+        callback) {
   Index();
 
   if (!m_set.function_basenames.Find(regex,
-                                     DIERefCallback(callback, regex.GetText())))
+                                     DIEUIDCallback(callback, regex.GetText())))
     return;
   if (!m_set.function_fullnames.Find(regex,
-                                     DIERefCallback(callback, regex.GetText())))
+                                     DIEUIDCallback(callback, regex.GetText())))
     return;
 }
 

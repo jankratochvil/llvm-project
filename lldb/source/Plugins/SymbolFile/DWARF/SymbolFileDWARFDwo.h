@@ -31,8 +31,10 @@ public:
 
   DWARFCompileUnit *GetDWOCompileUnitForHash(uint64_t hash);
 
-  void GetObjCMethods(lldb_private::ConstString class_name,
-                      llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void GetObjCMethods(
+      lldb_private::ConstString class_name,
+      llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+          callback) override;
 
   llvm::Expected<lldb_private::TypeSystem &>
   GetTypeSystemForLanguage(lldb::LanguageType language) override;
@@ -41,6 +43,8 @@ public:
   GetDIE(const DIERef &die_ref) override;
 
   llvm::Optional<uint32_t> GetDwoNum() override { return GetID() >> 32; }
+
+  SymbolFileDWARF &GetBaseSymbolFile() { return m_base_symbol_file; }
 
 protected:
   DIEToTypePtr &GetDIEToType() override;
@@ -59,8 +63,6 @@ protected:
   lldb::TypeSP FindCompleteObjCDefinitionTypeForDIE(
       const DWARFDIE &die, lldb_private::ConstString type_name,
       bool must_be_implementation) override;
-
-  SymbolFileDWARF &GetBaseSymbolFile() { return m_base_symbol_file; }
 
   /// If this file contains exactly one compile unit, this function will return
   /// it. Otherwise it returns nullptr.

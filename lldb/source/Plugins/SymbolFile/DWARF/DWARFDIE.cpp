@@ -9,10 +9,11 @@
 #include "DWARFDIE.h"
 
 #include "DWARFASTParser.h"
+#include "DWARFCompileUnit.h"
 #include "DWARFDebugInfo.h"
 #include "DWARFDebugInfoEntry.h"
 #include "DWARFDeclContext.h"
-#include "DWARFUnit.h"
+#include "SymbolFileDWARFDwo.h"
 
 using namespace lldb_private;
 
@@ -200,6 +201,12 @@ DWARFDIE::LookupDeepestBlock(lldb::addr_t address) const {
   return result;
 }
 
+lldb::user_id_t DWARFDIE::GetID(DWARFCompileUnit *main_unit) const {
+  if (IsValid())
+    return GetDWARF()->GetUID(main_unit, *this);
+  return LLDB_INVALID_UID;
+}
+
 const char *DWARFDIE::GetMangledName() const {
   if (IsValid())
     return m_die->GetMangledName(m_cu);
@@ -345,16 +352,18 @@ void DWARFDIE::AppendTypeName(Stream &s) const {
   }
 }
 
-lldb_private::Type *DWARFDIE::ResolveType() const {
+lldb_private::Type *DWARFDIE::ResolveType(DWARFCompileUnit *main_unit) const {
   if (IsValid())
-    return GetDWARF()->ResolveType(*this, true);
+    return GetMainDWARFUnit(main_unit)->GetSymbolFileDWARF().ResolveType(
+        main_unit, *this, true);
   else
     return nullptr;
 }
 
-lldb_private::Type *DWARFDIE::ResolveTypeUID(const DWARFDIE &die) const {
-  if (SymbolFileDWARF *dwarf = GetDWARF())
-    return dwarf->ResolveTypeUID(die, true);
+lldb_private::Type *DWARFDIE::ResolveTypeUID(DWARFCompileUnit *main_unit,
+                                             const DWARFDIE &die) const {
+  if (SymbolFileDWARF *dwarf = &GetMainDWARFUnit(main_unit)->GetSymbolFileDWARF())
+    return dwarf->ResolveTypeUID(main_unit, die, true);
   return nullptr;
 }
 
@@ -447,4 +456,40 @@ bool DWARFDIE::GetDIENamesAndRanges(
         call_file, call_line, call_column, frame_base);
   } else
     return false;
+}
+
+DWARFCompileUnit *
+DWARFDIE::GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) const {
+  if (!IsValid())
+    return nullptr;
+  return GetCU()->GetMainDWARFCompileUnit(main_unit);
+}
+
+DWARFUnit *DWARFDIE::GetMainDWARFUnit(DWARFCompileUnit *main_unit) const {
+  lldbassert(IsValid());
+  return GetCU()->GetMainDWARFUnit(main_unit);
+}
+
+DWARFCompileUnit *
+DWARFDIE::GetMainDWARFCompileUnitOrNull(DWARFCompileUnit *main_unit) const {
+  lldbassert(IsValid());
+  if (!MainUnitIsNeeded(main_unit))
+    return nullptr;
+  return GetMainDWARFCompileUnit(main_unit);
+}
+
+std::pair<DWARFCompileUnit *, DWARFDIE>
+DWARFDIE::MainCUtoDWARFDIEPair(DWARFCompileUnit *main_unit) const {
+  return std::make_pair(GetMainDWARFCompileUnitOrNull(main_unit), *this);
+}
+
+std::pair<DWARFCompileUnit *, DWARFDebugInfoEntry *>
+DWARFDIE::MainCUtoDIEPair(DWARFCompileUnit *main_unit) const {
+  return std::make_pair(GetMainDWARFCompileUnitOrNull(main_unit), GetDIE());
+}
+
+bool DWARFDIE::MainUnitIsNeeded(DWARFCompileUnit *main_unit) const {
+  if (!IsValid())
+    return false;
+  return GetCU()->MainUnitIsNeeded(main_unit);
 }

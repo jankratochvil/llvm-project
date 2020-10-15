@@ -11,7 +11,7 @@
 
 #include "clang/AST/CharUnits.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include "DWARFASTParser.h"
@@ -54,16 +54,19 @@ public:
                         lldb_private::CompilerType &compiler_type) override;
 
   lldb_private::CompilerDecl
-  GetDeclForUIDFromDWARF(const DWARFDIE &die) override;
+  GetDeclForUIDFromDWARF(DWARFCompileUnit *main_unit,
+                         const DWARFDIE &die) override;
 
   void EnsureAllDIEsInDeclContextHaveBeenParsed(
       lldb_private::CompilerDeclContext decl_context) override;
 
   lldb_private::CompilerDeclContext
-  GetDeclContextForUIDFromDWARF(const DWARFDIE &die) override;
+  GetDeclContextForUIDFromDWARF(DWARFCompileUnit *main_unit,
+                                const DWARFDIE &die) override;
 
   lldb_private::CompilerDeclContext
-  GetDeclContextContainingUIDFromDWARF(const DWARFDIE &die) override;
+  GetDeclContextContainingUIDFromDWARF(DWARFCompileUnit *main_unit,
+                                       const DWARFDIE &die) override;
 
   lldb_private::ClangASTImporter &GetClangASTImporter();
 
@@ -73,15 +76,22 @@ protected:
   class DelayedAddObjCClassProperty;
   typedef std::vector<DelayedAddObjCClassProperty> DelayedPropertyList;
 
-  typedef llvm::SmallPtrSet<const DWARFDebugInfoEntry *, 4> DIEPointerSet;
-  typedef llvm::DenseMap<const DWARFDebugInfoEntry *, clang::DeclContext *>
+  typedef llvm::SmallSet<
+      std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>, 4>
+      DIEPointerSet;
+  typedef llvm::DenseMap<
+      std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>,
+      clang::DeclContext *>
       DIEToDeclContextMap;
-  typedef std::multimap<const clang::DeclContext *, const DWARFDIE>
+  typedef std::multimap<const clang::DeclContext *,
+                        std::pair<DWARFCompileUnit *, const DWARFDIE>>
       DeclContextToDIEMap;
-  typedef llvm::DenseMap<const DWARFDebugInfoEntry *,
-                         lldb_private::OptionalClangModuleID>
+  typedef llvm::DenseMap<
+      std::pair<const DWARFCompileUnit *, const DWARFDebugInfoEntry *>,
+      lldb_private::OptionalClangModuleID>
       DIEToModuleMap;
-  typedef llvm::DenseMap<const DWARFDebugInfoEntry *, clang::Decl *>
+  typedef llvm::DenseMap<
+      std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>, clang::Decl *>
       DIEToDeclMap;
   typedef llvm::DenseMap<const clang::Decl *, DIEPointerSet> DeclToDIEMap;
 
@@ -94,21 +104,25 @@ protected:
   std::unique_ptr<lldb_private::ClangASTImporter> m_clang_ast_importer_up;
   /// @}
 
-  clang::DeclContext *GetDeclContextForBlock(const DWARFDIE &die);
+  clang::DeclContext *GetDeclContextForBlock(DWARFCompileUnit *main_unit,
+                                             const DWARFDIE &die);
 
-  clang::BlockDecl *ResolveBlockDIE(const DWARFDIE &die);
+  clang::BlockDecl *ResolveBlockDIE(DWARFCompileUnit *main_unit,
+                                    const DWARFDIE &die);
 
-  clang::NamespaceDecl *ResolveNamespaceDIE(const DWARFDIE &die);
+  clang::NamespaceDecl *ResolveNamespaceDIE(DWARFCompileUnit *main_unit,
+                                            const DWARFDIE &die);
 
-  bool ParseTemplateDIE(const DWARFDIE &die,
+  bool ParseTemplateDIE(DWARFCompileUnit *main_unit, const DWARFDIE &die,
                         lldb_private::TypeSystemClang::TemplateParameterInfos
                             &template_param_infos);
   bool ParseTemplateParameterInfos(
-      const DWARFDIE &parent_die,
+      DWARFCompileUnit *main_unit, const DWARFDIE &parent_die,
       lldb_private::TypeSystemClang::TemplateParameterInfos
           &template_param_infos);
 
   bool ParseChildMembers(
+      lldb_private::CompileUnit *comp_unit,
       const DWARFDIE &die, lldb_private::CompilerType &class_compiler_type,
       std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
       std::vector<int> &member_accessibilities,
@@ -118,7 +132,8 @@ protected:
       lldb_private::ClangASTImporter::LayoutInfo &layout_info);
 
   size_t
-  ParseChildParameters(clang::DeclContext *containing_decl_ctx,
+  ParseChildParameters(lldb_private::CompileUnit *comp_unit,
+                       clang::DeclContext *containing_decl_ctx,
                        const DWARFDIE &parent_die, bool skip_artificial,
                        bool &is_static, bool &is_variadic,
                        bool &has_template_params,
@@ -135,24 +150,33 @@ protected:
                                      const DWARFDIE &die,
                                      ParsedDWARFTypeAttributes &attrs);
 
-  lldb_private::Type *GetTypeForDIE(const DWARFDIE &die);
+  lldb_private::Type *GetTypeForDIE(DWARFCompileUnit *main_unit,
+                                    const DWARFDIE &die);
 
-  clang::Decl *GetClangDeclForDIE(const DWARFDIE &die);
+  clang::Decl *GetClangDeclForDIE(DWARFCompileUnit *main_unit,
+                                  const DWARFDIE &die);
 
-  clang::DeclContext *GetClangDeclContextForDIE(const DWARFDIE &die);
+  clang::DeclContext *GetClangDeclContextForDIE(DWARFCompileUnit *main_unit,
+                                                const DWARFDIE &die);
 
-  clang::DeclContext *GetClangDeclContextContainingDIE(const DWARFDIE &die,
-                                                       DWARFDIE *decl_ctx_die);
-  lldb_private::OptionalClangModuleID GetOwningClangModule(const DWARFDIE &die);
+  clang::DeclContext *
+  GetClangDeclContextContainingDIE(DWARFCompileUnit *main_unit,
+                                   const DWARFDIE &die, DWARFDIE *decl_ctx_die);
+  lldb_private::OptionalClangModuleID
+  GetOwningClangModule(DWARFCompileUnit *main_unit, const DWARFDIE &die);
 
-  bool CopyUniqueClassMethodTypes(const DWARFDIE &src_class_die,
+  bool CopyUniqueClassMethodTypes(DWARFCompileUnit *main_unit,
+                                  const DWARFDIE &src_class_die,
                                   const DWARFDIE &dst_class_die,
                                   lldb_private::Type *class_type,
                                   std::vector<DWARFDIE> &failures);
 
-  clang::DeclContext *GetCachedClangDeclContextForDIE(const DWARFDIE &die);
+  clang::DeclContext *
+  GetCachedClangDeclContextForDIE(DWARFCompileUnit *main_unit,
+                                  const DWARFDIE &die);
 
-  void LinkDeclContextToDIE(clang::DeclContext *decl_ctx, const DWARFDIE &die);
+  void LinkDeclContextToDIE(clang::DeclContext *decl_ctx,
+                            DWARFCompileUnit *main_unit, const DWARFDIE &die);
 
   void LinkDeclToDIE(clang::Decl *decl, const DWARFDIE &die);
 
@@ -192,7 +216,8 @@ private:
   };
 
   void
-  ParseSingleMember(const DWARFDIE &die, const DWARFDIE &parent_die,
+  ParseSingleMember(lldb_private::CompileUnit *comp_unit, const DWARFDIE &die,
+                    const DWARFDIE &parent_die,
                     const lldb_private::CompilerType &class_clang_type,
                     std::vector<int> &member_accessibilities,
                     lldb::AccessType default_accessibility,
@@ -210,12 +235,15 @@ private:
                                  ParsedDWARFTypeAttributes &attrs);
   lldb::TypeSP ParseEnum(const lldb_private::SymbolContext &sc,
                          const DWARFDIE &die, ParsedDWARFTypeAttributes &attrs);
-  lldb::TypeSP ParseSubroutine(const DWARFDIE &die,
+  lldb::TypeSP ParseSubroutine(const lldb_private::SymbolContext &sc,
+                               const DWARFDIE &die,
                                ParsedDWARFTypeAttributes &attrs);
   // FIXME: attrs should be passed as a const reference.
-  lldb::TypeSP ParseArrayType(const DWARFDIE &die,
+  lldb::TypeSP ParseArrayType(const lldb_private::SymbolContext &sc,
+                              const DWARFDIE &die,
                               ParsedDWARFTypeAttributes &attrs);
-  lldb::TypeSP ParsePointerToMemberType(const DWARFDIE &die,
+  lldb::TypeSP ParsePointerToMemberType(const lldb_private::SymbolContext &sc,
+                                        const DWARFDIE &die,
                                         const ParsedDWARFTypeAttributes &attrs);
 };
 

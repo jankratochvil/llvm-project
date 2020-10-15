@@ -138,6 +138,8 @@ public:
     return die_offset >= GetFirstDIEOffset() &&
            die_offset < GetNextUnitOffset();
   }
+  bool ContainsDIERef(DIERef die_ref) const;
+  bool ContainsUID(lldb::user_id_t uid) const;
   dw_offset_t GetFirstDIEOffset() const {
     return GetOffset() + GetHeaderByteSize();
   }
@@ -261,6 +263,11 @@ public:
   GetLocationTable(const lldb_private::DataExtractor &data) const;
 
   lldb_private::DWARFDataExtractor GetLocationData() const;
+
+  bool MainUnitIsNeeded(DWARFCompileUnit *main_unit);
+
+  virtual DWARFCompileUnit *GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) = 0;
+  DWARFUnit *GetMainDWARFUnit(DWARFCompileUnit *main_unit);
 
 protected:
   DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
