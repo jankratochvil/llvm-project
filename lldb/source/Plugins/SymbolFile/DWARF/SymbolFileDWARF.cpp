@@ -634,7 +634,8 @@ DWARFDebugInfo &SymbolFileDWARF::DebugInfo() {
   return *m_info;
 }
 
-DWARFCompileUnit *SymbolFileDWARF::GetMainDWARFCompileUnit(CompileUnit *comp_unit) {
+DWARFCompileUnit *
+SymbolFileDWARF::GetMainDWARFCompileUnit(CompileUnit *comp_unit) {
   if (!comp_unit)
     return nullptr;
 
