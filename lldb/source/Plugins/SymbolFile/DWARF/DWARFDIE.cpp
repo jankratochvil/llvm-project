@@ -466,7 +466,7 @@ DWARFDIE::MainDWARFCompileUnit(DWARFCompileUnit *main_unit) const {
 }
 
 DWARFUnit *DWARFDIE::GetMainDWARFUnit(DWARFCompileUnit *main_unit) const {
-  lldbassert(IsValid()) ;
+  lldbassert(IsValid());
   return GetCU()->GetMainDWARFUnit(main_unit);
 }
 
