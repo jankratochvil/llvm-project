@@ -266,7 +266,7 @@ public:
 
   bool MainUnitIsNeeded(DWARFCompileUnit *main_unit);
 
-  virtual DWARFCompileUnit *MainDWARFCompileUnit(DWARFCompileUnit *main_unit) = 0;
+  virtual DWARFCompileUnit *GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) = 0;
   DWARFUnit *GetMainDWARFUnit(DWARFCompileUnit *main_unit);
 
 protected:

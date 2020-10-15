@@ -105,7 +105,7 @@ DWARFCompileUnit &DWARFCompileUnit::GetNonSkeletonUnit() {
 }
 
 DWARFCompileUnit *
-DWARFCompileUnit::MainDWARFCompileUnit(DWARFCompileUnit *main_unit) {
+DWARFCompileUnit::GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) {
   if (!main_unit)
     main_unit = this;
   return main_unit;
