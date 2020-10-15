@@ -782,7 +782,7 @@ Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
   if (!die.IsValid())
     return nullptr;
 
-  DWARFCompileUnit *main_unit = GetDWARFCompileUnit(&comp_unit);
+  DWARFCompileUnit *main_unit = GetMainDWARFCompileUnit(&comp_unit);
 
   auto type_system_or_err = GetTypeSystemForLanguage(GetLanguage(*die.GetMainDWARFUnit(main_unit)));
   if (auto err = type_system_or_err.takeError()) {

@@ -154,7 +154,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
   if (sc.comp_unit) {
     SymbolFileDWARF *dwarf =
         llvm::cast<SymbolFileDWARF>(sc.comp_unit->GetModule()->GetSymbolFile());
-    main_unit = dwarf->GetDWARFCompileUnit(sc.comp_unit);
+    main_unit = dwarf->GetMainDWARFCompileUnit(sc.comp_unit);
   }
 
   // If this type comes from a Clang module, recursively look in the
