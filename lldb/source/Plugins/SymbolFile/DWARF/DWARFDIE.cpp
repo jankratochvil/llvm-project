@@ -459,14 +459,14 @@ bool DWARFDIE::GetDIENamesAndRanges(
 }
 
 DWARFCompileUnit *
-DWARFDIE::MainDWARFCompileUnit(DWARFCompileUnit *main_unit) const {
+DWARFDIE::GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) const {
   if (!IsValid())
     return nullptr;
-  return GetCU()->MainDWARFCompileUnit(main_unit);
+  return GetCU()->GetMainDWARFCompileUnit(main_unit);
 }
 
 DWARFUnit *DWARFDIE::GetMainDWARFUnit(DWARFCompileUnit *main_unit) const {
-  lldbassert(IsValid()) ;
+  lldbassert(IsValid());
   return GetCU()->GetMainDWARFUnit(main_unit);
 }
 
@@ -475,7 +475,7 @@ DWARFDIE::GetMainDWARFCompileUnitOrNull(DWARFCompileUnit *main_unit) const {
   lldbassert(IsValid());
   if (!MainUnitIsNeeded(main_unit))
     return nullptr;
-  return MainDWARFCompileUnit(main_unit);
+  return GetMainDWARFCompileUnit(main_unit);
 }
 
 std::pair<DWARFCompileUnit *, DWARFDIE>
