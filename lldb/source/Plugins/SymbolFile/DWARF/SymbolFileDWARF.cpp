@@ -1292,7 +1292,7 @@ user_id_t SymbolFileDWARF::GetUID(DWARFCompileUnit *main_unit,
                                   const DWARFDIE &die) {
   if (!die.MainUnitIsNeeded(main_unit))
     main_unit = nullptr;
-  return GetUID(die.MainDWARFCompileUnit(main_unit), die.GetDIERef(main_unit));
+  return GetUID(die.GetMainDWARFCompileUnit(main_unit), die.GetDIERef(main_unit));
 }
 
 user_id_t SymbolFileDWARF::GetUID(DWARFCompileUnit *main_unit, DIERef ref) {
@@ -1629,10 +1629,10 @@ bool SymbolFileDWARF::GetFunction(DWARFCompileUnit *main_unit,
                                   const DWARFDIE &die, SymbolContext &sc) {
   sc.Clear(false);
 
-  if (die && die.MainDWARFCompileUnit(main_unit)) {
+  if (die && die.GetMainDWARFCompileUnit(main_unit)) {
     // Check if the symbol vendor already knows about this compile unit?
     sc.comp_unit =
-        GetCompUnitForDWARFCompUnit(*die.MainDWARFCompileUnit(main_unit));
+        GetCompUnitForDWARFCompUnit(*die.GetMainDWARFCompileUnit(main_unit));
 
     sc.function = sc.comp_unit->FindFunctionByUID(die.GetID(main_unit)).get();
     if (sc.function == nullptr)
@@ -2225,7 +2225,7 @@ void SymbolFileDWARF::FindGlobalVariables(
         if (die.Tag() != DW_TAG_variable)
           return true;
 
-        DWARFCompileUnit *dwarf_cu = die.MainDWARFCompileUnit(main_unit);
+        DWARFCompileUnit *dwarf_cu = die.GetMainDWARFCompileUnit(main_unit);
         if (!dwarf_cu)
           return true;
         sc.comp_unit = GetCompUnitForDWARFCompUnit(*dwarf_cu);
@@ -2289,7 +2289,7 @@ void SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
           sc.module_sp = m_objfile_sp->GetModule();
         assert(sc.module_sp);
 
-        DWARFCompileUnit *dwarf_cu = die.MainDWARFCompileUnit(main_unit);
+        DWARFCompileUnit *dwarf_cu = die.GetMainDWARFCompileUnit(main_unit);
         if (!dwarf_cu)
           return true;
         sc.comp_unit = GetCompUnitForDWARFCompUnit(*dwarf_cu);
@@ -2657,7 +2657,7 @@ TypeSP SymbolFileDWARF::GetTypeForDIE(DWARFCompileUnit *main_unit,
     Type *type_ptr = GetDIEToType().lookup(die.MainCUtoDIEPair(main_unit));
     if (type_ptr == nullptr) {
       SymbolContextScope *scope;
-      if (auto *dwarf_cu = die.MainDWARFCompileUnit(main_unit))
+      if (auto *dwarf_cu = die.GetMainDWARFCompileUnit(main_unit))
         scope = GetCompUnitForDWARFCompUnit(*dwarf_cu);
       else
         scope = GetObjectFile()->GetModule().get();

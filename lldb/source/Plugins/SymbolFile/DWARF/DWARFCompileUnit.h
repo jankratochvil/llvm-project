@@ -22,7 +22,7 @@ public:
 
   DWARFCompileUnit &GetNonSkeletonUnit();
 
-  DWARFCompileUnit *MainDWARFCompileUnit(DWARFCompileUnit *main_unit) override;
+  DWARFCompileUnit *GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) override;
 
   DWARFBaseDIE GetUnitDWARFDIEOnly() { return {this, GetUnitDIEPtrOnly()}; }
 
