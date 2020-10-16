@@ -1289,22 +1289,30 @@ user_id_t SymbolFileDWARF::GetUID(DWARFCompileUnit *main_unit, DIERef ref) {
   if (GetDebugMapSymfile())
     return GetID() | ref.die_offset();
 
-  // WARNING: Use ref.dwo_num(), GetDwoNum() may not be valid in 'this'.
-  bool has_main_cu =
-      main_unit && (&main_unit->GetSymbolFileDWARF() != this ||
-                    !main_unit->ContainsDIEOffset(ref.die_offset()));
-  bool is_dwz = has_main_cu && !ref.dwo_num().hasValue();
-  bool is_dwz_common = is_dwz && &main_unit->GetSymbolFileDWARF() != this;
-  lldbassert(!ref.dwo_num().hasValue() || *ref.dwo_num() < 0x1fffffff);
-  static_assert(sizeof(ref.die_offset()) * 8 == 32, "");
+  if (main_unit)
+    main_unit = &main_unit->GetNonSkeletonUnit();
+  if (ref.dwo_num().hasValue())
+    lldbassert(main_unit == nullptr);
 
+#ifndef NDEBUG
+  DWARFDIE dwarfdie_check = GetDIE(ref);
+  lldbassert(dwarfdie_check.IsValid());
+  lldbassert(*dwarfdie_check.GetDIERef(main_unit) == ref);
+#endif
+
+  // WARNING: Use ref.dwo_num() as GetDwoNum() may not be valid in 'this'.
+  static_assert(sizeof(ref.die_offset()) * 8 == 32, "");
+  lldbassert(!ref.dwo_num().hasValue()||*ref.dwo_num()<=0x1fffffff);
   user_id_t retval =
-      user_id_t(is_dwz ? main_unit->GetID()
-                       : ref.dwo_num().getValueOr(0x1fffffff))
-          << 32 |
-      ref.die_offset() | user_id_t(is_dwz_common) << 61 |
-      user_id_t(is_dwz) << 62 |
-      (lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes) << 63);
+         user_id_t(ref.dwo_num() ? *ref.dwo_num() : 0) << 32 |
+         ref.die_offset() |
+         (lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes)) << 63;
+
+#ifndef NDEBUG
+  DWARFCompileUnit *main_unit_check;
+  DWARFDIE dwarfdie_check2 = GetDIEUnlocked(retval, &main_unit_check);
+  lldbassert(dwarfdie_check2 == dwarfdie_check);
+#endif
 
   return retval;
 }

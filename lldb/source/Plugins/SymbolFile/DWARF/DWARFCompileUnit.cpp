@@ -106,5 +106,7 @@ DWARFCompileUnit &DWARFCompileUnit::GetNonSkeletonUnit() {
 
 DWARFCompileUnit *
 DWARFCompileUnit::GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) {
+  // if (GetUnitDIEOnly().Tag() != DW_TAG_partial_unit)
+  main_unit = reinterpret_cast<DWARFCompileUnit *>(this);
   return DWARFUnit::GetMainDWARFCompileUnit(main_unit);
 }
