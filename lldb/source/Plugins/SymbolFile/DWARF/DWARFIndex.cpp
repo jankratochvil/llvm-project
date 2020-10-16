@@ -30,6 +30,7 @@ bool DWARFIndex::ProcessFunctionDIE(
     ReportInvalidDIERef(ref, name);
     return true;
   }
+  main_unit = die.GetMainDWARFCompileUnit(main_unit);
 
   // Exit early if we're searching exclusively for methods or selectors and
   // we have a context specified (no methods in namespaces).
@@ -77,8 +78,10 @@ DWARFIndex::DIECallbackImpl::DIECallbackImpl(
       m_callback(callback), m_name(name) {}
 
 bool DWARFIndex::DIERefCallbackImpl::operator()(DIERef ref) const {
-  if (DWARFDIE die = m_dwarf.GetDIE(ref))
-    return m_callback(nullptr /* main_unit */, die);
+  if (DWARFDIE die = m_dwarf.GetDIE(ref)) {
+    DWARFCompileUnit *main_unit = die.GetMainDWARFCompileUnit(nullptr);
+    return m_callback(main_unit, die);
+  }
   m_index.ReportInvalidDIERef(ref, m_name);
   return true;
 }

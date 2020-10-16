@@ -57,7 +57,7 @@ public:
 
   DWARFDebugInfoEntry *GetDIE() const { return m_die; }
 
-  llvm::Optional<DIERef> GetDIERef() const;
+  llvm::Optional<DIERef> GetDIERef(DWARFCompileUnit *main_unit) const;
 
   void Set(DWARFUnit *cu, DWARFDebugInfoEntry *die) {
     if (cu && die) {

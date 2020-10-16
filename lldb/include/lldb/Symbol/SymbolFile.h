@@ -298,6 +298,8 @@ public:
 
   virtual void Dump(Stream &s);
 
+  virtual DWARFCompileUnit *GetMainDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) { return nullptr; }
+
 protected:
   void AssertModuleLock();
   virtual uint32_t CalculateNumCompileUnits() = 0;

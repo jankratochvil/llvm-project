@@ -22,6 +22,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 
+class DWARFCompileUnit;
+
 namespace lldb_private {
 /// \class CompileUnit CompileUnit.h "lldb/Symbol/CompileUnit.h"
 /// A class that describes a compilation unit.
@@ -402,6 +404,8 @@ public:
 
   /// Returns the number of functions in this compile unit
   size_t GetNumFunctions() const { return m_functions_by_uid.size(); }
+
+  DWARFCompileUnit *GetMainDWARFCompileUnit();
 
 protected:
   /// User data for the SymbolFile parser to store information into.

@@ -999,17 +999,11 @@ bool DWARFUnit::ContainsUID(user_id_t uid) const {
   return ContainsDIERef(decoded->ref);
 }
 
-bool DWARFUnit::MainUnitIsNeeded(DWARFCompileUnit *main_unit) {
-  switch (GetUnitDIEOnly().Tag()) {
-  case DW_TAG_compile_unit:
-    return false;
-  case DW_TAG_partial_unit:
-    // FIXME: DWZ
-    lldbassert(0);
-    return true;
-  default:
-    return false;
-  }
+DWARFCompileUnit *
+DWARFUnit::GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) {
+  lldbassert(main_unit);
+  main_unit = &main_unit->GetNonSkeletonUnit();
+  return main_unit;
 }
 
 DWARFUnit *DWARFUnit::GetMainDWARFUnit(DWARFCompileUnit *main_unit) {

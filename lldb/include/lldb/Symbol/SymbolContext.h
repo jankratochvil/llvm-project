@@ -19,6 +19,9 @@
 #include "lldb/Utility/Iterable.h"
 #include "lldb/lldb-private.h"
 
+class DWARFCompileUnit;
+class SymbolFileDWARF;
+
 namespace lldb_private {
 
 class SymbolContextScope;
@@ -304,6 +307,8 @@ public:
   bool GetParentOfInlinedScope(const Address &curr_frame_pc,
                                SymbolContext &next_frame_sc,
                                Address &inlined_frame_addr) const;
+
+  DWARFCompileUnit *GetMainDWARFCompileUnit(SymbolFileDWARF **dwarf_return = nullptr) const;
 
   // Member variables
   lldb::TargetSP target_sp; ///< The Target for a given query

@@ -264,9 +264,7 @@ public:
 
   lldb_private::DWARFDataExtractor GetLocationData() const;
 
-  bool MainUnitIsNeeded(DWARFCompileUnit *main_unit);
-
-  virtual DWARFCompileUnit *GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) = 0;
+  virtual DWARFCompileUnit *GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit);
   DWARFUnit *GetMainDWARFUnit(DWARFCompileUnit *main_unit);
 
 protected:
