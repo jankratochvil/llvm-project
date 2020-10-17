@@ -1281,7 +1281,8 @@ user_id_t SymbolFileDWARF::GetUID(DWARFCompileUnit *main_unit,
                                   const DWARFDIE &die) {
   if (!die.IsValid())
     return LLDB_INVALID_UID;
-  main_unit = die.GetMainDWARFCompileUnit(main_unit);
+  // if (die.GetCU()->GetUnitDIEOnly().Tag() != DW_TAG_partial_unit)
+  main_unit = nullptr;
   return GetUID(main_unit, die.GetDIERef(main_unit));
 }
 
@@ -1304,7 +1305,7 @@ user_id_t SymbolFileDWARF::GetUID(DWARFCompileUnit *main_unit, DIERef ref) {
   static_assert(sizeof(ref.die_offset()) * 8 == 32, "");
   lldbassert(!ref.dwo_num().hasValue()||*ref.dwo_num()<=0x1fffffff);
   user_id_t retval =
-         user_id_t(ref.dwo_num() ? *ref.dwo_num() : 0) << 32 |
+         user_id_t(ref.dwo_num() ? *ref.dwo_num() : 0x1fffffff) << 32 |
          ref.die_offset() |
          (lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes)) << 63;
 
