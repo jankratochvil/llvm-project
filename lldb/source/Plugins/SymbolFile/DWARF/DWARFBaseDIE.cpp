@@ -23,8 +23,6 @@ using namespace lldb_private;
 llvm::Optional<DIERef> DWARFBaseDIE::GetDIERef(MainDWARFCompileUnit *main_unit) const {
   if (!IsValid())
     return llvm::None;
-  if (!MainUnitIsNeeded(main_unit))
-    main_unit = nullptr;
 
   return DIERef(m_cu->GetSymbolFileDWARF().GetDwoNum(), (!main_unit ? llvm::None : llvm::Optional<uint32_t>(main_unit->GetID())),
     GetCU()->GetSymbolFileDWARF().GetIsDwz() ? DIERef::CommonDwz : DIERef::MainDwz,
@@ -124,10 +122,4 @@ const DWARFDataExtractor &DWARFBaseDIE::GetData() const {
   // Clients must check if this DIE is valid before calling this function.
   assert(IsValid());
   return m_cu->GetData();
-}
-
-bool DWARFBaseDIE::MainUnitIsNeeded(MainDWARFCompileUnit *main_unit) const {
-  if (!IsValid())
-    return false;
-  return GetCU()->MainUnitIsNeeded(main_unit);
 }
