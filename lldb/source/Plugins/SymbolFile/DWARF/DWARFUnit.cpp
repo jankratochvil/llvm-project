@@ -994,17 +994,6 @@ bool DWARFUnit::ContainsDIERef(DIERef die_ref) const {
   return ContainsDIEOffset(die_ref.die_offset());
 }
 
-bool DWARFUnit::ContainsUID(user_id_t uid) const {
-  llvm::Optional<SymbolFileDWARF::DecodedUID> decoded =
-      m_dwarf.DecodeUIDUnlocked(uid);
-  if (!decoded)
-    return false;
-  if (&decoded->dwarf != &m_dwarf)
-    return false;
-  // FIXME: DWZ: main_cu
-  return ContainsDIERef(decoded->ref);
-}
-
 DWARFCompileUnit *
 DWARFUnit::GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) {
   lldbassert(main_unit);

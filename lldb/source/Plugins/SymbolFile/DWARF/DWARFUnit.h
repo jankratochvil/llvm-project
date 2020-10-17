@@ -150,6 +150,7 @@ public:
     return die_offset >= GetFirstDIEOffset() &&
            die_offset < GetNextUnitOffset();
   }
+  bool ContainsDIERef(DIERef die_ref) const;
   dw_offset_t GetFirstDIEOffset() const {
     return GetOffset() + GetHeaderByteSize();
   }
