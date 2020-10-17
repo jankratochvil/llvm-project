@@ -983,7 +983,6 @@ DWARFUnit::FindRnglistFromIndex(uint32_t index) {
                                  "missing or invalid range list table");
 }
 
-<<<<<<< HEAD
 bool DWARFUnit::ContainsDIERef(DIERef die_ref) const {
   if (m_dwarf.GetDwoNum() != die_ref.dwo_num())
     return false;
