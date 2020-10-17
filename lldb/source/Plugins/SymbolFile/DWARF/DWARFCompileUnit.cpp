@@ -151,13 +151,3 @@ bool MainDWARFCompileUnit::ContainsDIERef(DIERef die_ref) const {
               die_ref.die_offset() < GetNextUnitOffset()));
   return ContainsDIEOffset(die_ref.die_offset());
 }
-
-bool MainDWARFCompileUnit::ContainsUID(user_id_t uid) const {
-  llvm::Optional<SymbolFileDWARF::DecodedUID> decoded =
-      m_dwarf.DecodeUIDUnlocked(uid);
-  if (!decoded)
-    return false;
-  if (&decoded->dwarf != &m_dwarf)
-    return false;
-  return ContainsDIERef(decoded->ref);
-}
