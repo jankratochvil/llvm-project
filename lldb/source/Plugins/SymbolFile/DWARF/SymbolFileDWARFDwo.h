@@ -33,7 +33,7 @@ public:
 
   void GetObjCMethods(
       lldb_private::ConstString class_name,
-      llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+      llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
           callback) override;
 
   llvm::Expected<lldb_private::TypeSystem &>

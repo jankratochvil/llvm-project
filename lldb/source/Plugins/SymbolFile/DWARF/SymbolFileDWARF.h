@@ -51,6 +51,7 @@ class DWARFDebugRanges;
 class DWARFDeclContext;
 class DWARFFormValue;
 class DWARFTypeUnit;
+class MainDWARFUnit;
 class SymbolFileDWARFDebugMap;
 class SymbolFileDWARFDwo;
 class SymbolFileDWARFDwp;
@@ -146,7 +147,7 @@ public:
 
   bool CompleteType(lldb_private::CompilerType &compiler_type) override;
 
-  lldb_private::Type *ResolveType(DWARFCompileUnit *main_unit,
+  lldb_private::Type *ResolveType(MainDWARFCompileUnit *main_unit,
                                   const DWARFDIE &die,
                                   bool assert_not_being_parsed = true,
                                   bool resolve_function_context = false);
@@ -247,7 +248,7 @@ public:
 
   virtual void GetObjCMethods(
       lldb_private::ConstString class_name,
-      llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+      llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
           callback);
 
   bool Supports_DW_AT_APPLE_objc_complete_type(DWARFUnit *cu);
@@ -271,16 +272,16 @@ public:
   DWARFDIE GetDIE(lldb::user_id_t uid);
 
   DWARFDIE GetDIEUnlocked(lldb::user_id_t uid,
-                          DWARFCompileUnit **main_unit_return = nullptr);
+                          MainDWARFCompileUnit **main_unit_return = nullptr);
 
-  lldb::user_id_t GetUID(DWARFCompileUnit *main_unit, const DWARFDIE &die);
+  lldb::user_id_t GetUID(MainDWARFCompileUnit *main_unit, const DWARFDIE &die);
 
-  lldb::user_id_t GetUID(DWARFCompileUnit *main_unit,
+  lldb::user_id_t GetUID(MainDWARFCompileUnit *main_unit,
                          const llvm::Optional<DIERef> &ref) {
     return ref ? GetUID(main_unit, *ref) : LLDB_INVALID_UID;
   }
 
-  lldb::user_id_t GetUID(DWARFCompileUnit *main_unit, DIERef ref);
+  lldb::user_id_t GetUID(MainDWARFCompileUnit *main_unit, DIERef ref);
 
   std::shared_ptr<SymbolFileDWARFDwo>
   GetDwoSymbolFileForCompileUnit(DWARFUnit &dwarf_cu,
@@ -293,7 +294,7 @@ public:
 
   static bool
   DIEInDeclContext(const lldb_private::CompilerDeclContext &parent_decl_ctx,
-                   DWARFCompileUnit *main_unit, const DWARFDIE &die);
+                   MainDWARFCompileUnit *main_unit, const DWARFDIE &die);
 
   std::vector<std::unique_ptr<lldb_private::CallEdge>>
   ParseCallEdgesInFunction(UserID func_id) override;
@@ -309,26 +310,26 @@ public:
   lldb_private::FileSpec GetFile(DWARFUnit &unit, size_t file_idx);
 
   static llvm::Expected<lldb_private::TypeSystem &>
-  GetTypeSystem(DWARFUnit &unit);
+  GetTypeSystem(MainDWARFUnit &unit);
 
-  static DWARFASTParser *GetDWARFParser(DWARFUnit &unit);
+  static DWARFASTParser *GetDWARFParser(MainDWARFUnit &unit);
 
   // CompilerDecl related functions
 
-  static lldb_private::CompilerDecl GetDecl(DWARFCompileUnit *main_unit,
+  static lldb_private::CompilerDecl GetDecl(MainDWARFCompileUnit *main_unit,
                                             const DWARFDIE &die);
 
   static lldb_private::CompilerDeclContext
-  GetDeclContext(DWARFCompileUnit *main_unit, const DWARFDIE &die);
+  GetDeclContext(MainDWARFCompileUnit *main_unit, const DWARFDIE &die);
 
   static lldb_private::CompilerDeclContext
-  GetContainingDeclContext(DWARFCompileUnit *main_unit, const DWARFDIE &die);
+  GetContainingDeclContext(MainDWARFCompileUnit *main_unit, const DWARFDIE &die);
 
-  static DWARFDeclContext GetDWARFDeclContext(DWARFCompileUnit *main_unit, const DWARFDIE &die);
+  static DWARFDeclContext GetDWARFDeclContext(MainDWARFCompileUnit *main_unit, const DWARFDIE &die);
 
   static lldb::LanguageType LanguageTypeFromDWARF(uint64_t val);
 
-  static lldb::LanguageType GetLanguage(DWARFUnit &unit);
+  static lldb::LanguageType GetLanguage(MainDWARFUnit &unit);
 
   SymbolFileDWARFDwz *GetDwzSymbolFile() const {
     return m_dwz_symfile;
@@ -338,7 +339,6 @@ public:
   struct DecodedUID {
     SymbolFileDWARF &dwarf;
     DIERef ref;
-    // FIXME: DWZ: uint32_t main_cu = 0xffffffff
   };
   llvm::Optional<DecodedUID> DecodeUIDUnlocked(lldb::user_id_t uid);
 
@@ -346,15 +346,15 @@ public:
 
 protected:
   typedef llvm::DenseMap<
-      std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>,
+      std::pair<MainDWARFCompileUnit *, const DWARFDebugInfoEntry *>,
       lldb_private::Type *>
       DIEToTypePtr;
   typedef llvm::DenseMap<
-      std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>,
+      std::pair<MainDWARFCompileUnit *, const DWARFDebugInfoEntry *>,
       lldb::VariableSP>
       DIEToVariableSP;
   typedef llvm::DenseMap<
-      std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>,
+      std::pair<MainDWARFCompileUnit *, const DWARFDebugInfoEntry *>,
       lldb::opaque_compiler_type_t>
       DIEToClangType;
   typedef llvm::DenseMap<lldb::opaque_compiler_type_t, lldb::user_id_t>
@@ -377,11 +377,11 @@ protected:
 
   lldb::CompUnitSP ParseCompileUnit(DWARFCompileUnit &dwarf_cu);
 
-  DWARFCompileUnit *GetMainDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) override;
+  MainDWARFCompileUnit *GetMainDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) override;
 
   DWARFUnit *GetNextUnparsedDWARFCompileUnit(DWARFUnit *prev_cu);
 
-  bool GetFunction(DWARFCompileUnit *main_unit, const DWARFDIE &die,
+  bool GetFunction(MainDWARFCompileUnit *main_unit, const DWARFDIE &die,
                    lldb_private::SymbolContext &sc);
 
   lldb_private::Function *ParseFunction(lldb_private::CompileUnit &comp_unit,
@@ -398,11 +398,11 @@ protected:
   lldb::TypeSP ParseType(const lldb_private::SymbolContext &sc,
                          const DWARFDIE &die, bool *type_is_new);
 
-  lldb_private::Type *ResolveTypeUID(DWARFCompileUnit *main_unit,
+  lldb_private::Type *ResolveTypeUID(MainDWARFCompileUnit *main_unit,
                                      const DWARFDIE &die,
                                      bool assert_not_being_parsed);
 
-  lldb_private::Type *ResolveTypeUID(DWARFCompileUnit *main_unit,
+  lldb_private::Type *ResolveTypeUID(MainDWARFCompileUnit *main_unit,
                                      const DIERef &die_ref);
 
   lldb::VariableSP ParseVariableDIE(const lldb_private::SymbolContext &sc,
@@ -418,7 +418,7 @@ protected:
   bool ClassOrStructIsVirtual(const DWARFDIE &die);
 
   // Given a die_offset, figure out the symbol context representing that die.
-  bool ResolveFunction(DWARFCompileUnit *main_unit, const DWARFDIE &die,
+  bool ResolveFunction(MainDWARFCompileUnit *main_unit, const DWARFDIE &die,
                        bool include_inlines,
                        lldb_private::SymbolContextList &sc_list);
 
@@ -439,7 +439,7 @@ protected:
   lldb_private::Symbol *
   GetObjCClassSymbol(lldb_private::ConstString objc_class_name);
 
-  lldb::TypeSP GetTypeForDIE(DWARFCompileUnit *main_unit, const DWARFDIE &die,
+  lldb::TypeSP GetTypeForDIE(MainDWARFCompileUnit *main_unit, const DWARFDIE &die,
                              bool resolve_function_context = false);
 
   void SetDebugMapModule(const lldb::ModuleSP &module_sp) {
@@ -479,7 +479,7 @@ protected:
 
   typedef llvm::SetVector<lldb_private::Type *> TypeSet;
 
-  void GetTypes(DWARFCompileUnit *main_unit, const DWARFDIE &die,
+  void GetTypes(MainDWARFCompileUnit *main_unit, const DWARFDIE &die,
                 dw_offset_t min_die_offset, dw_offset_t max_die_offset,
                 uint32_t type_mask, TypeSet &type_set);
 

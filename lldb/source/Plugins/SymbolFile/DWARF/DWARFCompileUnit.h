@@ -22,7 +22,7 @@ public:
 
   DWARFCompileUnit &GetNonSkeletonUnit();
 
-  DWARFCompileUnit *GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) override;
+  MainDWARFCompileUnit *GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) override;
 
   DWARFBaseDIE GetUnitDWARFDIEOnly() { return {this, GetUnitDIEPtrOnly()}; }
 
@@ -42,5 +42,17 @@ private:
 
   friend class DWARFUnit;
 };
+
+class MainDWARFCompileUnit:public DWARFCompileUnit {
+private:
+  using DWARFCompileUnit::DWARFCompileUnit;
+public:
+  operator MainDWARFUnit *() { return reinterpret_cast<MainDWARFUnit *>(this); }
+  operator MainDWARFUnit &() { return reinterpret_cast<MainDWARFUnit &>(*this); }
+  MainDWARFCompileUnit &GetNonSkeletonUnit();
+  bool ContainsDIERef(DIERef die_ref) const;
+  bool ContainsUID(lldb::user_id_t uid) const;
+};
+static_assert(sizeof(MainDWARFCompileUnit)==sizeof(DWARFCompileUnit),"");
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFCOMPILEUNIT_H

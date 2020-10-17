@@ -21,6 +21,8 @@ class DWARFCompileUnit;
 class NameToDIE;
 class SymbolFileDWARF;
 class SymbolFileDWARFDwo;
+class MainDWARFUnit;
+class MainDWARFCompileUnit;
 
 typedef std::shared_ptr<DWARFUnit> DWARFUnitSP;
 
@@ -148,8 +150,6 @@ public:
     return die_offset >= GetFirstDIEOffset() &&
            die_offset < GetNextUnitOffset();
   }
-  bool ContainsDIERef(DIERef die_ref) const;
-  bool ContainsUID(lldb::user_id_t uid) const;
   dw_offset_t GetFirstDIEOffset() const {
     return GetOffset() + GetHeaderByteSize();
   }
@@ -270,8 +270,8 @@ public:
 
   lldb_private::DWARFDataExtractor GetLocationData() const;
 
-  virtual DWARFCompileUnit *GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit);
-  DWARFUnit *GetMainDWARFUnit(DWARFCompileUnit *main_unit);
+  virtual MainDWARFCompileUnit *GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit);
+  MainDWARFUnit *GetMainDWARFUnit(MainDWARFCompileUnit *main_unit);
 
   DWARFDebugInfoEntry GetUnitDIEOnly() {
     const DWARFDebugInfoEntry *dieptr = GetUnitDIEPtrOnly();
@@ -370,5 +370,8 @@ private:
   DWARFUnit(const DWARFUnit &) = delete;
   const DWARFUnit &operator=(const DWARFUnit &) = delete;
 };
+
+class MainDWARFUnit:public DWARFUnit {};
+static_assert(sizeof(MainDWARFUnit)==sizeof(DWARFUnit),"");
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFUNIT_H

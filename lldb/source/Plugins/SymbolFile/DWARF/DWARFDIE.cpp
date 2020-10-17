@@ -201,7 +201,7 @@ DWARFDIE::LookupDeepestBlock(lldb::addr_t address) const {
   return result;
 }
 
-lldb::user_id_t DWARFDIE::GetID(DWARFCompileUnit *main_unit) const {
+lldb::user_id_t DWARFDIE::GetID(MainDWARFCompileUnit *main_unit) const {
   if (IsValid())
     return GetDWARF()->GetUID(main_unit, *this);
   return LLDB_INVALID_UID;
@@ -352,7 +352,7 @@ void DWARFDIE::AppendTypeName(Stream &s) const {
   }
 }
 
-lldb_private::Type *DWARFDIE::ResolveType(DWARFCompileUnit *main_unit) const {
+lldb_private::Type *DWARFDIE::ResolveType(MainDWARFCompileUnit *main_unit) const {
   if (IsValid())
     return GetMainDWARFUnit(main_unit)->GetSymbolFileDWARF().ResolveType(
         main_unit, *this, true);
@@ -360,7 +360,7 @@ lldb_private::Type *DWARFDIE::ResolveType(DWARFCompileUnit *main_unit) const {
     return nullptr;
 }
 
-lldb_private::Type *DWARFDIE::ResolveTypeUID(DWARFCompileUnit *main_unit,
+lldb_private::Type *DWARFDIE::ResolveTypeUID(MainDWARFCompileUnit *main_unit,
                                              const DWARFDIE &die) const {
   if (SymbolFileDWARF *dwarf = &GetMainDWARFUnit(main_unit)->GetSymbolFileDWARF())
     return dwarf->ResolveTypeUID(main_unit, die, true);
@@ -458,30 +458,35 @@ bool DWARFDIE::GetDIENamesAndRanges(
     return false;
 }
 
-DWARFCompileUnit *
-DWARFDIE::GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) const {
+MainDWARFCompileUnit *
+DWARFDIE::GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) const {
   if (!IsValid())
     return nullptr;
   return GetCU()->GetMainDWARFCompileUnit(main_unit);
 }
 
-DWARFUnit *DWARFDIE::GetMainDWARFUnit(DWARFCompileUnit *main_unit) const {
+MainDWARFUnit *DWARFDIE::GetMainDWARFUnit(MainDWARFCompileUnit *main_unit) const {
   lldbassert(IsValid());
   return GetCU()->GetMainDWARFUnit(main_unit);
 }
 
-DWARFCompileUnit *
-DWARFDIE::GetMainDWARFCompileUnitOrNull(DWARFCompileUnit *main_unit) const {
+CompileUnit *DWARFDIE::GetMainCompUnit(MainDWARFCompileUnit *main_unit) const {
+  lldbassert(IsValid());
+  return GetCU()->GetMainCompUnit(main_unit);
+}
+
+MainDWARFCompileUnit *
+DWARFDIE::GetMainDWARFCompileUnitOrNull(MainDWARFCompileUnit *main_unit) const {
   lldbassert(IsValid());
   return GetMainDWARFCompileUnit(main_unit);
 }
 
-std::pair<DWARFCompileUnit *, DWARFDIE>
-DWARFDIE::MainCUtoDWARFDIEPair(DWARFCompileUnit *main_unit) const {
+std::pair<MainDWARFCompileUnit *, DWARFDIE>
+DWARFDIE::MainCUtoDWARFDIEPair(MainDWARFCompileUnit *main_unit) const {
   return std::make_pair(GetMainDWARFCompileUnitOrNull(main_unit), *this);
 }
 
-std::pair<DWARFCompileUnit *, DWARFDebugInfoEntry *>
-DWARFDIE::MainCUtoDIEPair(DWARFCompileUnit *main_unit) const {
+std::pair<MainDWARFCompileUnit *, DWARFDebugInfoEntry *>
+DWARFDIE::MainCUtoDIEPair(MainDWARFCompileUnit *main_unit) const {
   return std::make_pair(GetMainDWARFCompileUnitOrNull(main_unit), GetDIE());
 }

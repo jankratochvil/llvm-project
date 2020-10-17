@@ -12,6 +12,8 @@
 #include "DWARFBaseDIE.h"
 #include "llvm/ADT/SmallSet.h"
 
+class MainDWARFUnit;
+
 class DWARFDIE : public DWARFBaseDIE {
 public:
   using DWARFBaseDIE::DWARFBaseDIE;
@@ -27,7 +29,7 @@ public:
   // but it might have a SymbolFileDWARF::GetID() in the high 32 bits if
   // we are doing Darwin DWARF in .o file, or DWARF stand alone debug
   // info.
-  lldb::user_id_t GetID(DWARFCompileUnit *main_unit) const;
+  lldb::user_id_t GetID(MainDWARFCompileUnit *main_unit) const;
 
   // Accessing information about a DIE
   const char *GetMangledName() const;
@@ -41,10 +43,10 @@ public:
 
   void AppendTypeName(lldb_private::Stream &s) const;
 
-  lldb_private::Type *ResolveType(DWARFCompileUnit *main_unit) const;
+  lldb_private::Type *ResolveType(MainDWARFCompileUnit *main_unit) const;
 
   // Resolve a type by UID using this DIE's DWARF file
-  lldb_private::Type *ResolveTypeUID(DWARFCompileUnit *main_unit,
+  lldb_private::Type *ResolveTypeUID(MainDWARFCompileUnit *main_unit,
                                      const DWARFDIE &die) const;
 
   // Functions for obtaining DIE relations and references
@@ -96,16 +98,17 @@ public:
                             int &call_line, int &call_column,
                             lldb_private::DWARFExpression *frame_base) const;
 
-  DWARFCompileUnit *GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) const;
-  DWARFUnit *GetMainDWARFUnit(DWARFCompileUnit *main_unit) const;
-  std::pair<DWARFCompileUnit *, DWARFDIE>
-  MainCUtoDWARFDIEPair(DWARFCompileUnit *main_unit) const;
-  std::pair<DWARFCompileUnit *, DWARFDebugInfoEntry *>
-  MainCUtoDIEPair(DWARFCompileUnit *main_unit) const;
+  MainDWARFCompileUnit *GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) const;
+  MainDWARFUnit *GetMainDWARFUnit(MainDWARFCompileUnit *main_unit) const;
+  lldb_private::CompileUnit *GetMainCompUnit(MainDWARFCompileUnit *main_unit) const;
+  std::pair<MainDWARFCompileUnit *, DWARFDIE>
+  MainCUtoDWARFDIEPair(MainDWARFCompileUnit *main_unit) const;
+  std::pair<MainDWARFCompileUnit *, DWARFDebugInfoEntry *>
+  MainCUtoDIEPair(MainDWARFCompileUnit *main_unit) const;
 
 protected:
-  DWARFCompileUnit *
-  GetMainDWARFCompileUnitOrNull(DWARFCompileUnit *main_unit) const;
+  MainDWARFCompileUnit *
+  GetMainDWARFCompileUnitOrNull(MainDWARFCompileUnit *main_unit) const;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDIE_H

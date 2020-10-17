@@ -10,6 +10,7 @@
 #include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
+#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
 
 #include "lldb/Core/Module.h"
@@ -55,7 +56,7 @@ std::unique_ptr<AppleDWARFIndex> AppleDWARFIndex::Create(
 
 void AppleDWARFIndex::GetGlobalVariables(
     ConstString basename,
-    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+    llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
         callback) {
   if (!m_apple_names_up)
     return;
@@ -66,7 +67,7 @@ void AppleDWARFIndex::GetGlobalVariables(
 
 void AppleDWARFIndex::GetGlobalVariables(
     const RegularExpression &regex,
-    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+    llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
         callback) {
   if (!m_apple_names_up)
     return;
@@ -79,8 +80,8 @@ void AppleDWARFIndex::GetGlobalVariables(
 }
 
 void AppleDWARFIndex::GetGlobalVariables(
-    const DWARFCompileUnit &main_unit,
-    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+    const MainDWARFCompileUnit &main_unit,
+    llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
         callback) {
   if (!m_apple_names_up)
     return;
@@ -93,7 +94,7 @@ void AppleDWARFIndex::GetGlobalVariables(
 
 void AppleDWARFIndex::GetObjCMethods(
     ConstString class_name,
-    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+    llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
         callback) {
   if (!m_apple_objc_up)
     return;
@@ -104,7 +105,7 @@ void AppleDWARFIndex::GetObjCMethods(
 
 void AppleDWARFIndex::GetCompleteObjCClass(
     ConstString class_name, bool must_be_implementation,
-    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+    llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
         callback) {
   if (!m_apple_types_up)
     return;
@@ -116,7 +117,7 @@ void AppleDWARFIndex::GetCompleteObjCClass(
 
 void AppleDWARFIndex::GetTypes(
     ConstString name,
-    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+    llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
         callback) {
   if (!m_apple_types_up)
     return;
@@ -126,7 +127,7 @@ void AppleDWARFIndex::GetTypes(
 
 void AppleDWARFIndex::GetTypes(
     const DWARFDeclContext &context,
-    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+    llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
         callback) {
   if (!m_apple_types_up)
     return;
@@ -182,7 +183,7 @@ void AppleDWARFIndex::GetTypes(
 
 void AppleDWARFIndex::GetNamespaces(
     ConstString name,
-    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+    llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
         callback) {
   if (!m_apple_namespaces_up)
     return;
@@ -193,7 +194,7 @@ void AppleDWARFIndex::GetNamespaces(
 void AppleDWARFIndex::GetFunctions(
     ConstString name, SymbolFileDWARF &dwarf,
     const CompilerDeclContext &parent_decl_ctx, uint32_t name_type_mask,
-    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+    llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
         callback) {
   m_apple_names_up->FindByName(name.GetStringRef(), [&](DIERef die_ref) {
     return ProcessFunctionDIE(name.GetStringRef(), nullptr /* main_unit */,
@@ -204,7 +205,7 @@ void AppleDWARFIndex::GetFunctions(
 
 void AppleDWARFIndex::GetFunctions(
     const RegularExpression &regex,
-    llvm::function_ref<bool(DWARFCompileUnit *main_unit, DWARFDIE die)>
+    llvm::function_ref<bool(MainDWARFCompileUnit *main_unit, DWARFDIE die)>
         callback) {
   if (!m_apple_names_up)
     return;

@@ -23,6 +23,7 @@ class DWARFDebugInfoEntry;
 class DWARFDeclContext;
 class SymbolFileDWARF;
 class DWARFCompileUnit;
+class MainDWARFCompileUnit;
 
 class DWARFBaseDIE {
 public:
@@ -57,7 +58,7 @@ public:
 
   DWARFDebugInfoEntry *GetDIE() const { return m_die; }
 
-  llvm::Optional<DIERef> GetDIERef(DWARFCompileUnit *main_unit) const;
+  llvm::Optional<DIERef> GetDIERef(MainDWARFCompileUnit *main_unit) const;
 
   void Set(DWARFUnit *cu, DWARFDebugInfoEntry *die) {
     if (cu && die) {
@@ -110,7 +111,7 @@ public:
   size_t GetAttributes(DWARFAttributes &attributes,
                        Recurse recurse = Recurse::yes) const;
 
-  bool MainUnitIsNeeded(DWARFCompileUnit *main_unit) const;
+  bool MainUnitIsNeeded(MainDWARFCompileUnit *main_unit) const;
 
 protected:
   DWARFUnit *m_cu;

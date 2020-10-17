@@ -107,8 +107,8 @@ void DWARFCompileUnit::BuildAddressRangeTable(
   }
 }
 
-DWARFCompileUnit *
-DWARFCompileUnit::GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) {
+MainDWARFCompileUnit *
+DWARFCompileUnit::GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) {
   // if (GetUnitDIEOnly().Tag() != DW_TAG_partial_unit)
   main_unit = reinterpret_cast<DWARFCompileUnit *>(this);
   return DWARFUnit::GetMainDWARFCompileUnit(main_unit);
@@ -130,4 +130,34 @@ DWARFCompileUnit &DWARFCompileUnit::GetNonSkeletonUnit() {
   if (m_dwo)
     return *m_dwo;
   return *this;
+}
+
+MainDWARFCompileUnit &MainDWARFCompileUnit::GetNonSkeletonUnit() {
+  ExtractUnitDIEIfNeeded();
+  if (m_dwo)
+    return reinterpret_cast<MainDWARFCompileUnit &>(*m_dwo);
+  return *this;
+}
+
+bool MainDWARFCompileUnit::ContainsDIERef(DIERef die_ref) const {
+  if (die_ref.main_cu())
+    return GetID() == *die_ref.main_cu();
+  if (m_dwarf.GetDwoNum() != die_ref.dwo_num())
+    return false;
+  if (m_section != die_ref.section())
+    return false;
+  lldbassert(ContainsDIEOffset(die_ref.die_offset()) ==
+             (GetOffset() <= die_ref.die_offset() &&
+              die_ref.die_offset() < GetNextUnitOffset()));
+  return ContainsDIEOffset(die_ref.die_offset());
+}
+
+bool MainDWARFCompileUnit::ContainsUID(user_id_t uid) const {
+  llvm::Optional<SymbolFileDWARF::DecodedUID> decoded =
+      m_dwarf.DecodeUIDUnlocked(uid);
+  if (!decoded)
+    return false;
+  if (&decoded->dwarf != &m_dwarf)
+    return false;
+  return ContainsDIERef(decoded->ref);
 }
