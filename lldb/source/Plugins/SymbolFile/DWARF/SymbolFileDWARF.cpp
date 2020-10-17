@@ -658,15 +658,9 @@ SymbolFileDWARF::GetMainDWARFCompileUnit(CompileUnit *comp_unit) {
     return nullptr;
 
   if (dwarf_cu->GetUserData() == nullptr)
-{
     dwarf_cu->SetUserData(comp_unit);
-//printf("SymbolFileDWARF=%p dwarf_cu=%p comp_unit=%p comp_unit.ID=0x%lx\n",(void *)this,(void *)dwarf_cu,(void *)comp_unit,comp_unit->GetID());
-}
   else
-{
-//printf("SymbolFileDWARF=%p dwarf_cu=%p comp_unit=%p comp_unit.ID=0x%lx\n",(void *)this,(void *)dwarf_cu,(void *)comp_unit,comp_unit->GetID());
     lldbassert(dwarf_cu->GetUserData() == comp_unit);
-}
 
   // It must be DWARFCompileUnit when it created a CompileUnit.
   return llvm::cast<MainDWARFCompileUnit>(dwarf_cu);
