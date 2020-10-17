@@ -50,7 +50,7 @@ public:
                          const DWARFDIE &die) override;
 
   bool
-  CompleteTypeFromDWARF(DWARFCompileUnit *main_unit, const DWARFDIE &die, lldb_private::Type *type,
+  CompleteTypeFromDWARF(MainDWARFCompileUnit *main_unit, const DWARFDIE &die, lldb_private::Type *type,
                         lldb_private::CompilerType &compiler_type) override;
 
   lldb_private::CompilerDecl
@@ -225,7 +225,7 @@ private:
                     lldb_private::ClangASTImporter::LayoutInfo &layout_info,
                     FieldInfo &last_field_info);
 
-  bool CompleteRecordType(DWARFCompileUnit *main_unit, const DWARFDIE &die, lldb_private::Type *type,
+  bool CompleteRecordType(MainDWARFCompileUnit *main_unit, const DWARFDIE &die, lldb_private::Type *type,
                           lldb_private::CompilerType &clang_type);
   bool CompleteEnumType(const DWARFDIE &die, lldb_private::Type *type,
                         lldb_private::CompilerType &clang_type);

@@ -1403,7 +1403,7 @@ TypeSP DWARFASTParserClang::UpdateSymbolContextScopeForType(
     return type_sp;
 
   SymbolFileDWARF *dwarf;
-  DWARFCompileUnit *main_unit = sc.GetMainDWARFCompileUnit(&dwarf);
+  MainDWARFCompileUnit *main_unit = sc.GetMainDWARFCompileUnit(&dwarf);
   TypeList &type_list = dwarf->GetTypeList();
   DWARFDIE sc_parent_die = SymbolFileDWARF::GetParentSymbolContextDIE(die);
   dw_tag_t sc_parent_tag = sc_parent_die.Tag();
@@ -1986,7 +1986,7 @@ bool DWARFASTParserClang::ParseTemplateParameterInfos(
   return template_param_infos.args.size() == template_param_infos.names.size();
 }
 
-bool DWARFASTParserClang::CompleteRecordType(DWARFCompileUnit *main_unit, const DWARFDIE &die,
+bool DWARFASTParserClang::CompleteRecordType(MainDWARFCompileUnit *main_unit, const DWARFDIE &die,
                                              lldb_private::Type *type,
                                              CompilerType &clang_type) {
   const dw_tag_t tag = die.Tag();
@@ -1995,7 +1995,7 @@ bool DWARFASTParserClang::CompleteRecordType(DWARFCompileUnit *main_unit, const 
       type->GetSymbolContextScope()->CalculateSymbolContextCompileUnit();
   // comp_unit may be a CU with DIE being only declaration.
   // Then 'die' will be a definition in a different CU with different 'main_unit'.
-  //DWARFCompileUnit *main_unit_check = sc.GetMainDWARFCompileUnit(&dwarf);
+  //MainDWARFCompileUnit *main_unit_check = sc.GetMainDWARFCompileUnit(&dwarf);
   //lldbassert(main_unit_check && &main_unit_check->GetNonSkeletonUnit() == main_unit);
 
   ClangASTImporter::LayoutInfo layout_info;
@@ -2130,13 +2130,13 @@ bool DWARFASTParserClang::CompleteEnumType(const DWARFDIE &die,
   return (bool)clang_type;
 }
 
-bool DWARFASTParserClang::CompleteTypeFromDWARF(DWARFCompileUnit *main_unit, const DWARFDIE &die,
+bool DWARFASTParserClang::CompleteTypeFromDWARF(MainDWARFCompileUnit *main_unit, const DWARFDIE &die,
                                                 lldb_private::Type *type,
                                                 CompilerType &clang_type) {
   SymbolFileDWARF *dwarf = main_unit ? &main_unit->GetSymbolFileDWARF() : llvm::cast<SymbolFileDWARF>(type->GetSymbolContextScope()->CalculateSymbolContextModule()->GetSymbolFile());
   // sc.comp_unit may be a CU with DIE being only declaration.
   // Then 'die' will be a definition in a different CU with different 'main_unit'.
-  //DWARFCompileUnit *main_unit_check = sc.GetMainDWARFCompileUnit(&dwarf);
+  //MainDWARFCompileUnit *main_unit_check = sc.GetMainDWARFCompileUnit(&dwarf);
   //lldbassert(main_unit_check && &main_unit_check->GetNonSkeletonUnit() == main_unit);
 
   std::lock_guard<std::recursive_mutex> guard(
