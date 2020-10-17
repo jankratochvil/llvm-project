@@ -57,6 +57,10 @@ public:
     return m_data_kind == MainDwzKind ? MainDwz : CommonDwz;
   }
 
+  Kind kind_get() const {
+    return Kind(m_data_kind);
+  }
+
   Section section() const { return static_cast<Section>(m_section); }
 
   dw_offset_t die_offset() const { return m_die_offset; }
