@@ -994,8 +994,8 @@ bool DWARFUnit::ContainsDIERef(DIERef die_ref) const {
   return ContainsDIEOffset(die_ref.die_offset());
 }
 
-DWARFCompileUnit *
-DWARFUnit::GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) {
+MainDWARFCompileUnit *
+DWARFUnit::GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) {
   lldbassert(main_unit);
   main_unit = &main_unit->GetNonSkeletonUnit();
   return main_unit;
