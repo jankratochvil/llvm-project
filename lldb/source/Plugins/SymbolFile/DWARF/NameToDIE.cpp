@@ -58,6 +58,7 @@ void NameToDIE::FindAllEntriesForUnit(
 }
 
 void NameToDIE::Dump(Stream *s) {
+  llvm::raw_ostream &OS = s->AsRawOstream();
   const uint32_t size = m_map.GetSize();
   for (uint32_t i = 0; i < size; ++i) {
     DIERef ref = m_map.GetValueAtIndexUnchecked(i);
@@ -65,8 +66,8 @@ void NameToDIE::Dump(Stream *s) {
       OS << llvm::format_hex_no_prefix(*ref.dwo_num(), 8) << "/";
     if (ref.main_cu())
       OS << llvm::format_hex_no_prefix(*ref.main_cu(), 8) << "/";
-    OS << ref.section() == DIERef::Section::DebugTypes ? "TYPE" : "INFO");
-    switch (dref.kind_get()) {
+    OS << (ref.section() == DIERef::Section::DebugTypes ? "TYPE" : "INFO");
+    switch (ref.kind_get()) {
       case DIERef::Kind::NoneKind:
       case DIERef::Kind::DwoKind:
         break;

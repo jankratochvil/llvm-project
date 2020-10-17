@@ -992,46 +992,6 @@ bool DWARFUnit::ContainsDIERef(DIERef die_ref) const {
   return ContainsDIEOffset(die_ref.die_offset());
 }
 
-bool DWARFUnit::ContainsUID(user_id_t uid) const {
-  llvm::Optional<SymbolFileDWARF::DecodedUID> decoded =
-      m_dwarf.DecodeUIDUnlocked(uid);
-  if (!decoded)
-    return false;
-  if (&decoded->dwarf != &m_dwarf)
-    return false;
-  // FIXME: DWZ: main_cu
-  return ContainsDIERef(decoded->ref);
-}
-
-DWARFCompileUnit *
-DWARFUnit::GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) {
-  lldbassert(main_unit);
-  main_unit = &main_unit->GetNonSkeletonUnit();
-  return main_unit;
-}
-
-bool DWARFUnit::ContainsDIERef(DIERef die_ref) const {
-  if (m_dwarf.GetDwoNum() != die_ref.dwo_num())
-    return false;
-  if (m_section != die_ref.section())
-    return false;
-  lldbassert(ContainsDIEOffset(die_ref.die_offset()) ==
-             (GetOffset() <= die_ref.die_offset() &&
-              die_ref.die_offset() < GetNextUnitOffset()));
-  return ContainsDIEOffset(die_ref.die_offset());
-}
-
-bool DWARFUnit::ContainsUID(user_id_t uid) const {
-  llvm::Optional<SymbolFileDWARF::DecodedUID> decoded =
-      m_dwarf.DecodeUIDUnlocked(uid);
-  if (!decoded)
-    return false;
-  if (&decoded->dwarf != &m_dwarf)
-    return false;
-  // FIXME: DWZ: main_cu
-  return ContainsDIERef(decoded->ref);
-}
-
 MainDWARFCompileUnit *
 DWARFUnit::GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) {
   lldbassert(main_unit);
