@@ -11,11 +11,14 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Stream.h"
 
 #include "DWARFDebugInfo.h"
 #include "DWARFFormValue.h"
 #include "DWARFUnit.h"
+#include "DWARFCompileUnit.h"
+#include "SymbolFileDWARFDwz.h"
 
 class DWARFUnit;
 
@@ -76,6 +79,7 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
     case DW_FORM_strp:
     case DW_FORM_line_strp:
     case DW_FORM_sec_offset:
+    case DW_FORM_GNU_strp_alt:
       m_value.value.uval = data.GetMaxU64(offset_ptr, 4);
       break;
     case DW_FORM_addrx1:
@@ -122,6 +126,11 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
         ref_addr_size = m_unit->GetAddressByteSize();
       else
         ref_addr_size = 4;
+      m_value.value.uval = data.GetMaxU64(offset_ptr, ref_addr_size);
+      break;
+    case DW_FORM_GNU_ref_alt:
+      assert(m_unit);
+      ref_addr_size = 4;
       m_value.value.uval = data.GetMaxU64(offset_ptr, ref_addr_size);
       break;
     case DW_FORM_indirect:
@@ -255,6 +264,11 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
     *offset_ptr += ref_addr_size;
     return true;
 
+  case DW_FORM_GNU_ref_alt:
+    ref_addr_size = 4;
+    *offset_ptr += ref_addr_size;
+    return true;
+
   // 0 bytes values (implied from DW_FORM)
   case DW_FORM_flag_present:
   case DW_FORM_implicit_const:
@@ -286,6 +300,7 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
     // 32 bit for DWARF 32, 64 for DWARF 64
     case DW_FORM_sec_offset:
     case DW_FORM_strp:
+    case DW_FORM_GNU_strp_alt:
       *offset_ptr += 4;
       return true;
 
@@ -433,6 +448,9 @@ void DWARFFormValue::Dump(Stream &s) const {
   case DW_FORM_ref_udata:
     unit_relative_offset = true;
     break;
+  case DW_FORM_GNU_ref_alt:
+    DumpAddress(s.AsRawOstream(), uvalue, 4 * 2);
+    break;
 
   // All DW_FORM_indirect attributes should be resolved prior to calling this
   // function
@@ -475,6 +493,19 @@ const char *DWARFFormValue::AsCString() const {
   if (m_form == DW_FORM_line_strp)
     return context.getOrLoadLineStrData().PeekCStr(m_value.value.uval);
 
+  if (m_form == DW_FORM_GNU_strp_alt) {
+    SymbolFileDWARFDwz *dwz_symbol_file = m_unit->GetSymbolFileDWARF().GetDwzSymbolFile();
+    if (!dwz_symbol_file) {
+      m_unit->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
+          "String reference to DWZ offset 0x%8.8" PRIx64
+          " is in a file without associated DWZ common file",
+          m_value.value.uval);
+      return nullptr;
+    }
+    return dwz_symbol_file->GetDWARFContext().getOrLoadStrData().PeekCStr(
+        m_value.value.uval);
+  }
+
   return nullptr;
 }
 
@@ -503,9 +534,10 @@ DWARFDIE DWARFFormValue::Reference() const {
   case DW_FORM_ref2:
   case DW_FORM_ref4:
   case DW_FORM_ref8:
-  case DW_FORM_ref_udata:
+  case DW_FORM_ref_udata: {
     assert(m_unit); // Unit must be valid for DW_FORM_ref forms that are compile
                     // unit relative or we will get this wrong
+    // The offset adjustment is already appropriate inside this CU.
     value += m_unit->GetOffset();
     if (!m_unit->ContainsDIEOffset(value)) {
       m_unit->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
@@ -513,9 +545,52 @@ DWARFDIE DWARFFormValue::Reference() const {
           value);
       return {};
     }
-    return const_cast<DWARFUnit *>(m_unit)->GetDIE(value);
+    DWARFUnit *cu = const_cast<DWARFUnit *>(m_unit);
+    return {cu, cu->GetDIEPtr(value)};
+  }
+
+  case DW_FORM_GNU_ref_alt: {
+    assert(m_unit);
+    SymbolFileDWARF &symbol_file = m_unit->GetSymbolFileDWARF();
+    if (symbol_file.GetIsDwz())
+      symbol_file.GetObjectFile()->GetModule()->ReportError(
+          "DW_FORM_GNU_ref_alt to DWZ offset 0x%8.8" PRIx64
+          " is in a DWZ common file itself",
+          value);
+    else if (!symbol_file.GetDwzSymbolFile()) {
+      symbol_file.GetObjectFile()->GetModule()->ReportError(
+          "DW_FORM_GNU_ref_alt to DWZ offset 0x%8.8" PRIx64
+          " has no DWZ common file",
+          value);
+      return {};
+    }
+    SymbolFileDWARF *target_symbol_file = &symbol_file;
+    if (!target_symbol_file->GetIsDwz()) {
+      target_symbol_file = symbol_file.GetDwzSymbolFile();
+      if (!target_symbol_file) {
+        symbol_file.GetObjectFile()->GetModule()->ReportError(
+            "There is Reference to DWZ offset 0x%8.8" PRIx64
+            " but the DWZ common file is missing",
+            value);
+        return {};
+      }
+    }
+    lldbassert(target_symbol_file->GetIsDwz());
+    DWARFDebugInfo &target_debuginfo = target_symbol_file->DebugInfo();
+    DWARFUnit *target_cu = target_debuginfo.GetUnitContainingDIEOffset(
+        DIERef::Section::DebugInfo, value);
+    if (!target_cu) {
+      symbol_file.GetObjectFile()->GetModule()->ReportError(
+          "There is Reference to DWZ offset 0x%8.8" PRIx64
+          " but the DWZ common file does not contain a unit for that offset",
+          value);
+      return {};
+    }
+    return {target_cu, target_cu->GetDIEPtr(value)};
+  }
 
   case DW_FORM_ref_addr: {
+    assert(m_unit);
     DWARFUnit *ref_cu =
         m_unit->GetSymbolFileDWARF().DebugInfo().GetUnitContainingDIEOffset(
             DIERef::Section::DebugInfo, value);
@@ -525,7 +600,7 @@ DWARFDIE DWARFFormValue::Reference() const {
           value);
       return {};
     }
-    return ref_cu->GetDIE(value);
+    return {ref_cu, ref_cu->GetDIEPtr(value)};
   }
 
   case DW_FORM_ref_sig8: {
@@ -533,7 +608,7 @@ DWARFDIE DWARFFormValue::Reference() const {
         m_unit->GetSymbolFileDWARF().DebugInfo().GetTypeUnitForHash(value);
     if (!tu)
       return {};
-    return tu->GetDIE(tu->GetTypeOffset());
+    return {tu, tu->GetDIEPtr(tu->GetTypeOffset())};
   }
 
   default:
@@ -626,6 +701,8 @@ bool DWARFFormValue::FormIsSupported(dw_form_t form) {
     case DW_FORM_GNU_str_index:
     case DW_FORM_GNU_addr_index:
     case DW_FORM_implicit_const:
+    case DW_FORM_GNU_ref_alt:
+    case DW_FORM_GNU_strp_alt:
       return true;
     default:
       break;

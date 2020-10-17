@@ -110,6 +110,8 @@ public:
   size_t GetAttributes(DWARFAttributes &attributes,
                        Recurse recurse = Recurse::yes) const;
 
+  bool MainUnitIsNeeded(DWARFCompileUnit *main_unit) const;
+
 protected:
   DWARFUnit *m_cu;
   DWARFDebugInfoEntry *m_die;

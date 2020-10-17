@@ -44,6 +44,7 @@ private:
   SectionData m_data_debug_str_offsets;
   SectionData m_data_debug_tu_index;
   SectionData m_data_debug_types;
+  SectionData m_data_gnu_debug_alt_link;
 
   const DWARFDataExtractor &
   LoadOrGetSection(llvm::Optional<lldb::SectionType> main_section_type,
@@ -73,6 +74,7 @@ public:
   const DWARFDataExtractor &getOrLoadStrData();
   const DWARFDataExtractor &getOrLoadStrOffsetsData();
   const DWARFDataExtractor &getOrLoadDebugTypesData();
+  const DWARFDataExtractor &getOrLoadGNUDebugAltLink();
 
   bool isDwo() { return m_dwo_section_list != nullptr; }
 

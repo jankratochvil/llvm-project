@@ -24,6 +24,12 @@ public:
 
   DWARFCompileUnit *GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) override;
 
+  DWARFBaseDIE GetUnitDWARFDIEOnly() { return {this, GetUnitDIEPtrOnly()}; }
+
+  DWARFDIE DIE() { return {this, DIEPtr()}; }
+
+  DWARFDIE LookupAddress(const dw_addr_t address);
+
 private:
   DWARFCompileUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
                    const DWARFUnitHeader &header,

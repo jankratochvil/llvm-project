@@ -13,10 +13,12 @@
 #include <map>
 #include <mutex>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Support/RWMutex.h"
 #include "llvm/Support/Threading.h"
 
 #include "lldb/Core/UniqueCStringMap.h"
@@ -52,6 +54,7 @@ class DWARFTypeUnit;
 class SymbolFileDWARFDebugMap;
 class SymbolFileDWARFDwo;
 class SymbolFileDWARFDwp;
+class SymbolFileDWARFDwz;
 
 #define DIE_IS_BEING_PARSED ((lldb_private::Type *)1)
 
@@ -75,6 +78,7 @@ public:
   friend class DWARFCompileUnit;
   friend class DWARFDIE;
   friend class DWARFASTParserClang;
+  friend class SymbolFileDWARFDwz;
 
   // Static Functions
   static void Initialize();
@@ -320,11 +324,16 @@ public:
   static lldb_private::CompilerDeclContext
   GetContainingDeclContext(DWARFCompileUnit *main_unit, const DWARFDIE &die);
 
-  static DWARFDeclContext GetDWARFDeclContext(const DWARFDIE &die);
+  static DWARFDeclContext GetDWARFDeclContext(DWARFCompileUnit *main_unit, const DWARFDIE &die);
 
   static lldb::LanguageType LanguageTypeFromDWARF(uint64_t val);
 
   static lldb::LanguageType GetLanguage(DWARFUnit &unit);
+
+  SymbolFileDWARFDwz *GetDwzSymbolFile() const {
+    return m_dwz_symfile;
+  }
+  virtual bool GetIsDwz() const { return false; }
 
   struct DecodedUID {
     SymbolFileDWARF &dwarf;
@@ -500,7 +509,9 @@ protected:
 
   void FindDwpSymbolFile();
 
-  const lldb_private::FileSpecList &GetTypeUnitSupportFiles(DWARFTypeUnit &tu);
+  const lldb_private::FileSpecList &GetSharedUnitSupportFiles(DWARFUnit &tu);
+
+  SymbolFileDWARFDwz *m_dwz_symfile = nullptr;
 
   lldb::ModuleWP m_debug_map_module_wp;
   SymbolFileDWARFDebugMap *m_debug_map_symfile;
@@ -535,7 +546,7 @@ protected:
   DIEToClangType m_forward_decl_die_to_clang_type;
   ClangTypeToDIE m_forward_decl_clang_type_to_die;
   llvm::DenseMap<dw_offset_t, lldb_private::FileSpecList>
-      m_type_unit_support_files;
+      m_shared_unit_support_files;
   std::vector<uint32_t> m_lldb_cu_to_dwarf_unit;
 };
 

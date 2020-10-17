@@ -54,6 +54,9 @@ public:
 
   void Append(DWARFUnit *cu, dw_offset_t attr_die_offset,
               dw_attr_t attr, dw_form_t form);
+
+public:
+
   DWARFUnit *CompileUnitAtIndex(uint32_t i) const {
     return m_infos[i].cu;
   }

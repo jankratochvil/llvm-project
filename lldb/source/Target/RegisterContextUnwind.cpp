@@ -1518,7 +1518,7 @@ RegisterContextUnwind::SavedLocationForRegister(
                             process->GetByteOrder(),
                             process->GetAddressByteSize());
     ModuleSP opcode_ctx;
-    DWARFExpression dwarfexpr(opcode_ctx, dwarfdata, nullptr);
+    DWARFExpression dwarfexpr(opcode_ctx, dwarfdata, {});
     dwarfexpr.SetRegisterKind(unwindplan_registerkind);
     Value cfa_val = Scalar(m_cfa);
     cfa_val.SetValueType(Value::eValueTypeLoadAddress);
@@ -1871,7 +1871,7 @@ bool RegisterContextUnwind::ReadFrameAddress(
                             process->GetByteOrder(),
                             process->GetAddressByteSize());
     ModuleSP opcode_ctx;
-    DWARFExpression dwarfexpr(opcode_ctx, dwarfdata, nullptr);
+    DWARFExpression dwarfexpr(opcode_ctx, dwarfdata, {});
     dwarfexpr.SetRegisterKind(row_register_kind);
     Value result;
     Status error;
