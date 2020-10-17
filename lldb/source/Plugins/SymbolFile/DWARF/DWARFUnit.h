@@ -149,7 +149,6 @@ public:
            die_offset < GetNextUnitOffset();
   }
   bool ContainsDIERef(DIERef die_ref) const;
-  bool ContainsUID(lldb::user_id_t uid) const;
   dw_offset_t GetFirstDIEOffset() const {
     return GetOffset() + GetHeaderByteSize();
   }
