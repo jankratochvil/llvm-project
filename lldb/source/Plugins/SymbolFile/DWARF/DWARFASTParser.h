@@ -36,7 +36,7 @@ public:
                          const DWARFDIE &die) = 0;
 
   virtual bool
-  CompleteTypeFromDWARF(DWARFCompileUnit *main_unit, const DWARFDIE &die, lldb_private::Type *type,
+  CompleteTypeFromDWARF(MainDWARFCompileUnit *main_unit, const DWARFDIE &die, lldb_private::Type *type,
                         lldb_private::CompilerType &compiler_type) = 0;
 
   virtual lldb_private::CompilerDecl

@@ -76,7 +76,7 @@ bool DebugNamesDWARFIndex::ProcessEntry(
   if (!die)
     return true;
   // FIXME: DWZ
-  DWARFCompileUnit *main_unit = die.GetMainDWARFCompileUnit(nullptr);
+  MainDWARFCompileUnit *main_unit = die.GetMainDWARFCompileUnit(nullptr);
   return callback(main_unit, die);
 }
 
@@ -274,7 +274,7 @@ void DebugNamesDWARFIndex::GetFunctions(
       if (!ProcessFunctionDIE(
               name.GetStringRef(), main_unit, *ref, dwarf, parent_decl_ctx,
               name_type_mask,
-              [&](DWARFCompileUnit *main_unit_check, DWARFDIE die) {
+              [&](MainDWARFCompileUnit *main_unit_check, DWARFDIE die) {
                 // FIXME: DWZ
                 //lldbassert(main_unit_check == main_unit);
                 if (!seen.insert(die.GetDIE()).second)

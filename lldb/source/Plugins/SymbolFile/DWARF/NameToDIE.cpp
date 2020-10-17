@@ -60,8 +60,25 @@ void NameToDIE::FindAllEntriesForUnit(
 void NameToDIE::Dump(Stream *s) {
   const uint32_t size = m_map.GetSize();
   for (uint32_t i = 0; i < size; ++i) {
-    s->Format("{0} \"{1}\"\n", m_map.GetValueAtIndexUnchecked(i),
-              m_map.GetCStringAtIndexUnchecked(i));
+    DIERef ref = m_map.GetValueAtIndexUnchecked(i);
+    if (ref.dwo_num())
+      OS << llvm::format_hex_no_prefix(*ref.dwo_num(), 8) << "/";
+    if (ref.main_cu())
+      OS << llvm::format_hex_no_prefix(*ref.main_cu(), 8) << "/";
+    OS << ref.section() == DIERef::Section::DebugTypes ? "TYPE" : "INFO");
+    switch (dref.kind_get()) {
+      case DIERef::Kind::NoneKind:
+      case DIERef::Kind::DwoKind:
+        break;
+      case DIERef::Kind::MainDwzKind:
+        OS << "/DWZ";
+        break;
+      case DIERef::Kind::DwzCommonKind:
+        OS << "/DWZCOMMON";
+        break;
+    }
+    OS << "/" << llvm::format_hex_no_prefix(ref.die_offset(), 8) << " \""
+       << m_map.GetCStringAtIndexUnchecked(i).GetStringRef() << "\"\n";
   }
 }
 

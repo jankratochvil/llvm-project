@@ -78,7 +78,7 @@ DWARFIndex::DIECallbackImpl::DIECallbackImpl(
       m_callback(callback), m_name(name) {}
 
 bool DWARFIndex::DIERefCallbackImpl::operator()(DIERef ref) const {
-  DWARFCompileUnit *main_unit;
+  MainDWARFCompileUnit *main_unit;
   if (DWARFDIE die = m_dwarf.GetDIE(ref, &main_unit))
     return m_callback(main_unit, die);
   m_index.ReportInvalidDIERef(ref, m_name);

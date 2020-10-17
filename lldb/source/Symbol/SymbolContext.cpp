@@ -1317,11 +1317,11 @@ bool lldb_private::operator!=(const SymbolContextList &lhs,
   return !(lhs == rhs);
 }
 
-DWARFCompileUnit *SymbolContext::GetMainDWARFCompileUnit(SymbolFileDWARF **dwarf_return) const {
+MainDWARFCompileUnit *SymbolContext::GetMainDWARFCompileUnit(SymbolFileDWARF **dwarf_return) const {
   SymbolFileDWARF *dwarf = nullptr;
   if (module_sp)
     dwarf = llvm::dyn_cast<SymbolFileDWARF>(module_sp->GetSymbolFile());
-  DWARFCompileUnit *retval = nullptr;
+  MainDWARFCompileUnit *retval = nullptr;
   if (comp_unit == nullptr)
     lldbassert(dwarf);
   else {

@@ -22,6 +22,18 @@ void DWARFTypeUnit::Dump(Stream *s) const {
             GetAddressByteSize(), GetNextUnitOffset());
 }
 
-DWARFCompileUnit *DWARFTypeUnit::GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) {
+MainDWARFCompileUnit *DWARFTypeUnit::GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) {
   return nullptr;
+#if 0
+  if (llvm::isa<SymbolFileDWARFDwo>(m_dwarf)) {
+//    lldbassert(main_unit == nullptr);
+    return nullptr;
+  }
+  lldbassert(main_unit || GetUnitDIEOnly().Tag() != DW_TAG_partial_unit);
+#if 0
+  if (GetUnitDIEOnly().Tag() != DW_TAG_partial_unit)
+    return nullptr;
+#endif
+  return DWARFUnit::GetMainDWARFCompileUnit(main_unit);
+#endif
 }

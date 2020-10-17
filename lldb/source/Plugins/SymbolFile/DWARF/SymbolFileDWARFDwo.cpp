@@ -50,7 +50,7 @@ DWARFCompileUnit *SymbolFileDWARFDwo::GetDWOCompileUnitForHash(uint64_t hash) {
   if (!cu)
     return nullptr;
   if (hash !=
-      cu->GetUnitDIEOnly().GetAttributeValueAsUnsigned(cu, DW_AT_GNU_dwo_id, 0))
+      cu->GetUnitDIEOnly().GetAttributeValueAsUnsigned(DW_AT_GNU_dwo_id, 0))
     return nullptr;
   return cu;
 }
@@ -125,7 +125,7 @@ SymbolFileDWARFDwo::GetTypeSystemForLanguage(LanguageType language) {
 }
 
 DWARFDIE
-SymbolFileDWARFDwo::GetDIE(const DIERef &die_ref, DWARFCompileUnit **main_unit_return) {
+SymbolFileDWARFDwo::GetDIE(const DIERef &die_ref, MainDWARFCompileUnit **main_unit_return) {
   if (die_ref.dwo_num() == GetDwoNum())
     return DebugInfo().GetDIE(die_ref, main_unit_return);
   return GetBaseSymbolFile().GetDIE(die_ref, main_unit_return);
