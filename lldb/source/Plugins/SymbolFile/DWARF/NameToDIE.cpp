@@ -22,12 +22,12 @@ void NameToDIE::Finalize() {
   m_map.SizeToFit();
 }
 
-void NameToDIE::Insert(ConstString name, user_id_t uid) {
-  m_map.Append(name, uid);
+void NameToDIE::Insert(ConstString name, const DIERef &die_ref) {
+  m_map.Append(name, die_ref);
 }
 
 bool NameToDIE::Find(ConstString name,
-                     llvm::function_ref<bool(user_id_t uid)> callback) const {
+                     llvm::function_ref<bool(DIERef ref)> callback) const {
   for (const auto &entry : m_map.equal_range(name))
     if (!callback(entry.value))
       return false;
@@ -35,7 +35,7 @@ bool NameToDIE::Find(ConstString name,
 }
 
 bool NameToDIE::Find(const RegularExpression &regex,
-                     llvm::function_ref<bool(user_id_t uid)> callback) const {
+                     llvm::function_ref<bool(DIERef ref)> callback) const {
   for (const auto &entry : m_map)
     if (regex.Execute(entry.cstring.GetCString())) {
       if (!callback(entry.value))
@@ -46,12 +46,12 @@ bool NameToDIE::Find(const RegularExpression &regex,
 
 void NameToDIE::FindAllEntriesForUnit(
     const DWARFUnit &unit,
-    llvm::function_ref<bool(user_id_t uid)> callback) const {
+    llvm::function_ref<bool(DIERef ref)> callback) const {
   const uint32_t size = m_map.GetSize();
   for (uint32_t i = 0; i < size; ++i) {
-    user_id_t uid = m_map.GetValueAtIndexUnchecked(i);
-    if (unit.ContainsUID(uid)) {
-      if (!callback(uid))
+    const DIERef &die_ref = m_map.GetValueAtIndexUnchecked(i);
+    if (unit.ContainsDIERef(die_ref)) {
+      if (!callback(die_ref))
         return;
     }
   }
@@ -66,8 +66,8 @@ void NameToDIE::Dump(Stream *s) {
 }
 
 void NameToDIE::ForEach(
-    std::function<bool(ConstString name, user_id_t uid)> const &callback)
-    const {
+    std::function<bool(ConstString name, const DIERef &die_ref)> const
+        &callback) const {
   const uint32_t size = m_map.GetSize();
   for (uint32_t i = 0; i < size; ++i) {
     if (!callback(m_map.GetCStringAtIndexUnchecked(i),
