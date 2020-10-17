@@ -1290,8 +1290,6 @@ user_id_t SymbolFileDWARF::GetUID(DWARFCompileUnit *main_unit, DIERef ref) {
   if (GetDebugMapSymfile())
     return GetID() | ref.die_offset();
 
-  if (main_unit)
-    main_unit = &main_unit->GetNonSkeletonUnit();
   if (ref.dwo_num().hasValue())
     lldbassert(main_unit == nullptr);
 
@@ -1304,10 +1302,9 @@ user_id_t SymbolFileDWARF::GetUID(DWARFCompileUnit *main_unit, DIERef ref) {
   // WARNING: Use ref.dwo_num() as GetDwoNum() may not be valid in 'this'.
   static_assert(sizeof(ref.die_offset()) * 8 == 32, "");
   lldbassert(!ref.dwo_num().hasValue()||*ref.dwo_num()<=0x1fffffff);
-  user_id_t retval =
-         user_id_t(ref.dwo_num() ? *ref.dwo_num() : 0x1fffffff) << 32 |
+  user_id_t retval = user_id_t(GetDwoNum().getValueOr(0x7fffffff)) << 32 |
          ref.die_offset() |
-         (lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes)) << 63;
+         (lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes) << 63);
 
 #ifndef NDEBUG
   DWARFCompileUnit *main_unit_check;
@@ -1340,14 +1337,11 @@ SymbolFileDWARF::DecodeUIDUnlocked(lldb::user_id_t uid) {
   DIERef::Section section =
       uid >> 63 ? DIERef::Section::DebugTypes : DIERef::Section::DebugInfo;
 
-  // FIXME: DWZ
-
-  llvm::Optional<uint32_t> dwo_num = uid >> 32 & 0x1fffffff;
-  if (*dwo_num == 0x1fffffff)
+  llvm::Optional<uint32_t> dwo_num = uid >> 32 & 0x7fffffff;
+  if (*dwo_num == 0x7fffffff)
     dwo_num = llvm::None;
 
   return DecodedUID{*this, {dwo_num, section, die_offset}};
-  // FIXME: DWZ: main_cu
 }
 
 llvm::Optional<SymbolFileDWARF::DecodedUID>
