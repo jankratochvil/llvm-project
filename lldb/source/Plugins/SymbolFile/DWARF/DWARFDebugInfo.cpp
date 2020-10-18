@@ -169,7 +169,7 @@ DWARFUnit *DWARFDebugInfo::GetUnit(const DIERef &die_ref) {
   return GetUnitContainingDIEOffset(die_ref.section(), die_ref.die_offset());
 }
 
-DWARFCompileUnit *DWARFDebugInfo::GetMainUnit(const DIERef &die_ref) {
+MainDWARFCompileUnit *DWARFDebugInfo::GetMainUnit(const DIERef &die_ref) {
   DWARFUnit *cu;
   if (!die_ref.main_cu())
     cu = GetUnit(die_ref);
@@ -177,7 +177,7 @@ DWARFCompileUnit *DWARFDebugInfo::GetMainUnit(const DIERef &die_ref) {
     cu = GetUnitAtIndex(*die_ref.main_cu());
   if (!cu || cu->IsTypeUnit())
     return nullptr;
-  return llvm::cast<DWARFCompileUnit>(cu);
+  return llvm::cast<MainDWARFCompileUnit>(cu);
 }
 
 DWARFUnit *
