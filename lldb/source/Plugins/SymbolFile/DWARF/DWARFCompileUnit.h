@@ -30,8 +30,6 @@ public:
 
   DWARFDIE DIE() { return {this, DIEPtr()}; }
 
-  DWARFDIE LookupAddress(const dw_addr_t address);
-
 private:
   DWARFCompileUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
                    const DWARFUnitHeader &header,
