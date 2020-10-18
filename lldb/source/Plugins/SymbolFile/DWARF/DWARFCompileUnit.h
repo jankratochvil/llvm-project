@@ -22,6 +22,8 @@ public:
 
   DWARFCompileUnit &GetNonSkeletonUnit();
 
+  DWARFDIE LookupAddress(const dw_addr_t address);
+
   DWARFCompileUnit *GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) override;
 
   DWARFBaseDIE GetUnitDWARFDIEOnly() { return {this, GetUnitDIEPtrOnly()}; }
