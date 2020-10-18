@@ -150,12 +150,8 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
   if (!clang_module_sp)
     return TypeSP();
 
-  MainDWARFCompileUnit *main_unit = nullptr;
-  if (sc.comp_unit) {
-    SymbolFileDWARF *dwarf =
-        llvm::cast<SymbolFileDWARF>(sc.comp_unit->GetModule()->GetSymbolFile());
-    main_unit = dwarf->GetMainDWARFCompileUnit(sc.comp_unit);
-  }
+  SymbolFileDWARF *dwarf;
+  MainDWARFCompileUnit *main_unit = sc.GetMainDWARFCompileUnit(&dwarf);
 
   // If this type comes from a Clang module, recursively look in the
   // DWARF section of the .pcm file in the module cache. Clang
