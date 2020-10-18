@@ -2528,6 +2528,11 @@ static llvm::RoundingMode getActiveRoundingMode(EvalInfo &Info, const Expr *E,
 /// Check if the given evaluation result is allowed for constant evaluation.
 static bool checkFloatingPointResult(EvalInfo &Info, const Expr *E,
                                      APFloat::opStatus St) {
+  // In a constant context, assume that any dynamic rounding mode or FP
+  // exception state matches the default floating-point environment.
+  if (Info.InConstantContext)
+    return true;
+
   FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
   if ((St & APFloat::opInexact) &&
       FPO.getRoundingMode() == llvm::RoundingMode::Dynamic) {
@@ -7440,7 +7445,6 @@ public:
     bool HasQualifier = false;
 
     CallRef Call;
-    bool EvaluatedArgs = false;
 
     // Extract function decl and 'this' pointer from the callee.
     if (CalleeType->isSpecificBuiltinType(BuiltinType::BoundMember)) {
@@ -7499,7 +7503,6 @@ public:
         if (!EvaluateArgs(isa<CXXMethodDecl>(FD) ? Args.slice(1) : Args, Call,
                           Info, FD, /*RightToLeft=*/true))
           return false;
-        EvaluatedArgs = true;
       }
 
       // Overloaded operator calls to member functions are represented as normal
