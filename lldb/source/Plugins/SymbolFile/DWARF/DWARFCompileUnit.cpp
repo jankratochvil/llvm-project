@@ -105,7 +105,7 @@ DWARFCompileUnit &DWARFCompileUnit::GetNonSkeletonUnit() {
 }
 
 DWARFDIE DWARFCompileUnit::LookupAddress(const dw_addr_t address) {
-  if (GetUnitDIEPtrOnly()) {
+  if (DIE()) {
     const DWARFDebugAranges &func_aranges = GetFunctionAranges();
 
     // Re-check the aranges auto pointer contents in case it was created above
