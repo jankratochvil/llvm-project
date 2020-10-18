@@ -1469,6 +1469,17 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.PassByValueIsNoAlias = Args.hasArg(OPT_fpass_by_value_is_noalias);
 
+  // -f[no-]split-cold-code
+  // This may only be enabled when optimizing, and when small code size
+  // increases are tolerable.
+  Opts.SplitColdCode =
+      (Opts.OptimizationLevel > 0) && (Opts.OptimizeSize != 2) &&
+      Args.hasFlag(OPT_fsplit_cold_code, OPT_fno_split_cold_code, false);
+  if (Arg *A = Args.getLastArg(OPT_fsplit_cold_code))
+    if (!Opts.SplitColdCode)
+      Diags.Report(diag::warn_fe_ignored_opt_split_cold_code)
+          << A->getAsString(Args) << (Opts.OptimizeSize != 2);
+
   return Success;
 }
 
@@ -3513,15 +3524,6 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Args.hasFlag(OPT_fexperimental_relative_cxx_abi_vtables,
                    OPT_fno_experimental_relative_cxx_abi_vtables,
                    /*default=*/false);
-
-  // The value can be empty, which indicates the system default should be used.
-  StringRef CXXABI = Args.getLastArgValue(OPT_fcxx_abi_EQ);
-  if (!CXXABI.empty()) {
-    if (!TargetCXXABI::isABI(CXXABI))
-      Diags.Report(diag::err_invalid_cxx_abi) << CXXABI;
-    else
-      Opts.CXXABI = TargetCXXABI::getKind(CXXABI);
-  }
 }
 
 static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
