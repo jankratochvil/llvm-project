@@ -63,6 +63,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Transforms/IPO/HotColdSplitting.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -75,14 +76,19 @@ static llvm::cl::opt<bool> LimitedCoverage(
 static const char AnnotationSection[] = "llvm.metadata";
 
 static CGCXXABI *createCXXABI(CodeGenModule &CGM) {
-  switch (CGM.getContext().getCXXABIKind()) {
-#define ITANIUM_CXXABI(Name, Str) case TargetCXXABI::Name:
-#define CXXABI(Name, Str)
-#include "clang/Basic/TargetCXXABI.def"
+  switch (CGM.getTarget().getCXXABI().getKind()) {
+  case TargetCXXABI::Fuchsia:
+  case TargetCXXABI::GenericAArch64:
+  case TargetCXXABI::GenericARM:
+  case TargetCXXABI::iOS:
+  case TargetCXXABI::iOS64:
+  case TargetCXXABI::WatchOS:
+  case TargetCXXABI::GenericMIPS:
+  case TargetCXXABI::GenericItanium:
+  case TargetCXXABI::WebAssembly:
+  case TargetCXXABI::XL:
     return CreateItaniumCXXABI(CGM);
-#define MICROSOFT_CXXABI(Name, Str) case TargetCXXABI::Name:
-#define CXXABI(Name, Str)
-#include "clang/Basic/TargetCXXABI.def"
+  case TargetCXXABI::Microsoft:
     return CreateMicrosoftCXXABI(CGM);
   }
 
@@ -1690,6 +1696,9 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
 
     if (D->hasAttr<MinSizeAttr>())
       B.addAttribute(llvm::Attribute::MinSize);
+
+    if (CodeGenOpts.SplitColdCode)
+      B.addAttribute(llvm::getHotColdSplittingAttrKind());
   }
 
   F->addAttributes(llvm::AttributeList::FunctionIndex, B);
