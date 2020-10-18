@@ -107,15 +107,12 @@ void DWARFCompileUnit::BuildAddressRangeTable(
   }
 }
 
-MainDWARFCompileUnit *
-DWARFCompileUnit::GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) {
-  // if (GetUnitDIEOnly().Tag() != DW_TAG_partial_unit)
-  main_unit = reinterpret_cast<DWARFCompileUnit *>(this);
-  return DWARFUnit::GetMainDWARFCompileUnit(main_unit);
+DWARFCompileUnit &DWARFCompileUnit::GetNonSkeletonUnit() {
+  return llvm::cast<DWARFCompileUnit>(DWARFUnit::GetNonSkeletonUnit());
 }
 
 DWARFDIE DWARFCompileUnit::LookupAddress(const dw_addr_t address) {
-  if (GetUnitDIEPtrOnly()) {
+  if (DIE()) {
     const DWARFDebugAranges &func_aranges = GetFunctionAranges();
 
     // Re-check the aranges auto pointer contents in case it was created above
@@ -125,11 +122,11 @@ DWARFDIE DWARFCompileUnit::LookupAddress(const dw_addr_t address) {
   return DWARFDIE();
 }
 
-DWARFCompileUnit &DWARFCompileUnit::GetNonSkeletonUnit() {
-  ExtractUnitDIEIfNeeded();
-  if (m_dwo)
-    return *m_dwo;
-  return *this;
+MainDWARFCompileUnit *
+DWARFCompileUnit::GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) {
+  // if (GetUnitDIEOnly().Tag() != DW_TAG_partial_unit)
+  main_unit = reinterpret_cast<DWARFCompileUnit *>(this);
+  return DWARFUnit::GetMainDWARFCompileUnit(main_unit);
 }
 
 MainDWARFCompileUnit &MainDWARFCompileUnit::GetNonSkeletonUnit() {
