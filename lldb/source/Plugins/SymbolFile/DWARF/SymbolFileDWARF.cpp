@@ -650,6 +650,7 @@ SymbolFileDWARF::GetMainDWARFCompileUnit(CompileUnit *comp_unit) {
 
   if (SymbolFileDWARFDwo *dwo = llvm::dyn_cast<SymbolFileDWARFDwo>(this))
     return dwo->GetBaseSymbolFile().GetMainDWARFCompileUnit(comp_unit);
+  lldbassert(!GetIsDwz());
 
   // The compile unit ID is the index of the DWARF unit.
   DWARFUnit *dwarf_cu = DebugInfo().GetUnitAtIndex(comp_unit->GetID());
@@ -697,6 +698,7 @@ static void MakeAbsoluteAndRemap(FileSpec &file_spec, DWARFUnit &dwarf_cu,
 }
 
 lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
+  lldbassert(!GetIsDwz());
   CompUnitSP cu_sp;
   CompileUnit *comp_unit = (CompileUnit *)dwarf_cu.GetUserData();
   if (comp_unit) {
