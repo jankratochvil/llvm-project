@@ -357,9 +357,8 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
     return; // Can't fetch the compile unit from the dwo file.
   dwo_cu->SetUserData(this);
 
-  // 'main_cu' is not used.
-  const DWARFDebugInfoEntry *dwo_cu_die = dwo_cu->GetUnitDIEPtrOnly();
-  if (!dwo_cu_die)
+  DWARFBaseDIE dwo_cu_die = dwo_cu->GetUnitDIEOnly();
+  if (!dwo_cu_die.IsValid())
     return; // Can't fetch the compile unit DIE from the dwo file.
 
   // Here for DWO CU we want to use the address base set in the skeleton unit
