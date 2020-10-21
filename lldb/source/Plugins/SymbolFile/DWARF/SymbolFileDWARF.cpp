@@ -1667,7 +1667,7 @@ lldb::ModuleSP SymbolFileDWARF::GetExternalModule(ConstString name) {
 }
 
 DWARFDIE
-SymbolFileDWARF::GetDIE(const DIERef &die_ref, DWARFCompileUnit **main_unit_return) {
+SymbolFileDWARF::GetDIE(const DIERef &die_ref, MainDWARFCompileUnit **main_unit_return) {
   if (die_ref.dwo_num() && !GetIsDwz()) {
     if (GetDwzSymbolFile()) {
       lldbassert(0 == *die_ref.dwo_num());
