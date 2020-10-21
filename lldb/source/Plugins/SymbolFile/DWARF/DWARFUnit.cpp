@@ -538,6 +538,9 @@ const DWARFDebugInfoEntry *DWARFUnit::GetDIEPtr(dw_offset_t die_offset) {
     if (die_offset == (*pos).GetOffset())
       return &(*pos);
   }
+  GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
+      "CU 0x%8.8" PRIx32 " does not contain DIE 0x%8.8" PRIx32, GetOffset(),
+      die_offset);
   return nullptr;
 }
 

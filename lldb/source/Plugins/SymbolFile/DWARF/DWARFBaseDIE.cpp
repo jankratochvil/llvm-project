@@ -23,6 +23,10 @@ using namespace lldb_private;
 llvm::Optional<DIERef> DWARFBaseDIE::GetDIERef(MainDWARFCompileUnit *main_unit) const {
   if (!IsValid())
     return llvm::None;
+  if (m_cu->GetSymbolFileDWARF().GetDwoNum().hasValue())
+    main_unit = nullptr;
+  if (m_cu == main_unit)
+    main_unit = nullptr;
 
   return DIERef(m_cu->GetSymbolFileDWARF().GetDwoNum(), (!main_unit ? llvm::None : llvm::Optional<uint32_t>(main_unit->GetID())),
     GetCU()->GetSymbolFileDWARF().GetIsDwz() ? DIERef::CommonDwz : DIERef::MainDwz,

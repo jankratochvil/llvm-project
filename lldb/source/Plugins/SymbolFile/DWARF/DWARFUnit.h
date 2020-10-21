@@ -182,6 +182,8 @@ public:
 
   DWARFBaseDIE GetUnitDIEOnly() { return {this, GetUnitDIEPtrOnly()}; }
 
+  DWARFDIE DIE() { return DWARFDIE(this, DIEPtr()); }
+
   const DWARFDebugInfoEntry *GetDIEPtr(dw_offset_t die_offset);
 
   DWARFDIE GetDIE(dw_offset_t die_offset);
@@ -272,6 +274,8 @@ public:
   GetLocationTable(const lldb_private::DataExtractor &data) const;
 
   lldb_private::DWARFDataExtractor GetLocationData() const;
+
+  lldb_private::CompileUnit *GetMainCompUnit(MainDWARFCompileUnit *main_unit);
 
   virtual MainDWARFCompileUnit *GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit);
   MainDWARFUnit *GetMainDWARFUnit(MainDWARFCompileUnit *main_unit);
