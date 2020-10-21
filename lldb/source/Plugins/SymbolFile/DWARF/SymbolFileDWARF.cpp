@@ -728,8 +728,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
               *GetDWARFUnitIndex(dwarf_cu.GetID()), cu_language,
               is_optimized ? eLazyBoolYes : eLazyBoolNo);
 
-//printf("SymbolFileDWARF=%p comp_unit=%p dwarf_cu=%p dwarf_cu.ID=0x%lx comp_unit.ID=0x%lx\n",(void *)this,(void *)cu_sp.get(),(void *)&dwarf_cu,dwarf_cu.GetID(),cu_sp->GetID());
-lldbassert(cu_sp->GetID()==*GetDWARFUnitIndex(dwarf_cu.GetID()));
+          lldbassert(cu_sp->GetID()==*GetDWARFUnitIndex(dwarf_cu.GetID()));
           dwarf_cu.SetUserData(cu_sp.get());
 
           SetCompileUnitAtIndex(dwarf_cu.GetID(), cu_sp);
