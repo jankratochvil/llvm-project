@@ -180,7 +180,7 @@ public:
 
   void SetBaseAddress(dw_addr_t base_addr);
 
-  DWARFBaseDIE GetUnitDIEOnly() { return DWARFDIE(this, GetUnitDIEPtrOnly()); }
+  DWARFBaseDIE GetUnitDIEOnly() { return {this, GetUnitDIEPtrOnly()}; }
 
   DWARFDIE DIE() { return DWARFDIE(this, DIEPtr()); }
 
