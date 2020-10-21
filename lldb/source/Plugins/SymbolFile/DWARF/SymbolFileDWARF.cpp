@@ -1341,9 +1341,8 @@ user_id_t SymbolFileDWARF::GetUID(MainDWARFCompileUnit *main_unit, DIERef ref) {
   MainDWARFCompileUnit *main_unit_check;
   DWARFDIE dwarfdie_check2 = GetDIEUnlocked(retval, &main_unit_check);
   lldbassert(dwarfdie_check2 == dwarfdie_check);
-  lldbassert(main_unit_check == main_unit || main_unit_check == nullptr);
-  lldbassert(!!main_unit_check == is_dwz);
 #endif
+
   return retval;
 }
 
