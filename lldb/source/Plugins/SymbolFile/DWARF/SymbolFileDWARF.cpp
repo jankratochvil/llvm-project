@@ -712,7 +712,8 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
     } else {
       ModuleSP module_sp(m_objfile_sp->GetModule());
       if (module_sp) {
-        const DWARFBaseDIE cu_die = dwarf_cu.GetNonSkeletonUnit().GetUnitDWARFDIEOnly();
+        const DWARFBaseDIE cu_die =
+            dwarf_cu.GetNonSkeletonUnit().GetUnitDIEOnly();
         if (cu_die) {
           FileSpec cu_file_spec(cu_die.GetName(), dwarf_cu.GetPathStyle());
           MakeAbsoluteAndRemap(cu_file_spec, dwarf_cu, module_sp);
@@ -829,14 +830,14 @@ XcodeSDK SymbolFileDWARF::ParseXcodeSDK(CompileUnit &comp_unit) {
   DWARFUnit *dwarf_cu = comp_unit.GetMainDWARFCompileUnit();
   if (!dwarf_cu)
     return {};
-  const DWARFDebugInfoEntry cu_die = dwarf_cu->GetNonSkeletonUnit().GetUnitDIEOnly();
+  const DWARFBaseDIE cu_die = dwarf_cu->GetNonSkeletonUnit().GetUnitDIEOnly();
   if (!cu_die)
     return {};
-  const char *sdk = cu_die.GetAttributeValueAsString(dwarf_cu, DW_AT_APPLE_sdk, nullptr);
+  const char *sdk = cu_die.GetAttributeValueAsString(DW_AT_APPLE_sdk, nullptr);
   if (!sdk)
     return {};
   const char *sysroot =
-      cu_die.GetAttributeValueAsString(dwarf_cu, DW_AT_LLVM_sysroot, "");
+      cu_die.GetAttributeValueAsString(DW_AT_LLVM_sysroot, "");
   // Register the sysroot path remapping with the module belonging to
   // the CU as well as the one belonging to the symbol file. The two
   // would be different if this is an OSO object and module is the
@@ -1125,14 +1126,14 @@ bool SymbolFileDWARF::ParseDebugMacros(CompileUnit &comp_unit) {
   if (dwarf_cu == nullptr)
     return false;
 
-  const DWARFDebugInfoEntry dwarf_cu_die = dwarf_cu->GetUnitDIEOnly();
+  const DWARFBaseDIE dwarf_cu_die = dwarf_cu->GetUnitDIEOnly();
   if (!dwarf_cu_die)
     return false;
 
   lldb::offset_t sect_offset =
-      dwarf_cu_die.GetAttributeValueAsUnsigned(dwarf_cu, DW_AT_macros, DW_INVALID_OFFSET);
+      dwarf_cu_die.GetAttributeValueAsUnsigned(DW_AT_macros, DW_INVALID_OFFSET);
   if (sect_offset == DW_INVALID_OFFSET)
-    sect_offset = dwarf_cu_die.GetAttributeValueAsUnsigned(dwarf_cu, DW_AT_GNU_macros,
+    sect_offset = dwarf_cu_die.GetAttributeValueAsUnsigned(DW_AT_GNU_macros,
                                                            DW_INVALID_OFFSET);
   if (sect_offset == DW_INVALID_OFFSET)
     return false;
@@ -1770,11 +1771,11 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
     if (!dwarf_cu)
       continue;
 
-    const DWARFDebugInfoEntry die = dwarf_cu->GetUnitDIEOnly();
-    if (!die || die.HasChildren())
+    const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
+    if (!die || die.HasChildren() || !die.GetDIE())
       continue;
 
-    const char *name = die.GetAttributeValueAsString(dwarf_cu, DW_AT_name, nullptr);
+    const char *name = die.GetAttributeValueAsString(DW_AT_name, nullptr);
     if (!name)
       continue;
 
@@ -1783,7 +1784,7 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
     if (module_sp)
       continue;
 
-    const char *dwo_path = GetDWOName(*dwarf_cu, die);
+    const char *dwo_path = GetDWOName(*dwarf_cu, *die.GetDIE());
     if (!dwo_path)
       continue;
 
@@ -1791,7 +1792,7 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
     dwo_module_spec.GetFileSpec().SetFile(dwo_path, FileSpec::Style::native);
     if (dwo_module_spec.GetFileSpec().IsRelative()) {
       const char *comp_dir =
-          die.GetAttributeValueAsString(dwarf_cu, DW_AT_comp_dir, nullptr);
+          die.GetAttributeValueAsString(DW_AT_comp_dir, nullptr);
       if (comp_dir) {
         dwo_module_spec.GetFileSpec().SetFile(comp_dir,
                                               FileSpec::Style::native);
@@ -1835,7 +1836,7 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
 
     // Verify the DWO hash.
     // FIXME: Technically "0" is a valid hash.
-    uint64_t dwo_id = ::GetDWOId(*dwarf_cu, die);
+    uint64_t dwo_id = ::GetDWOId(*dwarf_cu, *die.GetDIE());
     if (!dwo_id)
       continue;
 

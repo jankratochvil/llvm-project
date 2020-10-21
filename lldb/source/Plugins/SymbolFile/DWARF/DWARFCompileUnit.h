@@ -26,8 +26,6 @@ public:
 
   DWARFCompileUnit *GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) override;
 
-  DWARFBaseDIE GetUnitDWARFDIEOnly() { return {this, GetUnitDIEPtrOnly()}; }
-
   DWARFDIE DIE() { return {this, DIEPtr()}; }
 
 private:

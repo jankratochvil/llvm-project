@@ -274,13 +274,6 @@ public:
   virtual DWARFCompileUnit *GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit);
   DWARFUnit *GetMainDWARFUnit(DWARFCompileUnit *main_unit);
 
-  DWARFDebugInfoEntry GetUnitDIEOnly() {
-    const DWARFDebugInfoEntry *dieptr = GetUnitDIEPtrOnly();
-    if (!dieptr)
-      return {};
-    return *dieptr;
-  }
-
   uint64_t GetDWARFLanguageType();
 
 protected:
