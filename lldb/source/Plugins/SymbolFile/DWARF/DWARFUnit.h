@@ -180,6 +180,8 @@ public:
 
   void SetBaseAddress(dw_addr_t base_addr);
 
+  DWARFBaseDIE GetUnitDIEOnly() { return {this, GetUnitDIEPtrOnly()}; }
+
   const DWARFDebugInfoEntry *GetDIEPtr(dw_offset_t die_offset);
 
   DWARFDIE GetDIE(dw_offset_t die_offset);
@@ -273,13 +275,6 @@ public:
 
   virtual MainDWARFCompileUnit *GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit);
   MainDWARFUnit *GetMainDWARFUnit(MainDWARFCompileUnit *main_unit);
-
-  DWARFDebugInfoEntry GetUnitDIEOnly() {
-    const DWARFDebugInfoEntry *dieptr = GetUnitDIEPtrOnly();
-    if (!dieptr)
-      return {};
-    return *dieptr;
-  }
 
   uint64_t GetDWARFLanguageType();
 
