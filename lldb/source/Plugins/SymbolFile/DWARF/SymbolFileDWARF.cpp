@@ -728,6 +728,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
               *GetDWARFUnitIndex(dwarf_cu.GetID()), cu_language,
               is_optimized ? eLazyBoolYes : eLazyBoolNo);
 
+          lldbassert(cu_sp->GetID()==*GetDWARFUnitIndex(dwarf_cu.GetID()));
           dwarf_cu.SetUserData(cu_sp.get());
 
           SetCompileUnitAtIndex(dwarf_cu.GetID(), cu_sp);
@@ -786,7 +787,7 @@ Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
   if (!die.IsValid())
     return nullptr;
 
-  DWARFCompileUnit *main_unit = GetMainDWARFCompileUnit(&comp_unit);
+  DWARFCompileUnit *main_unit = comp_unit.GetMainDWARFCompileUnit();
 
   auto type_system_or_err = GetTypeSystemForLanguage(GetLanguage(*die.GetMainDWARFUnit(main_unit)));
   if (auto err = type_system_or_err.takeError()) {
@@ -1297,8 +1298,16 @@ user_id_t SymbolFileDWARF::GetUID(DWARFCompileUnit *main_unit,
                                   const DWARFDIE &die) {
   if (!die.IsValid())
     return LLDB_INVALID_UID;
-  // if (die.GetCU()->GetUnitDIEOnly().Tag() != DW_TAG_partial_unit)
-  main_unit = nullptr;
+  // Do not use 'llvm::isa<SymbolFileDWARFDwo>(this)' as we may be in Dwp which
+  // is not Dwo.
+  // Do not use
+  // 'llvm::isa<SymbolFileDWARFDwo>(die.GetCU()->GetSymbolFileDWARF())' as DIE
+  // can be from .debug_types during indexing with no Dwo anywhere.
+//  lldbassert(main_unit||llvm::isa<DWARFTypeUnit>(die.GetCU()));
+  if (die.GetCU()->GetUnitDIEOnly().Tag() != DW_TAG_partial_unit)
+    main_unit = nullptr;
+  else
+    lldbassert(main_unit);
   return GetUID(main_unit, die.GetDIERef(main_unit));
 }
 
@@ -1306,6 +1315,12 @@ user_id_t SymbolFileDWARF::GetUID(DWARFCompileUnit *main_unit, DIERef ref) {
   if (GetDebugMapSymfile())
     return GetID() | ref.die_offset();
 
+  if (GetIsDwz()) {
+    lldbassert(main_unit);
+    return main_unit->GetSymbolFileDWARF().GetUID(main_unit,ref);
+  }
+  if (main_unit)
+    main_unit = &main_unit->GetNonSkeletonUnit();
   if (ref.dwo_num().hasValue())
     lldbassert(main_unit == nullptr);
 
@@ -1353,18 +1368,17 @@ SymbolFileDWARF::DecodeUIDUnlocked(lldb::user_id_t uid) {
   DIERef::Section section =
       uid >> 63 ? DIERef::Section::DebugTypes : DIERef::Section::DebugInfo;
 
-  bool is_main_cu = (uid >> 62) & 1;
-  bool is_dwz_common = (uid >> 61) & 1;
+  DIERef::Kind kind = DIERef::Kind((uid >> 61) & 3);
 
   llvm::Optional<uint32_t> dwo_num = uid >> 32 & 0x1fffffff;
-  if (*dwo_num == 0x1fffffff || is_main_cu)
+  if (kind != DIERef::Kind::DwoKind)
     dwo_num = llvm::None;
 
   llvm::Optional<uint32_t> main_cu = uid >> 32 & 0x1fffffff;
-  if (*main_cu == 0x1fffffff || !is_main_cu)
+  if (kind != DIERef::Kind::MainDwzKind && kind != DIERef::Kind::DwzCommonKind)
     main_cu = llvm::None;
 
-  return DecodedUID{*this, {dwo_num, main_cu, is_dwz_common ? DIERef::CommonDwz : DIERef::MainDwz, section, die_offset}};
+  return DecodedUID{*this, {dwo_num, main_cu, kind == DIERef::Kind::DwzCommonKind ? DIERef::CommonDwz : DIERef::MainDwz, section, die_offset}};
 }
 
 llvm::Optional<SymbolFileDWARF::DecodedUID>
@@ -1657,7 +1671,7 @@ SymbolFileDWARF::GetDIE(const DIERef &die_ref, DWARFCompileUnit **main_unit_retu
   if (die_ref.dwo_num() && !GetIsDwz()) {
     if (GetDwzSymbolFile()) {
       lldbassert(0 == *die_ref.dwo_num());
-      return GetDwzSymbolFile()->GetDIE(die_ref);
+      return GetDwzSymbolFile()->GetDIE(die_ref, main_unit_return);
     }
     SymbolFileDWARF *dwarf = *die_ref.dwo_num() == 0x1fffffff
                                  ? m_dwp_symfile.get()

@@ -174,7 +174,7 @@ DWARFCompileUnit *DWARFDebugInfo::GetMainUnit(const DIERef &die_ref) {
   if (!die_ref.main_cu())
     cu = GetUnit(die_ref);
   else
-    cu = GetUnitAtIndex(*die_ref.main_cu());
+    cu = GetUnitAtIndex(*m_dwarf.GetDWARFUnitIndex(*die_ref.main_cu()));
   if (!cu || cu->IsTypeUnit())
     return nullptr;
   return llvm::cast<DWARFCompileUnit>(cu);
@@ -224,7 +224,7 @@ DWARFDebugInfo::GetDIE(const DIERef &die_ref, DWARFCompileUnit **main_unit_retur
       cu = main_cu = &main_cu->GetNonSkeletonUnit();
     if (main_unit_return)
       *main_unit_return = main_cu;
-    return cu->GetNonSkeletonUnit().GetDIE(die_ref.die_offset());
+    return cu->GetDIE(die_ref.die_offset());
   }
   return DWARFDIE(); // Not found
 }
