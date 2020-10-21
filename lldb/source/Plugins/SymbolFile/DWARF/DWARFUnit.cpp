@@ -515,8 +515,12 @@ static bool CompareDIEOffset(const DWARFDebugInfoEntry &die,
 }
 
 const DWARFDebugInfoEntry *DWARFUnit::GetDIEPtr(dw_offset_t die_offset) {
-  if (die_offset == DW_INVALID_OFFSET)
+  if (die_offset == DW_INVALID_OFFSET) {
+    m_dwarf.GetObjectFile()->GetModule()->ReportError(
+        "CU 0x%8.8" PRIx32 " does not contain DIE 0x%8.8" PRIx32, GetOffset(),
+        die_offset);
     return nullptr;
+  }
   lldbassert(!GetDwoSymbolFile()); // FIXME: Or maybe just leave it running here now?
 
   if (!ContainsDIEOffset(die_offset)) {
@@ -1002,8 +1006,7 @@ DWARFUnit::GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) {
 CompileUnit *
 DWARFUnit::GetMainCompUnit(MainDWARFCompileUnit *main_unit) {
   main_unit = GetMainDWARFCompileUnit(main_unit);
-//  lldbassert(main_unit);
-  if (!main_unit)
+  if (main_unit == nullptr)
     return nullptr;
   CompileUnit *comp_unit = main_unit->GetSymbolFileDWARF().GetCompUnitForDWARFCompUnit(*main_unit);
   lldbassert(comp_unit);
