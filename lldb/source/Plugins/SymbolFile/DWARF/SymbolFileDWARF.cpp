@@ -4076,7 +4076,7 @@ LanguageType SymbolFileDWARF::LanguageTypeFromDWARF(uint64_t val) {
 }
 
 LanguageType SymbolFileDWARF::GetLanguage(DWARFUnit &unit) {
-  // Caller should have called MainDWARFUnit().
+  // Caller should have called GetMainDWARFUnit().
   lldbassert(unit.GetUnitDIEOnly().Tag()!=DW_TAG_partial_unit);
   return LanguageTypeFromDWARF(unit.GetDWARFLanguageType());
 }
