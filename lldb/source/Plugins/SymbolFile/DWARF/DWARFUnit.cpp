@@ -965,3 +965,14 @@ DWARFUnit::FindRnglistFromIndex(uint32_t index) {
   return llvm::createStringError(errc::invalid_argument,
                                  "missing or invalid range list table");
 }
+
+bool DWARFUnit::ContainsDIERef(DIERef die_ref) const {
+  if (m_dwarf.GetDwoNum() != die_ref.dwo_num())
+    return false;
+  if (m_section != die_ref.section())
+    return false;
+  lldbassert(ContainsDIEOffset(die_ref.die_offset()) ==
+             (GetOffset() <= die_ref.die_offset() &&
+              die_ref.die_offset() < GetNextUnitOffset()));
+  return ContainsDIEOffset(die_ref.die_offset());
+}

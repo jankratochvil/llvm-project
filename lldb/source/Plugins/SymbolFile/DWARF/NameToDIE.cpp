@@ -50,10 +50,7 @@ void NameToDIE::FindAllEntriesForUnit(
   const uint32_t size = m_map.GetSize();
   for (uint32_t i = 0; i < size; ++i) {
     const DIERef &die_ref = m_map.GetValueAtIndexUnchecked(i);
-    if (unit.GetSymbolFileDWARF().GetDwoNum() == die_ref.dwo_num() &&
-        unit.GetDebugSection() == die_ref.section() &&
-        unit.GetOffset() <= die_ref.die_offset() &&
-        die_ref.die_offset() < unit.GetNextUnitOffset()) {
+    if (unit.ContainsDIERef(die_ref)) {
       if (!callback(die_ref))
         return;
     }
