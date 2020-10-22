@@ -136,19 +136,6 @@ MainDWARFCompileUnit &MainDWARFCompileUnit::GetNonSkeletonUnit() {
   return *this;
 }
 
-bool MainDWARFCompileUnit::ContainsDIERef(DIERef die_ref) const {
-  if (die_ref.main_cu())
-    return GetID() == *die_ref.main_cu();
-  if (m_dwarf.GetDwoNum() != die_ref.dwo_num())
-    return false;
-  if (m_section != die_ref.section())
-    return false;
-  lldbassert(ContainsDIEOffset(die_ref.die_offset()) ==
-             (GetOffset() <= die_ref.die_offset() &&
-              die_ref.die_offset() < GetNextUnitOffset()));
-  return ContainsDIEOffset(die_ref.die_offset());
-}
-
 CompileUnit *MainDWARFCompileUnit::GetCompUnit() {
   lldbassert(this);
   CompileUnit *comp_unit = GetNonSkeletonUnit().GetSymbolFileDWARF().GetCompUnitForDWARFCompUnit(*this);
