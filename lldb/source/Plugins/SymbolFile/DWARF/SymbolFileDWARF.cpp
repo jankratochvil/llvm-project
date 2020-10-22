@@ -1648,9 +1648,9 @@ bool SymbolFileDWARF::GetFunction(MainDWARFCompileUnit *main_unit,
     return false;
 
   // Check if the symbol vendor already knows about this compile unit?
-  sc.comp_unit = main_unit->GetCompUnit();
-  if (sc.comp_unit == nullptr)
+  if (!main_unit)
     return false;
+  sc.comp_unit = main_unit->GetCompUnit();
 
   sc.function = sc.comp_unit->FindFunctionByUID(die.GetID(main_unit)).get();
   if (sc.function == nullptr)
@@ -2240,9 +2240,9 @@ void SymbolFileDWARF::FindGlobalVariables(
         if (die.Tag() != DW_TAG_variable)
           return true;
 
-        sc.comp_unit = main_unit->GetCompUnit();
-        if (sc.comp_unit == nullptr)
+        if (!main_unit)
           return true;
+        sc.comp_unit = main_unit->GetCompUnit();
 
         if (parent_decl_ctx) {
           if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.GetMainDWARFUnit(main_unit))) {
@@ -2303,9 +2303,9 @@ void SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
           sc.module_sp = m_objfile_sp->GetModule();
         assert(sc.module_sp);
 
-        sc.comp_unit = main_unit->GetCompUnit();
-        if (sc.comp_unit == nullptr)
+        if (!main_unit)
           return true;
+        sc.comp_unit = main_unit->GetCompUnit();
 
         ParseVariables(sc, die, LLDB_INVALID_ADDRESS, false, false, &variables);
 
@@ -2669,8 +2669,10 @@ TypeSP SymbolFileDWARF::GetTypeForDIE(MainDWARFCompileUnit *main_unit,
   if (die) {
     Type *type_ptr = GetDIEToType().lookup(die.MainCUtoDIEPair(main_unit));
     if (type_ptr == nullptr) {
-      SymbolContextScope *scope = main_unit->GetCompUnit();
-      if (scope == nullptr)
+      SymbolContextScope *scope;
+      if (main_unit)
+        scope = main_unit->GetCompUnit();
+      else
         scope = GetObjectFile()->GetModule().get();
       assert(scope);
       SymbolContext sc(scope);
