@@ -222,6 +222,10 @@ DWARFDebugInfo::GetDIE(const DIERef &die_ref, MainDWARFCompileUnit **main_unit_r
     MainDWARFCompileUnit *main_cu = GetMainUnit(die_ref);
     if (main_cu == cu)
       cu = main_cu = &main_cu->GetNonSkeletonUnit();
+#if 0
+    if (cu->GetUnitDIEOnly().Tag() != DW_TAG_partial_unit)
+      main_cu = nullptr;
+#endif
     if (main_unit_return)
       *main_unit_return = main_cu;
     return cu->GetDIE(die_ref.die_offset());

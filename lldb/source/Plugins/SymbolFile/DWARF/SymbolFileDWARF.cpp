@@ -1332,15 +1332,21 @@ user_id_t SymbolFileDWARF::GetUID(MainDWARFCompileUnit *main_unit, DIERef ref) {
 
   // WARNING: Use ref.dwo_num() as GetDwoNum() may not be valid in 'this'.
   static_assert(sizeof(ref.die_offset()) * 8 == 32, "");
-  lldbassert(!ref.dwo_num().hasValue()||*ref.dwo_num()<=0x7fffffff);
-  user_id_t retval = user_id_t(ref.dwo_num().getValueOr(0x7fffffff)) << 32 |
+  lldbassert(!ref.dwo_num().hasValue()||*ref.dwo_num()<=0x1fffffff);
+  lldbassert(!ref.main_cu().hasValue()||*ref.main_cu()<=0x1fffffff);
+  lldbassert(0 <= ref.kind_get());
+  lldbassert(ref.kind_get() <= 3);
+  user_id_t retval =
+         user_id_t(ref.dwo_num() ? *ref.dwo_num() : (ref.main_cu() ? *ref.main_cu() : 0)) << 32 |
          ref.die_offset() |
-         (lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes) << 63);
+         user_id_t(ref.kind_get()) << 61 |
+         (lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes)) << 63;
 
 #ifndef NDEBUG
   MainDWARFCompileUnit *main_unit_check;
   DWARFDIE dwarfdie_check2 = GetDIEUnlocked(retval, &main_unit_check);
   lldbassert(dwarfdie_check2 == dwarfdie_check);
+  lldbassert(dwarfdie_check.GetCU()->GetUnitDIEOnly().Tag() != DW_TAG_partial_unit || main_unit_check == main_unit);
 #endif
 
   return retval;
@@ -1765,7 +1771,7 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
   if (dwo_obj_file == nullptr)
     return nullptr;
 
-  lldbassert(dwarf_cu->GetID()<0x1ffffffe);
+  lldbassert(dwarf_cu->GetID()<0x1fffffff);
   return std::make_shared<SymbolFileDWARFDwo>(*this, dwo_obj_file,
                                               dwarf_cu->GetID());
 }
@@ -3186,7 +3192,7 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
         return num_variables;
       }
     } else if (sc.comp_unit) {
-      MainDWARFCompileUnit *main_unit = GetMainDWARFCompileUnit(sc.comp_unit);
+      MainDWARFCompileUnit *main_unit = sc.GetMainDWARFCompileUnit();
       if (main_unit == nullptr)
         return 0;
       main_unit = &main_unit->GetNonSkeletonUnit();
@@ -3201,7 +3207,7 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
         m_index->GetGlobalVariables(
             *main_unit,
             [&](MainDWARFCompileUnit *main_unit_check, DWARFDIE die) {
-              lldbassert(main_unit_check == main_unit);
+              lldbassert(main_unit_check == main_unit || main_unit_check == nullptr);
               VariableSP var_sp(
                   ParseVariableDIE(sc, die, LLDB_INVALID_ADDRESS));
               if (var_sp) {
@@ -4007,7 +4013,7 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
       if (!dwp_obj_file)
         return;
       m_dwp_symfile =
-          std::make_shared<SymbolFileDWARFDwo>(*this, dwp_obj_file, 0x3fffffff);
+          std::make_shared<SymbolFileDWARFDwo>(*this, dwp_obj_file, 0x1fffffff);
     }
   });
   return m_dwp_symfile;
