@@ -1327,11 +1327,9 @@ DWARFCompileUnit *SymbolContext::GetMainDWARFCompileUnit(SymbolFileDWARF **dwarf
   else {
     retval = comp_unit->GetMainDWARFCompileUnit();
     if (dwarf)
-      lldbassert(&retval->GetSymbolFileDWARF() == dwarf);
-    else {
-      lldbassert(retval);
+      lldbassert(dwarf == &retval->GetSymbolFileDWARF());
+    else
       dwarf = &retval->GetSymbolFileDWARF();
-    }
   }
   if (dwarf_return)
     *dwarf_return = dwarf;
