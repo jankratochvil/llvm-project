@@ -16,7 +16,7 @@
 #include "lldb/Core/dwarf.h"
 #include "lldb/lldb-defines.h"
 
-class DWARFUnit;
+class DWARFCompileUnit;
 
 class NameToDIE {
 public:
@@ -39,7 +39,7 @@ public:
             llvm::function_ref<bool(DIERef ref)> callback) const;
 
   void
-  FindAllEntriesForUnit(const DWARFUnit &unit,
+  FindAllEntriesForUnit(const DWARFCompileUnit &unit,
                         llvm::function_ref<bool(DIERef ref)> callback) const;
 
   void

@@ -45,7 +45,7 @@ bool NameToDIE::Find(const RegularExpression &regex,
 }
 
 void NameToDIE::FindAllEntriesForUnit(
-    const DWARFUnit &unit,
+    const DWARFCompileUnit &unit,
     llvm::function_ref<bool(DIERef ref)> callback) const {
   const uint32_t size = m_map.GetSize();
   for (uint32_t i = 0; i < size; ++i) {

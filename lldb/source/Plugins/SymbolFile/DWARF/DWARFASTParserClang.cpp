@@ -1440,7 +1440,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   const dw_tag_t tag = die.Tag();
   SymbolFileDWARF *dwarf;
   DWARFCompileUnit *main_unit = sc.GetMainDWARFCompileUnit(&dwarf);
-  LanguageType cu_language = SymbolFileDWARF::GetLanguage(*die.GetCU());
+  LanguageType cu_language = SymbolFileDWARF::GetLanguage(*die.GetMainDWARFUnit(main_unit));
   Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_TYPE_COMPLETION |
                                           DWARF_LOG_LOOKUPS);
 
