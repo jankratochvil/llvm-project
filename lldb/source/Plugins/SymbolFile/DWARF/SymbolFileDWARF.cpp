@@ -3195,7 +3195,7 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
       }
     } else if (sc.comp_unit) {
       MainDWARFCompileUnit *main_unit = sc.GetMainDWARFCompileUnit();
-      if (main_unit == nullptr)
+      if (!main_unit)
         return 0;
       main_unit = &main_unit->GetNonSkeletonUnit();
 
