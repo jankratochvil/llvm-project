@@ -47,8 +47,8 @@ private:
 public:
   operator MainDWARFUnit *() { return reinterpret_cast<MainDWARFUnit *>(this); }
   operator MainDWARFUnit &() { return reinterpret_cast<MainDWARFUnit &>(*this); }
-  MainDWARFCompileUnit &GetNonSkeletonUnit();
   lldb_private::CompileUnit *GetCompUnit();
+  MainDWARFCompileUnit &GetNonSkeletonUnit();
 };
 static_assert(sizeof(MainDWARFCompileUnit)==sizeof(DWARFCompileUnit),"");
 
