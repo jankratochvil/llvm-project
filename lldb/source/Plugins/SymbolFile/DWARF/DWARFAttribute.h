@@ -73,7 +73,7 @@ public:
 
 protected:
   struct AttributeValue {
-    DWARFUnit *cu;        // Keep the compile unit with each attribute in
+    DWARFUnit *cu;              // Keep the compile unit with each attribute in
                                 // case we have DW_FORM_ref_addr values
     dw_offset_t die_offset;
     DWARFAttribute attr;
