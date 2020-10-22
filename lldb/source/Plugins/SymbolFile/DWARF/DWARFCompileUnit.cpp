@@ -129,16 +129,16 @@ DWARFCompileUnit::GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) {
   return DWARFUnit::GetMainDWARFCompileUnit(main_unit);
 }
 
-MainDWARFCompileUnit &MainDWARFCompileUnit::GetNonSkeletonUnit() {
-  ExtractUnitDIEIfNeeded();
-  if (m_dwo)
-    return reinterpret_cast<MainDWARFCompileUnit &>(*m_dwo);
-  return *this;
-}
-
 CompileUnit *MainDWARFCompileUnit::GetCompUnit() {
   lldbassert(this);
   CompileUnit *comp_unit = GetNonSkeletonUnit().GetSymbolFileDWARF().GetCompUnitForDWARFCompUnit(*this);
   lldbassert(comp_unit);
   return comp_unit;
+}
+
+MainDWARFCompileUnit &MainDWARFCompileUnit::GetNonSkeletonUnit() {
+  ExtractUnitDIEIfNeeded();
+  if (m_dwo)
+    return reinterpret_cast<MainDWARFCompileUnit &>(*m_dwo);
+  return *this;
 }
