@@ -1642,7 +1642,7 @@ bool SymbolFileDWARF::GetFunction(MainDWARFCompileUnit *main_unit,
     return false;
 
   // Check if the symbol vendor already knows about this compile unit?
-  sc.comp_unit = die.GetMainCompUnit(main_unit);
+  sc.comp_unit = main_unit->GetCompUnit();
   if (sc.comp_unit == nullptr)
     return false;
 
@@ -2234,7 +2234,7 @@ void SymbolFileDWARF::FindGlobalVariables(
         if (die.Tag() != DW_TAG_variable)
           return true;
 
-        sc.comp_unit = die.GetMainCompUnit(main_unit);
+        sc.comp_unit = main_unit->GetCompUnit();
         if (sc.comp_unit == nullptr)
           return true;
 
@@ -2297,7 +2297,7 @@ void SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
           sc.module_sp = m_objfile_sp->GetModule();
         assert(sc.module_sp);
 
-        sc.comp_unit = die.GetMainCompUnit(main_unit);
+        sc.comp_unit = main_unit->GetCompUnit();
         if (sc.comp_unit == nullptr)
           return true;
 
@@ -2663,7 +2663,7 @@ TypeSP SymbolFileDWARF::GetTypeForDIE(MainDWARFCompileUnit *main_unit,
   if (die) {
     Type *type_ptr = GetDIEToType().lookup(die.MainCUtoDIEPair(main_unit));
     if (type_ptr == nullptr) {
-      SymbolContextScope *scope = die.GetMainCompUnit(main_unit);
+      SymbolContextScope *scope = main_unit->GetCompUnit();
       if (scope == nullptr)
         scope = GetObjectFile()->GetModule().get();
       assert(scope);

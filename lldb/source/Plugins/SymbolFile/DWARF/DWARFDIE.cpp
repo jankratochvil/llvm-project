@@ -470,23 +470,12 @@ MainDWARFUnit *DWARFDIE::GetMainDWARFUnit(MainDWARFCompileUnit *main_unit) const
   return GetCU()->GetMainDWARFUnit(main_unit);
 }
 
-CompileUnit *DWARFDIE::GetMainCompUnit(MainDWARFCompileUnit *main_unit) const {
-  lldbassert(IsValid());
-  return GetCU()->GetMainCompUnit(main_unit);
-}
-
-MainDWARFCompileUnit *
-DWARFDIE::GetMainDWARFCompileUnitOrNull(MainDWARFCompileUnit *main_unit) const {
-  lldbassert(IsValid());
-  return GetMainDWARFCompileUnit(main_unit);
-}
-
 std::pair<MainDWARFCompileUnit *, DWARFDIE>
 DWARFDIE::MainCUtoDWARFDIEPair(MainDWARFCompileUnit *main_unit) const {
-  return std::make_pair(GetMainDWARFCompileUnitOrNull(main_unit), *this);
+  return std::make_pair(GetMainDWARFCompileUnit(main_unit), *this);
 }
 
 std::pair<MainDWARFCompileUnit *, DWARFDebugInfoEntry *>
 DWARFDIE::MainCUtoDIEPair(MainDWARFCompileUnit *main_unit) const {
-  return std::make_pair(GetMainDWARFCompileUnitOrNull(main_unit), GetDIE());
+  return std::make_pair(GetMainDWARFCompileUnit(main_unit), GetDIE());
 }

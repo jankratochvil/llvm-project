@@ -148,3 +148,10 @@ bool MainDWARFCompileUnit::ContainsDIERef(DIERef die_ref) const {
               die_ref.die_offset() < GetNextUnitOffset()));
   return ContainsDIEOffset(die_ref.die_offset());
 }
+
+CompileUnit *MainDWARFCompileUnit::GetCompUnit() {
+  lldbassert(this);
+  CompileUnit *comp_unit = GetNonSkeletonUnit().GetSymbolFileDWARF().GetCompUnitForDWARFCompUnit(*this);
+  lldbassert(comp_unit);
+  return comp_unit;
+}

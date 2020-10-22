@@ -49,6 +49,7 @@ public:
   operator MainDWARFUnit &() { return reinterpret_cast<MainDWARFUnit &>(*this); }
   MainDWARFCompileUnit &GetNonSkeletonUnit();
   bool ContainsDIERef(DIERef die_ref) const;
+  lldb_private::CompileUnit *GetCompUnit();
 };
 static_assert(sizeof(MainDWARFCompileUnit)==sizeof(DWARFCompileUnit),"");
 

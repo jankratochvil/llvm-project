@@ -1003,16 +1003,6 @@ DWARFUnit::GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) {
   return main_unit;
 }
 
-CompileUnit *
-DWARFUnit::GetMainCompUnit(MainDWARFCompileUnit *main_unit) {
-  main_unit = GetMainDWARFCompileUnit(main_unit);
-  if (main_unit == nullptr)
-    return nullptr;
-  CompileUnit *comp_unit = main_unit->GetSymbolFileDWARF().GetCompUnitForDWARFCompUnit(*main_unit);
-  lldbassert(comp_unit);
-  return comp_unit;
-}
-
 MainDWARFUnit *DWARFUnit::GetMainDWARFUnit(MainDWARFCompileUnit *main_unit) {
   main_unit = GetMainDWARFCompileUnit(main_unit);
   if (main_unit)

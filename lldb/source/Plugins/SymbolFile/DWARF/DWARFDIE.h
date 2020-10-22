@@ -100,15 +100,10 @@ public:
 
   MainDWARFCompileUnit *GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit) const;
   MainDWARFUnit *GetMainDWARFUnit(MainDWARFCompileUnit *main_unit) const;
-  lldb_private::CompileUnit *GetMainCompUnit(MainDWARFCompileUnit *main_unit) const;
   std::pair<MainDWARFCompileUnit *, DWARFDIE>
   MainCUtoDWARFDIEPair(MainDWARFCompileUnit *main_unit) const;
   std::pair<MainDWARFCompileUnit *, DWARFDebugInfoEntry *>
   MainCUtoDIEPair(MainDWARFCompileUnit *main_unit) const;
-
-protected:
-  MainDWARFCompileUnit *
-  GetMainDWARFCompileUnitOrNull(MainDWARFCompileUnit *main_unit) const;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDIE_H
