@@ -10,7 +10,6 @@
 #include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
-#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
 
 #include "lldb/Core/Module.h"
