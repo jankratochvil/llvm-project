@@ -612,12 +612,6 @@ bool ARMBaseInstrInfo::isCPSRDefined(const MachineInstr &MI) {
   return false;
 }
 
-bool ARMBaseInstrInfo::isAddrMode3OpImm(const MachineInstr &MI,
-                                        unsigned Op) const {
-  const MachineOperand &Offset = MI.getOperand(Op + 1);
-  return Offset.getReg() != 0;
-}
-
 // Load with negative register offset requires additional 1cyc and +I unit
 // for Cortex A57
 bool ARMBaseInstrInfo::isAddrMode3OpMinusReg(const MachineInstr &MI,
@@ -630,13 +624,6 @@ bool ARMBaseInstrInfo::isAddrMode3OpMinusReg(const MachineInstr &MI,
 
   bool isSub = ARM_AM::getAM3Op(OpcImm) == ARM_AM::sub;
   return (isSub && Offset.getReg() != 0);
-}
-
-bool ARMBaseInstrInfo::isLdstScaledReg(const MachineInstr &MI,
-                                       unsigned Op) const {
-  const MachineOperand &Opc = MI.getOperand(Op + 2);
-  unsigned OffImm = Opc.getImm();
-  return ARM_AM::getAM2ShiftOpc(OffImm) != ARM_AM::no_shift;
 }
 
 // Load, scaled register offset, not plus LSL2
@@ -3865,22 +3852,6 @@ ARMBaseInstrInfo::getVLDMDefCycle(const InstrItineraryData *ItinData,
   }
 
   return DefCycle;
-}
-
-bool ARMBaseInstrInfo::isLDMBaseRegInList(const MachineInstr &MI) const {
-  Register BaseReg = MI.getOperand(0).getReg();
-  for (unsigned i = 1, sz = MI.getNumOperands(); i < sz; ++i) {
-    const auto &Op = MI.getOperand(i);
-    if (Op.isReg() && Op.getReg() == BaseReg)
-      return true;
-  }
-  return false;
-}
-unsigned
-ARMBaseInstrInfo::getLDMVariableDefsSize(const MachineInstr &MI) const {
-  // ins GPR:$Rn, $p (2xOp), reglist:$regs, variable_ops
-  // (outs GPR:$wb), (ins GPR:$Rn, $p (2xOp), reglist:$regs, variable_ops)
-  return MI.getNumOperands() + 1 - MI.getDesc().getNumOperands();
 }
 
 int
