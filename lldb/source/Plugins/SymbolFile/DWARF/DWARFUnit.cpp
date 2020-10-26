@@ -34,7 +34,7 @@ DWARFUnit::DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
                      const DWARFAbbreviationDeclarationSet &abbrevs,
                      DIERef::Section section, bool is_dwo)
     : UserID(uid), m_dwarf(dwarf), m_header(header), m_abbrevs(&abbrevs),
-      m_cancel_scopes(false), m_section(section), m_is_dwo(is_dwo)/*, m_main_cu(this)*/ {}
+      m_cancel_scopes(false), m_section(section), m_is_dwo(is_dwo) {}
 
 DWARFUnit::~DWARFUnit() = default;
 
