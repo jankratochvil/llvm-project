@@ -725,6 +725,7 @@ DWARFDebugInfoEntry::GetDWARFDeclContextStatic(const DWARFDebugInfoEntry *die,
   }
 }
 
+// DIE.GetCU(), not main_unit.
 DWARFDeclContext DWARFDebugInfoEntry::GetDWARFDeclContext(DWARFUnit *cu) const {
   return GetDWARFDeclContextStatic(this, cu);
 }

@@ -26,6 +26,10 @@ public:
 
   DWARFCompileUnit *GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) override;
 
+  DWARFDIE DIE() { return {this, DIEPtr()}; }
+
+  lldb_private::CompileUnit *GetCompUnit();
+
 private:
   DWARFCompileUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
                    const DWARFUnitHeader &header,
