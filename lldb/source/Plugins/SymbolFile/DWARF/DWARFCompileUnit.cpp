@@ -9,6 +9,7 @@
 #include "DWARFCompileUnit.h"
 #include "DWARFDebugAranges.h"
 #include "SymbolFileDWARFDebugMap.h"
+#include "SymbolFileDWARFDwo.h"
 
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineTable.h"
@@ -120,4 +121,11 @@ DWARFCompileUnit::GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) {
   // if (GetUnitDIEOnly().Tag() != DW_TAG_partial_unit)
   main_unit = reinterpret_cast<DWARFCompileUnit *>(this);
   return DWARFUnit::GetMainDWARFCompileUnit(main_unit);
+}
+
+CompileUnit *DWARFCompileUnit::GetCompUnit() {
+  lldbassert(this);
+  CompileUnit *comp_unit = GetNonSkeletonUnit().GetSymbolFileDWARF().GetCompUnitForDWARFCompUnit(*this);
+  lldbassert(comp_unit);
+  return comp_unit;
 }

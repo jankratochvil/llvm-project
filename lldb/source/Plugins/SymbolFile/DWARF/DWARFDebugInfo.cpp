@@ -210,7 +210,7 @@ DWARFDebugInfo::GetDIE(const DIERef &die_ref, DWARFCompileUnit **main_unit_retur
       cu = main_cu = &main_cu->GetNonSkeletonUnit();
     if (main_unit_return)
       *main_unit_return = main_cu;
-    return cu->GetNonSkeletonUnit().GetDIE(die_ref.die_offset());
+    return cu->GetDIE(die_ref.die_offset());
   }
   return DWARFDIE(); // Not found
 }

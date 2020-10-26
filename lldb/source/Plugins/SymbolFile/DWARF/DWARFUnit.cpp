@@ -352,7 +352,7 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
 
   uint64_t main_dwo_id =
       cu_die.GetAttributeValueAsUnsigned(this, DW_AT_GNU_dwo_id, 0);
-  DWARFUnit *dwo_cu = dwo_symbol_file->GetDWOCompileUnitForHash(main_dwo_id);
+  DWARFCompileUnit *dwo_cu = dwo_symbol_file->GetDWOCompileUnitForHash(main_dwo_id);
   if (!dwo_cu)
     return; // Can't fetch the compile unit from the dwo file.
   dwo_cu->SetUserData(this);
@@ -385,7 +385,7 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
     dwo_cu->SetLoclistsBase(llvm::DWARFListTableHeader::getHeaderSize(DWARF32));
   dwo_cu->SetBaseAddress(GetBaseAddress());
 
-  m_dwo = std::shared_ptr<DWARFUnit>(std::move(dwo_symbol_file), dwo_cu);
+  m_dwo = std::shared_ptr<DWARFCompileUnit>(std::move(dwo_symbol_file), dwo_cu);
 }
 
 size_t DWARFUnit::GetDebugInfoSize() const {
