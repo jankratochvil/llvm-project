@@ -514,36 +514,6 @@ static bool CompareDIEOffset(const DWARFDebugInfoEntry &die,
   return die.GetOffset() < die_offset;
 }
 
-const DWARFDebugInfoEntry *DWARFUnit::GetDIEPtr(dw_offset_t die_offset) {
-  if (die_offset == DW_INVALID_OFFSET) {
-    m_dwarf.GetObjectFile()->GetModule()->ReportError(
-        "CU 0x%8.8" PRIx32 " does not contain DIE 0x%8.8" PRIx32, GetOffset(),
-        die_offset);
-    return nullptr;
-  }
-  lldbassert(!GetDwoSymbolFile()); // FIXME: Or maybe just leave it running here now?
-
-  if (!ContainsDIEOffset(die_offset)) {
-    GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-        "GetDIE for DIE 0x%" PRIx32 " is outside of its CU 0x%" PRIx32,
-        die_offset, GetOffset());
-    return nullptr;
-  }
-
-  ExtractDIEsIfNeeded();
-  DWARFDebugInfoEntry::const_iterator end = m_die_array.cend();
-  DWARFDebugInfoEntry::const_iterator pos =
-      lower_bound(m_die_array.cbegin(), end, die_offset, CompareDIEOffset);
-  if (pos != end) {
-    if (die_offset == (*pos).GetOffset())
-      return &(*pos);
-  }
-  GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-      "CU 0x%8.8" PRIx32 " does not contain DIE 0x%8.8" PRIx32, GetOffset(),
-      die_offset);
-  return nullptr;
-}
-
 // GetDIE()
 //
 // Get the DIE (Debug Information Entry) with the specified offset by first
@@ -551,10 +521,32 @@ const DWARFDebugInfoEntry *DWARFUnit::GetDIEPtr(dw_offset_t die_offset) {
 // DIE from this compile unit. Otherwise we grab the DIE from the DWARF file.
 DWARFDIE
 DWARFUnit::GetDIE(dw_offset_t die_offset) {
-  const DWARFDebugInfoEntry *die = GetDIEPtr(die_offset);
-  if (!die)
-    return DWARFDIE();
-  return {this, die};
+  if (die_offset == DW_INVALID_OFFSET) {
+    m_dwarf.GetObjectFile()->GetModule()->ReportError(
+        "CU 0x%8.8" PRIx32 " does not contain DIE 0x%8.8" PRIx32, GetOffset(),
+        die_offset);
+    return DWARFDIE(); // Not found
+  }
+  lldbassert(!GetDwoSymbolFile()); // FIXME: Or maybe just leave it running here now?
+
+  if (!ContainsDIEOffset(die_offset)) {
+    GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
+        "GetDIE for DIE 0x%" PRIx32 " is outside of its CU 0x%" PRIx32,
+        die_offset, GetOffset());
+    return DWARFDIE(); // Not found
+  }
+
+  ExtractDIEsIfNeeded();
+  DWARFDebugInfoEntry::const_iterator end = m_die_array.cend();
+  DWARFDebugInfoEntry::const_iterator pos =
+      lower_bound(m_die_array.cbegin(), end, die_offset, CompareDIEOffset);
+
+  if (pos != end && die_offset == (*pos).GetOffset())
+    return DWARFDIE(this, &(*pos));
+  GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
+      "CU 0x%8.8" PRIx32 " does not contain DIE 0x%8.8" PRIx32, GetOffset(),
+      die_offset);
+  return DWARFDIE(); // Not found
 }
 
 DWARFUnit &DWARFUnit::GetNonSkeletonUnit() {

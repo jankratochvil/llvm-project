@@ -182,8 +182,6 @@ public:
 
   DWARFDIE DIE() { return DWARFDIE(this, DIEPtr()); }
 
-  const DWARFDebugInfoEntry *GetDIEPtr(dw_offset_t die_offset);
-
   DWARFDIE GetDIE(dw_offset_t die_offset);
 
   DWARFUnit &GetNonSkeletonUnit();
