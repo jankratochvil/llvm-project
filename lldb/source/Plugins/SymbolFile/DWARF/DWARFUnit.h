@@ -212,6 +212,8 @@ public:
 
   uint32_t GetProducerVersionUpdate();
 
+  uint64_t GetDWARFLanguageType();
+
   bool GetIsOptimized();
 
   const lldb_private::FileSpec &GetCompilationDirectory();
@@ -275,8 +277,6 @@ public:
 
   virtual MainDWARFCompileUnit *GetMainDWARFCompileUnit(MainDWARFCompileUnit *main_unit);
   MainDWARFUnit *GetMainDWARFUnit(MainDWARFCompileUnit *main_unit);
-
-  uint64_t GetDWARFLanguageType();
 
 protected:
   DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
