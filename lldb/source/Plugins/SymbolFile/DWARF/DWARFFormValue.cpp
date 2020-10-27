@@ -545,8 +545,7 @@ DWARFDIE DWARFFormValue::Reference() const {
           value);
       return {};
     }
-    DWARFUnit *cu = const_cast<DWARFUnit *>(m_unit);
-    return {cu, cu->GetDIEPtr(value)};
+    return const_cast<DWARFUnit *>(m_unit)->GetDIE(value);
   }
 
   case DW_FORM_GNU_ref_alt: {
@@ -586,7 +585,7 @@ DWARFDIE DWARFFormValue::Reference() const {
           value);
       return {};
     }
-    return {target_cu, target_cu->GetDIEPtr(value)};
+    return target_cu->GetDIE(value);
   }
 
   case DW_FORM_ref_addr: {
@@ -600,7 +599,7 @@ DWARFDIE DWARFFormValue::Reference() const {
           value);
       return {};
     }
-    return {ref_cu, ref_cu->GetDIEPtr(value)};
+    return ref_cu->GetDIE(value);
   }
 
   case DW_FORM_ref_sig8: {
@@ -608,7 +607,7 @@ DWARFDIE DWARFFormValue::Reference() const {
         m_unit->GetSymbolFileDWARF().DebugInfo().GetTypeUnitForHash(value);
     if (!tu)
       return {};
-    return {tu, tu->GetDIEPtr(tu->GetTypeOffset())};
+    return tu->GetDIE(tu->GetTypeOffset());
   }
 
   default:
