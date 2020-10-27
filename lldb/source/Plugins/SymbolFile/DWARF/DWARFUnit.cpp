@@ -527,6 +527,7 @@ DWARFUnit::GetDIE(dw_offset_t die_offset) {
         die_offset);
     return DWARFDIE(); // Not found
   }
+
   lldbassert(!GetDwoSymbolFile()); // FIXME: Or maybe just leave it running here now?
 
   if (!ContainsDIEOffset(die_offset)) {
