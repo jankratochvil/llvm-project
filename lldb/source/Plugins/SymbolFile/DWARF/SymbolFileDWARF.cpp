@@ -1306,9 +1306,14 @@ user_id_t SymbolFileDWARF::GetUID(DWARFCompileUnit *main_unit, DIERef ref) {
   // WARNING: Use ref.dwo_num() as GetDwoNum() may not be valid in 'this'.
   static_assert(sizeof(ref.die_offset()) * 8 == 32, "");
   lldbassert(!ref.dwo_num().hasValue()||*ref.dwo_num()<=0x1fffffff);
-  user_id_t retval = user_id_t(ref.dwo_num().getValueOr(0x1fffffff)) << 32 |
+  lldbassert(!ref.main_cu().hasValue()||*ref.main_cu()<=0x1fffffff);
+  lldbassert(0 <= ref.kind_get());
+  lldbassert(ref.kind_get() <= 3);
+  user_id_t retval =
+         user_id_t(ref.dwo_num() ? *ref.dwo_num() : (ref.main_cu() ? *ref.main_cu() : 0)) << 32 |
          ref.die_offset() |
-         (lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes) << 63);
+         user_id_t(ref.kind_get()) << 61 |
+         (lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes)) << 63;
 
 #ifndef NDEBUG
   DWARFCompileUnit *main_unit_check;
