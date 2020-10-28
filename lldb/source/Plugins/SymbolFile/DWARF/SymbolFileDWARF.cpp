@@ -1332,8 +1332,8 @@ user_id_t SymbolFileDWARF::GetUID(MainDWARFCompileUnit *main_unit, DIERef ref) {
 
   // WARNING: Use ref.dwo_num() as GetDwoNum() may not be valid in 'this'.
   static_assert(sizeof(ref.die_offset()) * 8 == 32, "");
-  lldbassert(!ref.dwo_num().hasValue()||*ref.dwo_num()<=0x3fffffff);
-  lldbassert(!ref.main_cu().hasValue()||*ref.main_cu()<=0x3fffffff);
+  lldbassert(!ref.dwo_num().hasValue()||*ref.dwo_num()<=0x1fffffff);
+  lldbassert(!ref.main_cu().hasValue()||*ref.main_cu()<=0x1fffffff);
   lldbassert(0 <= ref.kind_get());
   lldbassert(ref.kind_get() <= 3);
   user_id_t retval =
@@ -1771,7 +1771,7 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
   if (dwo_obj_file == nullptr)
     return nullptr;
 
-  lldbassert(dwarf_cu->GetID()<0x1ffffffe);
+  lldbassert(dwarf_cu->GetID()<0x1fffffff);
   return std::make_shared<SymbolFileDWARFDwo>(*this, dwo_obj_file,
                                               dwarf_cu->GetID());
 }
@@ -4015,7 +4015,7 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
       if (!dwp_obj_file)
         return;
       m_dwp_symfile =
-          std::make_shared<SymbolFileDWARFDwo>(*this, dwp_obj_file, 0x3fffffff);
+          std::make_shared<SymbolFileDWARFDwo>(*this, dwp_obj_file, 0x1fffffff);
     }
   });
   return m_dwp_symfile;
