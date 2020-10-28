@@ -29,7 +29,9 @@ llvm::Optional<DIERef> DWARFBaseDIE::GetDIERef(DWARFCompileUnit *main_unit) cons
   if (m_cu == main_unit)
     main_unit = nullptr;
 
-  return DIERef(m_cu->GetSymbolFileDWARF().GetDwoNum(), m_cu->GetDebugSection(),
+  return DIERef(m_cu->GetSymbolFileDWARF().GetDwoNum(), (!main_unit ? llvm::None : llvm::Optional<uint32_t>(main_unit->GetID())),
+    DIERef::MainDwz,
+  m_cu->GetDebugSection(),
                 m_die->GetOffset());
 }
 
