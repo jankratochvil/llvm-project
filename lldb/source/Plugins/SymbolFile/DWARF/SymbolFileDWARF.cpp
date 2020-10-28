@@ -1340,7 +1340,7 @@ user_id_t SymbolFileDWARF::GetUID(DWARFCompileUnit *main_unit, DIERef ref) {
          user_id_t(ref.dwo_num() ? *ref.dwo_num() : (ref.main_cu() ? *ref.main_cu() : 0)) << 32 |
          ref.die_offset() |
          user_id_t(ref.kind_get()) << 61 |
-         (lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes)) << 63;
+         lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes) << 63;
 
 #ifndef NDEBUG
   DWARFCompileUnit *main_unit_check;
