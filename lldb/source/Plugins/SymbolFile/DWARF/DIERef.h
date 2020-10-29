@@ -27,7 +27,7 @@ class DIERef {
 public:
   enum Section : uint8_t { DebugInfo, DebugTypes };
   enum DwzCommon : uint8_t { MainDwz, CommonDwz };
-  enum Kind : uint8_t { NoneKind, DwoKind, MainDwzKind, DwzCommonKind };
+  enum Kind : uint8_t { NoneKind, MainDwzKind, DwoKind, DwzCommonKind };
 
   DIERef(llvm::Optional<uint32_t> dwo_num, llvm::Optional<uint32_t> main_cu, DwzCommon dwz_common, Section section,
          dw_offset_t die_offset)
