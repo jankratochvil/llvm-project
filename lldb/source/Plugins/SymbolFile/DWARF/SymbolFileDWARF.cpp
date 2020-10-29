@@ -1346,11 +1346,11 @@ SymbolFileDWARF::DecodeUIDUnlocked(lldb::user_id_t uid) {
   DIERef::Section section =
       uid >> 63 ? DIERef::Section::DebugTypes : DIERef::Section::DebugInfo;
 
-  DIERef::Kind kind = DIERef::Kind((uid >> 61) & 3);
+  DIERef::Kind kind = DIERef::Kind(uid >> 61 & 3);
 
-  llvm::Optional<uint32_t> dwo_num = uid >> 32 & 0x1fffffff;
-  if (kind != DIERef::Kind::DwoKind)
-    dwo_num = llvm::None;
+  llvm::Optional<uint32_t> dwo_num;
+  if (kind == DIERef::Kind::DwoKind)
+    dwo_num = uid >> 32 & 0x1fffffff;
 
   return DecodedUID{*this, {dwo_num, llvm::None, DIERef::MainDwz, section, die_offset}};
 }
