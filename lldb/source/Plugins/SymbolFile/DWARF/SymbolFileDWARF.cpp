@@ -1301,7 +1301,7 @@ SymbolFileDWARF::DecodeUID(lldb::user_id_t uid) {
       uid >> 63 ? DIERef::Section::DebugTypes : DIERef::Section::DebugInfo;
 
   llvm::Optional<uint32_t> dwo_num;
-  bool dwo_valid = uid >> 62 != 0;
+  bool dwo_valid = uid >> 62 & 1;
   if (dwo_valid)
     dwo_num = uid >> 32 & 0x3fffffff;
 
