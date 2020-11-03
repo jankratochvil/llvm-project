@@ -15,7 +15,7 @@ from lldbsuite.support import gmodules
 
 
 debug_info_categories = [
-    'dwarf', 'dwo', 'dsym', 'gmodules'
+    'dwarf', 'dwo', 'dsym', 'gmodules', 'dts'
 ]
 
 all_categories = {
@@ -26,6 +26,7 @@ all_categories = {
     'dsym': 'Tests that can be run with DSYM debug information',
     'dwarf': 'Tests that can be run with DWARF debug information',
     'dwo': 'Tests that can be run with DWO debug information',
+    'dts': 'Tests using -fdebug-types-section',
     'dyntype': 'Tests related to dynamic type support',
     'expression': 'Tests related to the expression parser',
     'flakey': 'Flakey test cases, i.e. tests that do not reliably pass at each execution',
