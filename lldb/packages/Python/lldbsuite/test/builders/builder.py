@@ -267,6 +267,31 @@ class Builder:
         # True signifies that we can handle building with DTS.
         return True
 
+    def buildDWZ(self,
+                 sender=None,
+                 architecture=None,
+                 compiler=None,
+                 dictionary=None,
+                 testdir=None,
+                 testname=None):
+        """Build the binaries with DWZ - a DWARF optimization tool."""
+        commands = []
+        commands.append(
+            self.getMake(testdir, testname) + [
+                "MAKE_DSYM=NO", "DWZ=YES",
+                self.getArchCFlags(architecture),
+                self.getArchSpec(architecture),
+                self.getCCSpec(compiler),
+                self.getExtraMakeArgs(),
+                self.getSDKRootSpec(),
+                self.getModuleCacheSpec(),
+                self.getCmdLine(dictionary)
+            ])
+
+        self.runBuildCommands(commands, sender=sender)
+        # True signifies that we can handle building with DWZ.
+        return True
+
     def cleanup(self, sender=None, dictionary=None):
         """Perform a platform-specific cleanup after the test."""
         return True
