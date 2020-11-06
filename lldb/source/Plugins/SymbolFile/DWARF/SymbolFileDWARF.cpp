@@ -390,11 +390,14 @@ void SymbolFileDWARF::GetTypes(SymbolContextScope *sc_scope,
     DWARFDebugInfo &info = DebugInfo();
     const size_t num_cus = info.GetNumUnits();
     for (size_t cu_idx = 0; cu_idx < num_cus; ++cu_idx) {
+#if 0 // FIXME!!!!!!!!!!!!!!!!!!!!!
       DWARFCompileUnit *dwarf_cu =
           llvm::dyn_cast_or_null<DWARFCompileUnit>(info.GetUnitAtIndex(cu_idx));
-// FIXME!!!!!!!!!!!!!!!!!!!!!
       if (dwarf_cu)
         get(dwarf_cu);
+#else
+      get(llvm::cast_or_null<DWARFCompileUnit>(info.GetUnitAtIndex(cu_idx)));
+#endif
     }
   }
 
