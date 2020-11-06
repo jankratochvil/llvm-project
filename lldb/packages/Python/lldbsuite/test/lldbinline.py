@@ -121,12 +121,12 @@ class InlineTest(TestBase):
         self.do_test()
 
     @add_test_categories(["dts"])
-    def __test_with_dwz(self):
+    def __test_with_dts(self):
         self.using_dsym = False
         self.BuildMakefile()
         self.build()
         self.do_test()
-    __test_with_dwz.debug_info = "dts"
+    __test_with_dts.debug_info = "dts"
 
     def execute_user_command(self, __command):
         exec(__command, globals(), locals())
