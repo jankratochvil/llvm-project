@@ -38,8 +38,18 @@ static bool WrapperGenMain(llvm::raw_ostream &OS, llvm::RecordKeeper &Records) {
   llvm::Record *FunctionSpec = NameSpecPair.second;
   llvm::Record *RetValSpec = FunctionSpec->getValueAsDef("Return");
   llvm::Record *ReturnType = RetValSpec->getValueAsDef("ReturnType");
-  OS << "extern \"C\" " << Indexer.getTypeAsString(ReturnType) << " "
-     << FunctionName << "(";
+  std::string ReturnTypeString = Indexer.getTypeAsString(ReturnType);
+  bool ShouldReturn = true;
+  // We are generating C wrappers in C++ code. So, we should convert the C
+  // _Noreturn to the C++ [[noreturn]].
+  llvm::StringRef NR("_Noreturn "); // Note the space after _Noreturn
+  llvm::StringRef RT(ReturnTypeString);
+  if (RT.startswith(NR)) {
+    RT = RT.drop_front(NR.size() - 1); // - 1 because of the space.
+    ReturnTypeString = std::string("[[noreturn]]") + std::string(RT);
+    ShouldReturn = false;
+  }
+  OS << "extern \"C\" " << ReturnTypeString << " " << FunctionName << "(";
 
   auto ArgsList = FunctionSpec->getValueAsListOfDefs("Args");
   std::stringstream CallArgs;
@@ -47,6 +57,20 @@ static bool WrapperGenMain(llvm::raw_ostream &OS, llvm::RecordKeeper &Records) {
   for (size_t i = 0; i < ArgsList.size(); ++i) {
     llvm::Record *ArgType = ArgsList[i]->getValueAsDef("ArgType");
     auto TypeName = Indexer.getTypeAsString(ArgType);
+
+    if (TypeName.compare("void") == 0) {
+      if (ArgsList.size() == 1) {
+        break;
+      } else {
+        // the reason this is a fatal error is that a void argument means this
+        // function has no arguments; multiple copies of no arguments is an
+        // error.
+        llvm::PrintFatalError(
+            "The specification for function " + FunctionName +
+            " lists other arguments along with a void argument.");
+      }
+    }
+
     OS << TypeName << " " << ArgPrefix << i;
     CallArgs << ArgPrefix << i;
     if (i < ArgsList.size() - 1) {
@@ -59,8 +83,8 @@ static bool WrapperGenMain(llvm::raw_ostream &OS, llvm::RecordKeeper &Records) {
   // match the standard types. Either handle such differences here, or
   // avoid such a thing in the implementations.
   OS << ") {\n"
-     << "  return __llvm_libc::" << FunctionName << "(" << CallArgs.str()
-     << ");\n"
+     << "  " << (ShouldReturn ? "return " : "")
+     << "__llvm_libc::" << FunctionName << "(" << CallArgs.str() << ");\n"
      << "}\n";
 
   return false;
