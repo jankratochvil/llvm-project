@@ -3689,10 +3689,10 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
 
   DWARFASTParserClang *src_dwarf_ast_parser =
       static_cast<DWARFASTParserClang *>(
-          SymbolFileDWARF::GetDWARFParser(*src_die.GetMainDWARFUnit(main_unit)));
+          SymbolFileDWARF::GetDWARFParser(*src_class_die.GetMainDWARFUnit(main_unit)));
   DWARFASTParserClang *dst_dwarf_ast_parser =
       static_cast<DWARFASTParserClang *>(
-          SymbolFileDWARF::GetDWARFParser(*dst_die.GetMainDWARFUnit(main_unit)));
+          SymbolFileDWARF::GetDWARFParser(*dst_class_die.GetMainDWARFUnit(main_unit)));
 
   // Now do the work of linking the DeclContexts and Types.
   if (fast_path) {
