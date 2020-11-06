@@ -136,7 +136,7 @@ void AMDGPUInstPrinter::printOffset(const MCInst *MI, unsigned OpNo,
                                     raw_ostream &O) {
   uint16_t Imm = MI->getOperand(OpNo).getImm();
   if (Imm != 0) {
-    O << ((OpNo == 0)? "offset:" : " offset:");
+    O << " offset:";
     printU16ImmDecOperand(MI, OpNo, O);
   }
 }
@@ -146,10 +146,11 @@ void AMDGPUInstPrinter::printFlatOffset(const MCInst *MI, unsigned OpNo,
                                         raw_ostream &O) {
   uint16_t Imm = MI->getOperand(OpNo).getImm();
   if (Imm != 0) {
-    O << ((OpNo == 0)? "offset:" : " offset:");
+    O << " offset:";
 
     const MCInstrDesc &Desc = MII.get(MI->getOpcode());
-    bool IsFlatSeg = !(Desc.TSFlags & SIInstrFlags::IsNonFlatSeg);
+    bool IsFlatSeg = !(Desc.TSFlags &
+        (SIInstrFlags::IsFlatGlobal | SIInstrFlags::IsFlatScratch));
 
     if (IsFlatSeg) { // Unsigned offset
       printU16ImmDecOperand(MI, OpNo, O);
