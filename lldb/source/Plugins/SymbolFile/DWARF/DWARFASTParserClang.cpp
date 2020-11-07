@@ -342,7 +342,8 @@ ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
 
     case DW_AT_decl_file:
       // die.GetCU() can differ if DW_AT_specification uses DW_FORM_ref_addr.
-      decl.SetFile(attributes.CompileUnitAtIndex(i)->GetFile(form_value.Unsigned()));
+      decl.SetFile(
+          attributes.CompileUnitAtIndex(i)->GetFile(form_value.Unsigned()));
       break;
     case DW_AT_decl_line:
       decl.SetLine(form_value.Unsigned());
