@@ -180,8 +180,8 @@ protected:
   dw_tag_t m_tag = llvm::dwarf::DW_TAG_null;
 
 private:
-  size_t GetAttributes(DWARFUnit *cu, DWARFAttributes &attrs,
-                       Recurse recurse, uint32_t curr_depth) const;
+  size_t GetAttributes(DWARFUnit *cu, DWARFAttributes &attrs, Recurse recurse,
+                       uint32_t curr_depth) const;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGINFOENTRY_H
