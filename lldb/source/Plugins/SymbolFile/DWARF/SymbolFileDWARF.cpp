@@ -389,16 +389,8 @@ void SymbolFileDWARF::GetTypes(SymbolContextScope *sc_scope,
   } else {
     DWARFDebugInfo &info = DebugInfo();
     const size_t num_cus = info.GetNumUnits();
-    for (size_t cu_idx = 0; cu_idx < num_cus; ++cu_idx) {
-#if 0 // FIXME!!!!!!!!!!!!!!!!!!!!!
-      DWARFCompileUnit *dwarf_cu =
-          llvm::dyn_cast_or_null<DWARFCompileUnit>(info.GetUnitAtIndex(cu_idx));
-      if (dwarf_cu)
-        get(dwarf_cu);
-#else
+    for (size_t cu_idx = 0; cu_idx < num_cus; ++cu_idx)
       get(llvm::cast_or_null<DWARFCompileUnit>(info.GetUnitAtIndex(cu_idx)));
-#endif
-    }
   }
 
   std::set<CompilerType> compiler_type_set;
