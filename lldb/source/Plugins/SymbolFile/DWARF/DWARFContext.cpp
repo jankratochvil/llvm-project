@@ -123,6 +123,11 @@ const DWARFDataExtractor &DWARFContext::getOrLoadDebugTypesData() {
                           eSectionTypeDWARFDebugTypesDwo, m_data_debug_types);
 }
 
+const DWARFDataExtractor &DWARFContext::getOrLoadGNUDebugAltLink() {
+  return LoadOrGetSection(eSectionTypeDWARFGNUDebugAltLink, llvm::None,
+                          m_data_gnu_debug_alt_link);
+}
+
 llvm::DWARFContext &DWARFContext::GetAsLLVM() {
   if (!m_llvm_context) {
     llvm::StringMap<std::unique_ptr<llvm::MemoryBuffer>> section_map;
