@@ -261,6 +261,9 @@ public:
 
   lldb_private::DWARFDataExtractor GetLocationData() const;
 
+  virtual DWARFCompileUnit *GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit);
+  DWARFUnit *GetMainDWARFUnit(DWARFCompileUnit *main_unit);
+
 protected:
   DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
             const DWARFUnitHeader &header,
@@ -290,7 +293,7 @@ protected:
   }
 
   SymbolFileDWARF &m_dwarf;
-  std::shared_ptr<DWARFUnit> m_dwo;
+  std::shared_ptr<DWARFCompileUnit> m_dwo;
   DWARFUnitHeader m_header;
   const DWARFAbbreviationDeclarationSet *m_abbrevs = nullptr;
   void *m_user_data = nullptr;

@@ -41,11 +41,12 @@ public:
   DWARFUnit *GetUnitContainingDIEOffset(DIERef::Section section,
                                         dw_offset_t die_offset);
   DWARFUnit *GetUnit(const DIERef &die_ref);
+  DWARFCompileUnit *GetMainUnit(const DIERef &die_ref);
   DWARFTypeUnit *GetTypeUnitForHash(uint64_t hash);
   bool ContainsTypeUnits();
   DWARFDIE GetDIEForDIEOffset(DIERef::Section section,
                               dw_offset_t die_offset);
-  DWARFDIE GetDIE(const DIERef &die_ref);
+  DWARFDIE GetDIE(const DIERef &die_ref, DWARFCompileUnit **main_unit_return = nullptr);
 
   enum {
     eDumpFlag_Verbose = (1 << 0),  // Verbose dumping
@@ -55,6 +56,10 @@ public:
   };
 
   llvm::Expected<DWARFDebugAranges &> GetCompileUnitAranges();
+
+  lldb::user_id_t GetUID(DWARFCompileUnit *main_unit, DIERef ref) const {
+    return m_dwarf.GetUID(main_unit, ref);
+  }
 
 protected:
   typedef std::vector<DWARFUnitSP> UnitColl;

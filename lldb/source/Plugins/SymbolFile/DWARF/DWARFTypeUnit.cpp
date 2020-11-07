@@ -8,7 +8,7 @@
 
 #include "DWARFTypeUnit.h"
 
-#include "SymbolFileDWARF.h"
+#include "SymbolFileDWARFDwo.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
@@ -20,4 +20,8 @@ void DWARFTypeUnit::Dump(Stream *s) const {
             "{0x%8.8x})\n",
             GetOffset(), GetLength(), GetVersion(), GetAbbrevOffset(),
             GetAddressByteSize(), GetNextUnitOffset());
+}
+
+DWARFCompileUnit *DWARFTypeUnit::GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) {
+  return nullptr;
 }
