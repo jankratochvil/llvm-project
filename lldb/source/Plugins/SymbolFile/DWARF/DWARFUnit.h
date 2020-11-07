@@ -93,28 +93,17 @@ public:
   void ExtractDIEsIfNeeded();
 
   class ScopedExtractDIEs {
-  public:
-    ScopedExtractDIEs(DWARFUnit &cu);
-    void ClearDIEs() {
-      assert(!m_clear_dies);
-      m_clear_dies = true;
-    }
-    // Do not touch m_cu anymore.
-    void Disable() {
-      m_unlock = false;
-      m_clear_dies = false;
-    }
-    ~ScopedExtractDIEs();
-    ScopedExtractDIEs(ScopedExtractDIEs &&rhs);
-    ScopedExtractDIEs &operator=(ScopedExtractDIEs &&rhs);
-
-  private:
     DWARFUnit *m_cu;
+  public:
     bool m_clear_dies = false;
-    bool m_unlock;
+    ScopedExtractDIEs(DWARFUnit &cu);
+    ~ScopedExtractDIEs();
     ScopedExtractDIEs(const ScopedExtractDIEs &) = delete;
     const ScopedExtractDIEs &operator=(const ScopedExtractDIEs &) = delete;
+    ScopedExtractDIEs(ScopedExtractDIEs &&rhs);
+    ScopedExtractDIEs &operator=(ScopedExtractDIEs &&rhs);
   };
+  ScopedExtractDIEs ExtractDIEsScoped();
 
   bool Verify(lldb_private::Stream *s) const;
   virtual void Dump(lldb_private::Stream *s) const = 0;
@@ -352,7 +341,6 @@ private:
   void ParseProducerInfo();
   void ExtractDIEsRWLocked();
   void ClearDIEsRWLocked();
-  void ExtractDIEsScoped(ScopedExtractDIEs &scoped);
 
   void AddUnitDIE(const DWARFDebugInfoEntry &cu_die);
   void SetDwoStrOffsetsBase();
