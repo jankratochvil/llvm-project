@@ -1671,23 +1671,6 @@ class Base(unittest2.TestCase):
                                     dictionary, testdir, testname):
             raise Exception("Don't know how to build binary with gmodules")
 
-    def buildDTS(
-            self,
-            architecture=None,
-            compiler=None,
-            dictionary=None):
-        """Platform specific way to build binaries with dts optimizer."""
-        testdir = self.mydir
-        testname = self.getBuildDirBasename()
-        if self.getDebugInfo() != "dts":
-            raise Exception("NO_DEBUG_INFO_TESTCASE must build with buildDefault")
-
-        module = builder_module()
-        dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
-        if not module.buildDTS(self, architecture, compiler,
-                               dictionary, testdir, testname):
-            raise Exception("Don't know how to build binary with dts")
-
     def buildDWZ(
             self,
             architecture=None,
@@ -2659,8 +2642,6 @@ FileCheck output:
             return self.buildDwo(architecture, compiler, dictionary)
         elif self.getDebugInfo() == "gmodules":
             return self.buildGModules(architecture, compiler, dictionary)
-        elif self.getDebugInfo() == "dts":
-            return self.buildDTS(architecture, compiler, dictionary)
         elif self.getDebugInfo() == "dwz":
             return self.buildDWZ(architecture, compiler, dictionary)
         else:

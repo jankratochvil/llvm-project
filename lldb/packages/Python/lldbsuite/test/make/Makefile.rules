@@ -26,7 +26,6 @@
 # SPLIT_DEBUG_SYMBOLS := YES
 # CROSS_COMPILE :=
 # USE_PRIVATE_MODULE_CACHE := YES
-# DTS := YES
 # DWZ := YES
 #
 # And test/functionalities/archives/Makefile:
@@ -259,11 +258,6 @@ endif
 
 ifeq "$(MAKE_DWO)" "YES"
 	CFLAGS += -gsplit-dwarf
-endif
-
-ifeq "$(DTS)" "YES"
-	CFLAGS += -fdebug-types-section
-	CXXFLAGS += -fdebug-types-section
 endif
 
 ifeq "$(USE_PRIVATE_MODULE_CACHE)" "YES"
