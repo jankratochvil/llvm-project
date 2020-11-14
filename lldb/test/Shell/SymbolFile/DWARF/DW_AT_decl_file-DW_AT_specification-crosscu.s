@@ -14,12 +14,12 @@
 	.text
 	.globl	main                            # -- Begin function main
 	.type	main,@function
-main:                                   # @main
+main:                                           # @main
 .Lfunc_begin0:
         .byte 0
 .Lfunc_end0:
 	.size	main, .Lfunc_end0-main
-                                        # -- End function
+                                                # -- End function
 	.section	.debug_abbrev,"",@progbits
 	.byte	1                               # Abbreviation Code
 	.byte	17                              # DW_TAG_compile_unit
@@ -94,15 +94,15 @@ main:                                   # @main
 	.long	.debug_abbrev                   # Offset Into Abbrev. Section
 	.byte	8                               # Address Size (in bytes)
 	.byte	1                               # Abbrev [1] 0xb:0x40 DW_TAG_compile_unit
-	.long	.Linfo_string_producer                  # DW_AT_producer
+	.long	.Linfo_string_producer          # DW_AT_producer
 	.short	12                              # DW_AT_language
-	.long	.Linfo_string_source                  # DW_AT_name
+	.long	.Linfo_string_source            # DW_AT_name
 	.long	.Lline_table_start0             # DW_AT_stmt_list
-	.long	.Linfo_string_directory                  # DW_AT_comp_dir
+	.long	.Linfo_string_directory         # DW_AT_comp_dir
 	.quad	.Lfunc_begin0                   # DW_AT_low_pc
 	.long	.Lfunc_end0-.Lfunc_begin0       # DW_AT_high_pc
 	.byte	2                               # Abbrev [2] 0x2a:0x19 DW_TAG_subprogram
-	.long	.Linfo_string_main                  # DW_AT_name
+	.long	.Linfo_string_main              # DW_AT_name
 	.quad	.Lfunc_begin0                   # DW_AT_low_pc
 	.long	.Lfunc_end0-.Lfunc_begin0       # DW_AT_high_pc
 	.byte	1                               # DW_AT_frame_base
@@ -118,23 +118,23 @@ main:                                   # @main
 	.long	.debug_abbrev                   # Offset Into Abbrev. Section
 	.byte	8                               # Address Size (in bytes)
 	.byte	1                               # Abbrev [1] 0xb:0x40 DW_TAG_compile_unit
-	.long	.Linfo_string_producer                  # DW_AT_producer
+	.long	.Linfo_string_producer          # DW_AT_producer
 	.short	12                              # DW_AT_language
-	.long	.Linfo_string_source                  # DW_AT_name
+	.long	.Linfo_string_source            # DW_AT_name
 	.long	.Lline_table_start1             # DW_AT_stmt_list
-	.long	.Linfo_string_directory                  # DW_AT_comp_dir
+	.long	.Linfo_string_directory         # DW_AT_comp_dir
 	.quad	.Lfunc_begin0                   # DW_AT_low_pc
 	.long	.Lfunc_end0-.Lfunc_begin0       # DW_AT_high_pc
 .Ldebug_info1_main:
 	.byte	4                               # Abbrev [2] 0x2a:0x19 DW_TAG_subprogram
 	.byte	1                               # DW_AT_decl_file
 	.byte	1                               # DW_AT_decl_line
-                                        # DW_AT_prototyped
+                                                # DW_AT_prototyped
 	.long	.Ldebug_info1_int - .Ldebug_info1 # DW_AT_type
-                                        # DW_AT_external
+                                                # DW_AT_external
 .Ldebug_info1_int:
 	.byte	3                               # Abbrev [3] 0x43:0x7 DW_TAG_base_type
-	.long	.Linfo_string_int                  # DW_AT_name
+	.long	.Linfo_string_int               # DW_AT_name
 	.byte	5                               # DW_AT_encoding
 	.byte	4                               # DW_AT_byte_size
 	.byte	0                               # End Of Children Mark
@@ -148,9 +148,9 @@ main:                                   # @main
 .Linfo_string_directory:
 	.asciz	"/directory" # string offset=196
 .Linfo_string_main:
-	.asciz	"main"                          # string offset=232
+	.asciz	"main"
 .Linfo_string_int:
-	.asciz	"int"                           # string offset=237
+	.asciz	"int"
 	.ident	"clang version 12.0.0"
 	.section	".note.GNU-stack","",@progbits
 	.addrsig

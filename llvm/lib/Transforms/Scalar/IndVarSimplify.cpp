@@ -149,6 +149,7 @@ class IndVarSimplify {
   std::unique_ptr<MemorySSAUpdater> MSSAU;
 
   SmallVector<WeakTrackingVH, 16> DeadInsts;
+  bool WidenIndVars;
 
   bool handleFloatingPointIV(Loop *L, PHINode *PH);
   bool rewriteNonIntegerIVs(Loop *L);
@@ -171,8 +172,9 @@ class IndVarSimplify {
 public:
   IndVarSimplify(LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
                  const DataLayout &DL, TargetLibraryInfo *TLI,
-                 TargetTransformInfo *TTI, MemorySSA *MSSA)
-      : LI(LI), SE(SE), DT(DT), DL(DL), TLI(TLI), TTI(TTI) {
+                 TargetTransformInfo *TTI, MemorySSA *MSSA, bool WidenIndVars)
+      : LI(LI), SE(SE), DT(DT), DL(DL), TLI(TLI), TTI(TTI),
+        WidenIndVars(WidenIndVars) {
     if (MSSA)
       MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
   }
@@ -630,7 +632,7 @@ bool IndVarSimplify::simplifyAndExtend(Loop *L,
     } while(!LoopPhis.empty());
 
     // Continue if we disallowed widening.
-    if (!AllowIVWidening)
+    if (!WidenIndVars)
       continue;
 
     for (; !WideIVs.empty(); WideIVs.pop_back()) {
@@ -1290,16 +1292,21 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
 
 enum ExitCondAnalysisResult {
   CanBeRemoved,
+  CanBeReplacedWithInvariant,
   CannotOptimize
 };
 
 /// If the condition of BI is trivially true during at least first MaxIter
 /// iterations, return CanBeRemoved.
+/// If the condition is equivalent to loop-invariant condition expressed as
+/// 'InvariantLHS `InvariantPred` InvariantRHS', fill them into respective
+/// output parameters and return CanBeReplacedWithInvariant.
 /// Otherwise, return CannotOptimize.
-static ExitCondAnalysisResult analyzeCond(const Loop *L, BranchInst *BI,
-                                          ScalarEvolution *SE,
-                                          bool ProvingLoopExit,
-                                          const SCEV *MaxIter) {
+static ExitCondAnalysisResult
+analyzeCond(const Loop *L, BranchInst *BI, ScalarEvolution *SE,
+            bool ProvingLoopExit, const SCEV *MaxIter,
+            ICmpInst::Predicate &InvariantPred, const SCEV *&InvariantLHS,
+            const SCEV *&InvariantRHS) {
   ICmpInst::Predicate Pred;
   Value *LHS, *RHS;
   using namespace PatternMatch;
@@ -1328,19 +1335,81 @@ static ExitCondAnalysisResult analyzeCond(const Loop *L, BranchInst *BI,
   if (ProvingLoopExit)
     return CannotOptimize;
 
-  ICmpInst::Predicate InvariantPred;
-  const SCEV *InvariantLHS, *InvariantRHS;
-
   // Check if there is a loop-invariant predicate equivalent to our check.
-  if (!SE->isLoopInvariantExitCondDuringFirstIterations(
-           Pred, LHSS, RHSS, L, BI, MaxIter, InvariantPred, InvariantLHS,
-           InvariantRHS))
+  auto LIP = SE->getLoopInvariantExitCondDuringFirstIterations(Pred, LHSS, RHSS,
+                                                               L, BI, MaxIter);
+  if (!LIP)
     return CannotOptimize;
+  InvariantPred = LIP->Pred;
+  InvariantLHS = LIP->LHS;
+  InvariantRHS = LIP->RHS;
 
   // Can we prove it to be trivially true?
   if (SE->isKnownPredicateAt(InvariantPred, InvariantLHS, InvariantRHS, BI))
     return CanBeRemoved;
-  return CannotOptimize;
+  return CanBeReplacedWithInvariant;
+}
+
+static void replaceExitCond(BranchInst *BI, Value *NewCond,
+                            SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+  auto *OldCond = BI->getCondition();
+  BI->setCondition(NewCond);
+  if (OldCond->use_empty())
+    DeadInsts.emplace_back(OldCond);
+}
+
+static void foldExit(const Loop *L, BasicBlock *ExitingBB, bool IsTaken,
+                     SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+  BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
+  bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));
+  auto *OldCond = BI->getCondition();
+  auto *NewCond =
+      ConstantInt::get(OldCond->getType(), IsTaken ? ExitIfTrue : !ExitIfTrue);
+  replaceExitCond(BI, NewCond, DeadInsts);
+}
+
+static void replaceWithInvariantCond(
+    const Loop *L, BasicBlock *ExitingBB, ICmpInst::Predicate InvariantPred,
+    const SCEV *InvariantLHS, const SCEV *InvariantRHS, SCEVExpander &Rewriter,
+    SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+  BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
+  Rewriter.setInsertPoint(BI);
+  auto *LHSV = Rewriter.expandCodeFor(InvariantLHS);
+  auto *RHSV = Rewriter.expandCodeFor(InvariantRHS);
+  bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));
+  if (ExitIfTrue)
+    InvariantPred = ICmpInst::getInversePredicate(InvariantPred);
+  IRBuilder<> Builder(BI);
+  auto *NewCond = Builder.CreateICmp(InvariantPred, LHSV, RHSV,
+                                     BI->getCondition()->getName());
+  replaceExitCond(BI, NewCond, DeadInsts);
+}
+
+static bool optimizeLoopExitWithUnknownExitCount(
+    const Loop *L, BranchInst *BI, BasicBlock *ExitingBB,
+    const SCEV *MaxIter, bool Inverted, bool SkipLastIter,
+    ScalarEvolution *SE, SCEVExpander &Rewriter,
+    SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
+  if (SkipLastIter) {
+    const SCEV *One = SE->getOne(MaxIter->getType());
+    MaxIter = SE->getMinusSCEV(MaxIter, One);
+  }
+  ICmpInst::Predicate InvariantPred;
+  const SCEV *InvariantLHS, *InvariantRHS;
+  switch (analyzeCond(L, BI, SE, Inverted, MaxIter, InvariantPred, InvariantLHS,
+                      InvariantRHS)) {
+  case CanBeRemoved:
+    foldExit(L, ExitingBB, Inverted, DeadInsts);
+    return true;
+  case CanBeReplacedWithInvariant: {
+    replaceWithInvariantCond(L, ExitingBB, InvariantPred, InvariantLHS,
+                             InvariantRHS, Rewriter, DeadInsts);
+    return true;
+  }
+  case CannotOptimize:
+    return false;
+  }
+  llvm_unreachable("Unknown case!");
 }
 
 bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
@@ -1402,22 +1471,6 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
   }
 #endif
 
-  auto ReplaceExitCond = [&](BranchInst *BI, Value *NewCond) {
-    auto *OldCond = BI->getCondition();
-    BI->setCondition(NewCond);
-    if (OldCond->use_empty())
-      DeadInsts.emplace_back(OldCond);
-  };
-
-  auto FoldExit = [&](BasicBlock *ExitingBB, bool IsTaken) {
-    BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
-    bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));
-    auto *OldCond = BI->getCondition();
-    auto *NewCond = ConstantInt::get(OldCond->getType(),
-                                     IsTaken ? ExitIfTrue : !ExitIfTrue);
-    ReplaceExitCond(BI, NewCond);
-  };
-
   bool Changed = false;
   bool SkipLastIter = false;
   SmallSet<const SCEV*, 8> DominatingExitCounts;
@@ -1427,21 +1480,10 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
       // Okay, we do not know the exit count here. Can we at least prove that it
       // will remain the same within iteration space?
       auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
-      auto OptimizeCond = [this, L, BI, ExitingBB, MaxExitCount, &FoldExit](
-          bool Inverted, bool SkipLastIter) {
-        const SCEV *MaxIter = MaxExitCount;
-        if (SkipLastIter) {
-          const SCEV *One = SE->getOne(MaxIter->getType());
-          MaxIter = SE->getMinusSCEV(MaxIter, One);
-        }
-        switch (analyzeCond(L, BI, SE, Inverted, MaxIter)) {
-        case CanBeRemoved:
-          FoldExit(ExitingBB, Inverted);
-          return true;
-        case CannotOptimize:
-          return false;
-        }
-        llvm_unreachable("Unknown case!");
+      auto OptimizeCond = [&](bool Inverted, bool SkipLastIter) {
+        return optimizeLoopExitWithUnknownExitCount(
+            L, BI, ExitingBB, MaxExitCount, Inverted, SkipLastIter, SE,
+            Rewriter, DeadInsts);
       };
 
       // TODO: We might have proved that we can skip the last iteration for
@@ -1479,7 +1521,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     // TODO: Given we know the backedge can't be taken, we should go ahead
     // and break it.  Or at least, kill all the header phis and simplify.
     if (ExitCount->isZero()) {
-      FoldExit(ExitingBB, true);
+      foldExit(L, ExitingBB, true, DeadInsts);
       Changed = true;
       continue;
     }
@@ -1501,7 +1543,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     // one?
     if (SE->isLoopEntryGuardedByCond(L, CmpInst::ICMP_ULT,
                                      MaxExitCount, ExitCount)) {
-      FoldExit(ExitingBB, false);
+      foldExit(L, ExitingBB, false, DeadInsts);
       Changed = true;
       continue;
     }
@@ -1511,7 +1553,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L, SCEVExpander &Rewriter) {
     // exiting iteration, but (from the visit order) strictly follows another
     // which does the same and is thus dead.
     if (!DominatingExitCounts.insert(ExitCount).second) {
-      FoldExit(ExitingBB, false);
+      foldExit(L, ExitingBB, false, DeadInsts);
       Changed = true;
       continue;
     }
@@ -1898,7 +1940,8 @@ PreservedAnalyses IndVarSimplifyPass::run(Loop &L, LoopAnalysisManager &AM,
   Function *F = L.getHeader()->getParent();
   const DataLayout &DL = F->getParent()->getDataLayout();
 
-  IndVarSimplify IVS(&AR.LI, &AR.SE, &AR.DT, DL, &AR.TLI, &AR.TTI, AR.MSSA);
+  IndVarSimplify IVS(&AR.LI, &AR.SE, &AR.DT, DL, &AR.TLI, &AR.TTI, AR.MSSA,
+                     WidenIndVars && AllowIVWidening);
   if (!IVS.run(&L))
     return PreservedAnalyses::all();
 
@@ -1935,7 +1978,7 @@ struct IndVarSimplifyLegacyPass : public LoopPass {
     if (MSSAAnalysis)
       MSSA = &MSSAAnalysis->getMSSA();
 
-    IndVarSimplify IVS(LI, SE, DT, DL, TLI, TTI, MSSA);
+    IndVarSimplify IVS(LI, SE, DT, DL, TLI, TTI, MSSA, AllowIVWidening);
     return IVS.run(L);
   }
 
