@@ -1324,7 +1324,7 @@ bool lldb_private::operator!=(const SymbolContextList &lhs,
   return !(lhs == rhs);
 }
 
-DWARFCompileUnit *SymbolContext::GetMainDWARFCompileUnit(SymbolFileDWARF **dwarf_return) const {
+DWARFCompileUnit *SymbolContext::GetDWARFCompileUnit(SymbolFileDWARF **dwarf_return) const {
   SymbolFileDWARF *dwarf = nullptr;
   if (module_sp)
     dwarf = llvm::dyn_cast<SymbolFileDWARF>(module_sp->GetSymbolFile());
@@ -1332,7 +1332,7 @@ DWARFCompileUnit *SymbolContext::GetMainDWARFCompileUnit(SymbolFileDWARF **dwarf
   if (comp_unit == nullptr)
     lldbassert(dwarf);
   else {
-    retval = comp_unit->GetMainDWARFCompileUnit();
+    retval = comp_unit->GetDWARFCompileUnit();
     if (dwarf)
       lldbassert(dwarf == &retval->GetSymbolFileDWARF());
     else

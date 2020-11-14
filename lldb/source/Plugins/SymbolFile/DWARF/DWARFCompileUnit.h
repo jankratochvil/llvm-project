@@ -24,7 +24,7 @@ public:
 
   DWARFDIE LookupAddress(const dw_addr_t address);
 
-  DWARFCompileUnit *GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) override;
+  DWARFCompileUnit *GetDWARFCompileUnit(DWARFCompileUnit *main_unit) override;
 
   DWARFDIE DIE() { return {this, DIEPtr()}; }
 

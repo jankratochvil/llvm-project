@@ -73,7 +73,7 @@ bool DebugNamesDWARFIndex::ProcessEntry(
   if (!die)
     return true;
   // FIXME: DWZ
-  DWARFCompileUnit *main_unit = die.GetMainDWARFCompileUnit(nullptr);
+  DWARFCompileUnit *main_unit = die.GetDWARFCompileUnit(nullptr);
   return callback(main_unit, die);
 }
 

@@ -1447,8 +1447,8 @@ SymbolFileDWARFDebugMap::AddOSOARanges(SymbolFileDWARF *dwarf2Data,
   return num_line_entries_added;
 }
 
-DWARFCompileUnit *SymbolFileDWARFDebugMap::GetMainDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) {
+DWARFCompileUnit *SymbolFileDWARFDebugMap::GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) {
   if (!comp_unit)
     return nullptr;
-  return GetSymbolFile(*comp_unit)->GetMainDWARFCompileUnit(comp_unit);
+  return GetSymbolFile(*comp_unit)->GetDWARFCompileUnit(comp_unit);
 }

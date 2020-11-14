@@ -370,9 +370,9 @@ const FileSpecList &CompileUnit::GetSupportFiles() {
 
 void *CompileUnit::GetUserData() const { return m_user_data; }
 
-DWARFCompileUnit *CompileUnit::GetMainDWARFCompileUnit() {
+DWARFCompileUnit *CompileUnit::GetDWARFCompileUnit() {
   SymbolFile *symfile = GetModule()->GetSymbolFile();
   if (!symfile)
     return nullptr;
-  return symfile->GetMainDWARFCompileUnit(this);
+  return symfile->GetDWARFCompileUnit(this);
 }

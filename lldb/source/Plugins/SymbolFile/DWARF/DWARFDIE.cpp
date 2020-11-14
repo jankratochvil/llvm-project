@@ -459,10 +459,10 @@ bool DWARFDIE::GetDIENamesAndRanges(
 }
 
 DWARFCompileUnit *
-DWARFDIE::GetMainDWARFCompileUnit(DWARFCompileUnit *main_unit) const {
+DWARFDIE::GetDWARFCompileUnit(DWARFCompileUnit *main_unit) const {
   if (!IsValid())
     return nullptr;
-  return GetCU()->GetMainDWARFCompileUnit(main_unit);
+  return GetCU()->GetDWARFCompileUnit(main_unit);
 }
 
 DWARFUnit *DWARFDIE::GetMainDWARFUnit(DWARFCompileUnit *main_unit) const {
@@ -472,10 +472,10 @@ DWARFUnit *DWARFDIE::GetMainDWARFUnit(DWARFCompileUnit *main_unit) const {
 
 std::pair<DWARFCompileUnit *, DWARFDIE>
 DWARFDIE::MainCUtoDWARFDIEPair(DWARFCompileUnit *main_unit) const {
-  return std::make_pair(GetMainDWARFCompileUnit(main_unit), *this);
+  return std::make_pair(GetDWARFCompileUnit(main_unit), *this);
 }
 
 std::pair<DWARFCompileUnit *, DWARFDebugInfoEntry *>
 DWARFDIE::MainCUtoDIEPair(DWARFCompileUnit *main_unit) const {
-  return std::make_pair(GetMainDWARFCompileUnit(main_unit), GetDIE());
+  return std::make_pair(GetDWARFCompileUnit(main_unit), GetDIE());
 }

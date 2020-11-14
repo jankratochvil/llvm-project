@@ -367,7 +367,7 @@ protected:
 
   lldb::CompUnitSP ParseCompileUnit(DWARFCompileUnit &dwarf_cu);
 
-  DWARFCompileUnit *GetMainDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) override;
+  DWARFCompileUnit *GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) override;
 
   DWARFUnit *GetNextUnparsedDWARFCompileUnit(DWARFUnit *prev_cu);
 
