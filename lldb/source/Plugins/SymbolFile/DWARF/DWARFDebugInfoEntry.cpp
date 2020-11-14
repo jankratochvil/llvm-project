@@ -110,6 +110,9 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
             else
               form_size = 4;
             break;
+          case DW_FORM_GNU_ref_alt:
+            form_size = 4;
+            break;
 
           // 0 sized form
           case DW_FORM_flag_present:
@@ -173,6 +176,7 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
             break;
 
           case DW_FORM_strp:
+          case DW_FORM_GNU_strp_alt:
           case DW_FORM_sec_offset:
             data.GetU32(&offset);
             break;

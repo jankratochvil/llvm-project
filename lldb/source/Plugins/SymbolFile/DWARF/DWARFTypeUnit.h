@@ -31,7 +31,9 @@ private:
                 const DWARFUnitHeader &header,
                 const DWARFAbbreviationDeclarationSet &abbrevs,
                 DIERef::Section section, bool is_dwo)
-      : DWARFUnit(dwarf, uid, header, abbrevs, section, is_dwo) {}
+      : DWARFUnit(dwarf, uid, header, abbrevs, section, is_dwo) {
+    assert(!dwarf.GetIsDwz());
+  }
 
   friend class DWARFUnit;
 };

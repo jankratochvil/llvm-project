@@ -397,6 +397,14 @@ public:
 
   ConstString GetLastPathComponent() const;
 
+  class Hasher {
+  public:
+    size_t operator()(const FileSpec &key) const {
+      return (ConstString::Hasher()(key.m_directory) << 16) ^
+             ConstString::Hasher()(key.m_filename) ^ key.m_is_resolved;
+    }
+  };
+
 protected:
   friend struct llvm::yaml::MappingTraits<FileSpec>;
 
