@@ -27,7 +27,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/timer.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <cassert>
@@ -2609,9 +2608,10 @@ void RecordKeeper::startBackendTimer(StringRef Name) {
 
 void RecordKeeper::stopBackendTimer() {
   if (TimingGroup) {
-    if (BackendTimer)
+    if (BackendTimer) {
       stopTimer();
       BackendTimer = false;
+    }
   }
 }
 
