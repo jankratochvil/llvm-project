@@ -201,7 +201,7 @@ DWARFDIE::LookupDeepestBlock(lldb::addr_t address) const {
   return result;
 }
 
-lldb::user_id_t DWARFDIE::GetID(DWARFCompileUnit *main_unit) const {
+lldb::user_id_t DWARFDIE::GetID(DWARFUnit *main_unit) const {
   if (IsValid())
     return GetDWARF()->GetUID(main_unit, *this);
   return LLDB_INVALID_UID;
@@ -352,7 +352,7 @@ void DWARFDIE::AppendTypeName(Stream &s) const {
   }
 }
 
-lldb_private::Type *DWARFDIE::ResolveType(DWARFCompileUnit *main_unit) const {
+lldb_private::Type *DWARFDIE::ResolveType(DWARFUnit *main_unit) const {
   if (IsValid())
     return GetMainDWARFUnit(main_unit)->GetSymbolFileDWARF().ResolveType(
         main_unit, *this, true);
@@ -360,7 +360,7 @@ lldb_private::Type *DWARFDIE::ResolveType(DWARFCompileUnit *main_unit) const {
     return nullptr;
 }
 
-lldb_private::Type *DWARFDIE::ResolveTypeUID(DWARFCompileUnit *main_unit,
+lldb_private::Type *DWARFDIE::ResolveTypeUID(DWARFUnit *main_unit,
                                              const DWARFDIE &die) const {
   if (SymbolFileDWARF *dwarf = &GetMainDWARFUnit(main_unit)->GetSymbolFileDWARF())
     return dwarf->ResolveTypeUID(main_unit, die, true);
@@ -459,23 +459,23 @@ bool DWARFDIE::GetDIENamesAndRanges(
 }
 
 DWARFCompileUnit *
-DWARFDIE::GetDWARFCompileUnit(DWARFCompileUnit *main_unit) const {
+DWARFDIE::GetDWARFCompileUnit(DWARFUnit *main_unit) const {
   if (!IsValid())
     return nullptr;
   return GetCU()->GetDWARFCompileUnit(main_unit);
 }
 
-DWARFUnit *DWARFDIE::GetMainDWARFUnit(DWARFCompileUnit *main_unit) const {
+DWARFUnit *DWARFDIE::GetMainDWARFUnit(DWARFUnit *main_unit) const {
   lldbassert(IsValid());
   return GetCU()->GetMainDWARFUnit(main_unit);
 }
 
 std::pair<DWARFCompileUnit *, DWARFDIE>
-DWARFDIE::MainCUtoDWARFDIEPair(DWARFCompileUnit *main_unit) const {
+DWARFDIE::MainCUtoDWARFDIEPair(DWARFUnit *main_unit) const {
   return std::make_pair(GetDWARFCompileUnit(main_unit), *this);
 }
 
 std::pair<DWARFCompileUnit *, DWARFDebugInfoEntry *>
-DWARFDIE::MainCUtoDIEPair(DWARFCompileUnit *main_unit) const {
+DWARFDIE::MainCUtoDIEPair(DWARFUnit *main_unit) const {
   return std::make_pair(GetDWARFCompileUnit(main_unit), GetDIE());
 }

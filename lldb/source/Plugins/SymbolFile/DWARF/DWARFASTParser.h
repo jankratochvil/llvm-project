@@ -36,18 +36,18 @@ public:
                          const DWARFDIE &die) = 0;
 
   virtual bool
-  CompleteTypeFromDWARF(DWARFCompileUnit *main_unit, const DWARFDIE &die, lldb_private::Type *type,
+  CompleteTypeFromDWARF(DWARFUnit *main_unit, const DWARFDIE &die, lldb_private::Type *type,
                         lldb_private::CompilerType &compiler_type) = 0;
 
   virtual lldb_private::CompilerDecl
-  GetDeclForUIDFromDWARF(DWARFCompileUnit *main_unit, const DWARFDIE &die) = 0;
+  GetDeclForUIDFromDWARF(DWARFUnit *main_unit, const DWARFDIE &die) = 0;
 
   virtual lldb_private::CompilerDeclContext
-  GetDeclContextForUIDFromDWARF(DWARFCompileUnit *main_unit,
+  GetDeclContextForUIDFromDWARF(DWARFUnit *main_unit,
                                 const DWARFDIE &die) = 0;
 
   virtual lldb_private::CompilerDeclContext
-  GetDeclContextContainingUIDFromDWARF(DWARFCompileUnit *main_unit,
+  GetDeclContextContainingUIDFromDWARF(DWARFUnit *main_unit,
                                        const DWARFDIE &die) = 0;
 
   virtual void EnsureAllDIEsInDeclContextHaveBeenParsed(

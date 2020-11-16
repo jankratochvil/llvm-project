@@ -969,13 +969,13 @@ DWARFUnit::FindRnglistFromIndex(uint32_t index) {
 }
 
 DWARFCompileUnit *
-DWARFUnit::GetDWARFCompileUnit(DWARFCompileUnit *main_unit) {
+DWARFUnit::GetDWARFCompileUnit(DWARFUnit *main_unit) {
   lldbassert(main_unit);
   main_unit = &main_unit->GetNonSkeletonUnit();
   return main_unit;
 }
 
-DWARFUnit *DWARFUnit::GetMainDWARFUnit(DWARFCompileUnit *main_unit) {
+DWARFUnit *DWARFUnit::GetMainDWARFUnit(DWARFUnit *main_unit) {
   main_unit = GetDWARFCompileUnit(main_unit);
   if (main_unit)
     return main_unit;

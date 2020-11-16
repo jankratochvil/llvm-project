@@ -50,22 +50,22 @@ public:
                          const DWARFDIE &die) override;
 
   bool
-  CompleteTypeFromDWARF(DWARFCompileUnit *main_unit, const DWARFDIE &die, lldb_private::Type *type,
+  CompleteTypeFromDWARF(DWARFUnit *main_unit, const DWARFDIE &die, lldb_private::Type *type,
                         lldb_private::CompilerType &compiler_type) override;
 
   lldb_private::CompilerDecl
-  GetDeclForUIDFromDWARF(DWARFCompileUnit *main_unit,
+  GetDeclForUIDFromDWARF(DWARFUnit *main_unit,
                          const DWARFDIE &die) override;
 
   void EnsureAllDIEsInDeclContextHaveBeenParsed(
       lldb_private::CompilerDeclContext decl_context) override;
 
   lldb_private::CompilerDeclContext
-  GetDeclContextForUIDFromDWARF(DWARFCompileUnit *main_unit,
+  GetDeclContextForUIDFromDWARF(DWARFUnit *main_unit,
                                 const DWARFDIE &die) override;
 
   lldb_private::CompilerDeclContext
-  GetDeclContextContainingUIDFromDWARF(DWARFCompileUnit *main_unit,
+  GetDeclContextContainingUIDFromDWARF(DWARFUnit *main_unit,
                                        const DWARFDIE &die) override;
 
   lldb_private::ClangASTImporter &GetClangASTImporter();
@@ -104,20 +104,20 @@ protected:
   std::unique_ptr<lldb_private::ClangASTImporter> m_clang_ast_importer_up;
   /// @}
 
-  clang::DeclContext *GetDeclContextForBlock(DWARFCompileUnit *main_unit,
+  clang::DeclContext *GetDeclContextForBlock(DWARFUnit *main_unit,
                                              const DWARFDIE &die);
 
-  clang::BlockDecl *ResolveBlockDIE(DWARFCompileUnit *main_unit,
+  clang::BlockDecl *ResolveBlockDIE(DWARFUnit *main_unit,
                                     const DWARFDIE &die);
 
-  clang::NamespaceDecl *ResolveNamespaceDIE(DWARFCompileUnit *main_unit,
+  clang::NamespaceDecl *ResolveNamespaceDIE(DWARFUnit *main_unit,
                                             const DWARFDIE &die);
 
-  bool ParseTemplateDIE(DWARFCompileUnit *main_unit, const DWARFDIE &die,
+  bool ParseTemplateDIE(DWARFUnit *main_unit, const DWARFDIE &die,
                         lldb_private::TypeSystemClang::TemplateParameterInfos
                             &template_param_infos);
   bool ParseTemplateParameterInfos(
-      DWARFCompileUnit *main_unit, const DWARFDIE &parent_die,
+      DWARFUnit *main_unit, const DWARFDIE &parent_die,
       lldb_private::TypeSystemClang::TemplateParameterInfos
           &template_param_infos);
 
@@ -150,33 +150,33 @@ protected:
                                      const DWARFDIE &die,
                                      ParsedDWARFTypeAttributes &attrs);
 
-  lldb_private::Type *GetTypeForDIE(DWARFCompileUnit *main_unit,
+  lldb_private::Type *GetTypeForDIE(DWARFUnit *main_unit,
                                     const DWARFDIE &die);
 
-  clang::Decl *GetClangDeclForDIE(DWARFCompileUnit *main_unit,
+  clang::Decl *GetClangDeclForDIE(DWARFUnit *main_unit,
                                   const DWARFDIE &die);
 
-  clang::DeclContext *GetClangDeclContextForDIE(DWARFCompileUnit *main_unit,
+  clang::DeclContext *GetClangDeclContextForDIE(DWARFUnit *main_unit,
                                                 const DWARFDIE &die);
 
   clang::DeclContext *
-  GetClangDeclContextContainingDIE(DWARFCompileUnit *main_unit,
+  GetClangDeclContextContainingDIE(DWARFUnit *main_unit,
                                    const DWARFDIE &die, DWARFDIE *decl_ctx_die);
   lldb_private::OptionalClangModuleID
-  GetOwningClangModule(DWARFCompileUnit *main_unit, const DWARFDIE &die);
+  GetOwningClangModule(DWARFUnit *main_unit, const DWARFDIE &die);
 
-  bool CopyUniqueClassMethodTypes(DWARFCompileUnit *main_unit,
+  bool CopyUniqueClassMethodTypes(DWARFUnit *main_unit,
                                   const DWARFDIE &src_class_die,
                                   const DWARFDIE &dst_class_die,
                                   lldb_private::Type *class_type,
                                   std::vector<DWARFDIE> &failures);
 
   clang::DeclContext *
-  GetCachedClangDeclContextForDIE(DWARFCompileUnit *main_unit,
+  GetCachedClangDeclContextForDIE(DWARFUnit *main_unit,
                                   const DWARFDIE &die);
 
   void LinkDeclContextToDIE(clang::DeclContext *decl_ctx,
-                            DWARFCompileUnit *main_unit, const DWARFDIE &die);
+                            DWARFUnit *main_unit, const DWARFDIE &die);
 
   void LinkDeclToDIE(clang::Decl *decl, const DWARFDIE &die);
 
@@ -225,7 +225,7 @@ private:
                     lldb_private::ClangASTImporter::LayoutInfo &layout_info,
                     FieldInfo &last_field_info);
 
-  bool CompleteRecordType(DWARFCompileUnit *main_unit, const DWARFDIE &die, lldb_private::Type *type,
+  bool CompleteRecordType(DWARFUnit *main_unit, const DWARFDIE &die, lldb_private::Type *type,
                           lldb_private::CompilerType &clang_type);
   bool CompleteEnumType(const DWARFDIE &die, lldb_private::Type *type,
                         lldb_private::CompilerType &clang_type);
