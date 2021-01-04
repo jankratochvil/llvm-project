@@ -1111,7 +1111,7 @@ TEST(TripleTest, EndianArchVariants) {
 
   T.setArch(Triple::ppc);
   EXPECT_EQ(Triple::ppc, T.getBigEndianArchVariant().getArch());
-  EXPECT_EQ(Triple::UnknownArch, T.getLittleEndianArchVariant().getArch());
+  EXPECT_EQ(Triple::ppcle, T.getLittleEndianArchVariant().getArch());
 
   T.setArch(Triple::ppc64);
   EXPECT_EQ(Triple::ppc64, T.getBigEndianArchVariant().getArch());
@@ -1589,6 +1589,11 @@ TEST(TripleTest, ParseARMArch) {
   {
     Triple T = Triple("aarch64_be");
     EXPECT_EQ(Triple::aarch64_be, T.getArch());
+  }
+  {
+    Triple T = Triple("arm64e");
+    EXPECT_EQ(Triple::aarch64, T.getArch());
+    EXPECT_EQ(Triple::AArch64SubArch_arm64e, T.getSubArch());
   }
 }
 } // end anonymous namespace
