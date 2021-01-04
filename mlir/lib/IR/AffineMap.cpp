@@ -8,8 +8,8 @@
 
 #include "mlir/IR/AffineMap.h"
 #include "AffineMapDetail.h"
-#include "mlir/IR/Attributes.h"
-#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/SmallSet.h"
@@ -319,7 +319,7 @@ AffineMap AffineMap::compose(AffineMap map) {
   for (unsigned idx = 0; idx < numDims; ++idx) {
     newDims[idx] = getAffineDimExpr(idx, getContext());
   }
-  SmallVector<AffineExpr, 8> newSymbols(numSymbols);
+  SmallVector<AffineExpr, 8> newSymbols(numSymbols - numSymbolsThisMap);
   for (unsigned idx = numSymbolsThisMap; idx < numSymbols; ++idx) {
     newSymbols[idx - numSymbolsThisMap] =
         getAffineSymbolExpr(idx, getContext());
