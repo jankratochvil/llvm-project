@@ -68,8 +68,10 @@ namespace wasm {
 DefinedFunction *WasmSym::callCtors;
 DefinedFunction *WasmSym::callDtors;
 DefinedFunction *WasmSym::initMemory;
-DefinedFunction *WasmSym::applyRelocs;
+DefinedFunction *WasmSym::applyDataRelocs;
+DefinedFunction *WasmSym::applyGlobalRelocs;
 DefinedFunction *WasmSym::initTLS;
+DefinedFunction *WasmSym::startFunction;
 DefinedData *WasmSym::dsoHandle;
 DefinedData *WasmSym::dataEnd;
 DefinedData *WasmSym::globalBase;
@@ -109,6 +111,9 @@ const WasmSignature *Symbol::getSignature() const {
 InputChunk *Symbol::getChunk() const {
   if (auto *f = dyn_cast<DefinedFunction>(this))
     return f->function;
+  if (auto *f = dyn_cast<UndefinedFunction>(this))
+    if (f->stubFunction)
+      return f->stubFunction->function;
   if (auto *d = dyn_cast<DefinedData>(this))
     return d->segment;
   return nullptr;
@@ -132,7 +137,7 @@ bool Symbol::isLive() const {
 
 void Symbol::markLive() {
   assert(!isDiscarded());
-  if (file != NULL)
+  if (file != NULL && isDefined())
     file->markLive();
   if (auto *g = dyn_cast<DefinedGlobal>(this))
     g->global->live = true;
@@ -207,6 +212,11 @@ bool Symbol::isNoStrip() const {
 uint32_t FunctionSymbol::getFunctionIndex() const {
   if (auto *f = dyn_cast<DefinedFunction>(this))
     return f->function->getFunctionIndex();
+  if (const auto *u = dyn_cast<UndefinedFunction>(this)) {
+    if (u->stubFunction) {
+      return u->stubFunction->getFunctionIndex();
+    }
+  }
   assert(functionIndex != INVALID_INDEX);
   return functionIndex;
 }
