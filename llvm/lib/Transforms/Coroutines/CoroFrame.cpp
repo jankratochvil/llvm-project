@@ -576,9 +576,10 @@ void FrameTypeBuilder::addFieldForAllocas(const Function &F,
         StackLifetimeAnalyzer.getLiveRange(AI2));
   };
   auto GetAllocaSize = [&](const AllocaInfo &A) {
-    Optional<uint64_t> RetSize = A.Alloca->getAllocationSizeInBits(DL);
-    assert(RetSize && "We can't handle scalable type now.\n");
-    return RetSize.getValue();
+    Optional<TypeSize> RetSize = A.Alloca->getAllocationSizeInBits(DL);
+    assert(RetSize && "Variable Length Arrays (VLA) are not supported.\n");
+    assert(!RetSize->isScalable() && "Scalable vectors are not yet supported");
+    return RetSize->getFixedSize();
   };
   // Put larger allocas in the front. So the larger allocas have higher
   // priority to merge, which can save more space potentially. Also each
@@ -864,12 +865,66 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
   }
 
   void visitStoreInst(StoreInst &SI) {
-    // Base visit function will handle escape setting.
-    Base::visitStoreInst(SI);
-
     // Regardless whether the alias of the alloca is the value operand or the
     // pointer operand, we need to assume the alloca is been written.
     handleMayWrite(SI);
+
+    if (SI.getValueOperand() != U->get())
+      return;
+
+    // We are storing the pointer into a memory location, potentially escaping.
+    // As an optimization, we try to detect simple cases where it doesn't
+    // actually escape, for example:
+    //   %ptr = alloca ..
+    //   %addr = alloca ..
+    //   store %ptr, %addr
+    //   %x = load %addr
+    //   ..
+    // If %addr is only used by loading from it, we could simply treat %x as
+    // another alias of %ptr, and not considering %ptr being escaped.
+    auto IsSimpleStoreThenLoad = [&]() {
+      auto *AI = dyn_cast<AllocaInst>(SI.getPointerOperand());
+      // If the memory location we are storing to is not an alloca, it
+      // could be an alias of some other memory locations, which is difficult
+      // to analyze.
+      if (!AI)
+        return false;
+      // StoreAliases contains aliases of the memory location stored into.
+      SmallVector<Instruction *, 4> StoreAliases = {AI};
+      while (!StoreAliases.empty()) {
+        Instruction *I = StoreAliases.back();
+        StoreAliases.pop_back();
+        for (User *U : I->users()) {
+          // If we are loading from the memory location, we are creating an
+          // alias of the original pointer.
+          if (auto *LI = dyn_cast<LoadInst>(U)) {
+            enqueueUsers(*LI);
+            handleAlias(*LI);
+            continue;
+          }
+          // If we are overriding the memory location, the pointer certainly
+          // won't escape.
+          if (auto *S = dyn_cast<StoreInst>(U))
+            if (S->getPointerOperand() == I)
+              continue;
+          if (auto *II = dyn_cast<IntrinsicInst>(U))
+            if (II->isLifetimeStartOrEnd())
+              continue;
+          // BitCastInst creats aliases of the memory location being stored
+          // into.
+          if (auto *BI = dyn_cast<BitCastInst>(U)) {
+            StoreAliases.push_back(BI);
+            continue;
+          }
+          return false;
+        }
+      }
+
+      return true;
+    };
+
+    if (!IsSimpleStoreThenLoad())
+      PI.setEscaped(&SI);
   }
 
   // All mem intrinsics modify the data.
@@ -1234,7 +1289,9 @@ static Instruction *insertSpills(const FrameDataInfo &FrameData,
       // that control flow can be later changed by other passes.
       auto *DI = cast<DbgDeclareInst>(FirstDbgDecl);
       BasicBlock *CurrentBlock = I->getParent();
-      DIB.insertDbgValueIntrinsic(G, DI->getVariable(), DI->getExpression(),
+      auto *DerefExpr =
+          DIExpression::append(DI->getExpression(), dwarf::DW_OP_deref);
+      DIB.insertDbgValueIntrinsic(G, DI->getVariable(), DerefExpr,
                                   DI->getDebugLoc(),
                                   &*CurrentBlock->getFirstInsertionPt());
       SeenDbgBBs.insert(CurrentBlock);
@@ -1465,7 +1522,7 @@ static void rewritePHIs(BasicBlock &BB) {
   // so we need to create an additional "dispatcher" block.
   if (auto *CleanupPad =
           dyn_cast_or_null<CleanupPadInst>(BB.getFirstNonPHI())) {
-    SmallVector<BasicBlock *, 8> Preds(pred_begin(&BB), pred_end(&BB));
+    SmallVector<BasicBlock *, 8> Preds(predecessors(&BB));
     for (BasicBlock *Pred : Preds) {
       if (CatchSwitchInst *CS =
               dyn_cast<CatchSwitchInst>(Pred->getTerminator())) {
@@ -1491,7 +1548,7 @@ static void rewritePHIs(BasicBlock &BB) {
     // ehAwareSplitEdge cloned it in the transition blocks.
   }
 
-  SmallVector<BasicBlock *, 8> Preds(pred_begin(&BB), pred_end(&BB));
+  SmallVector<BasicBlock *, 8> Preds(predecessors(&BB));
   for (BasicBlock *Pred : Preds) {
     auto *IncomingBB = ehAwareSplitEdge(Pred, &BB, LandingPad, ReplPHI);
     IncomingBB->setName(BB.getName() + Twine(".from.") + Pred->getName());
@@ -2113,8 +2170,25 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
   }
 
   // Put CoroEnds into their own blocks.
-  for (CoroEndInst *CE : Shape.CoroEnds)
+  for (AnyCoroEndInst *CE : Shape.CoroEnds) {
     splitAround(CE, "CoroEnd");
+
+    // Emit the musttail call function in a new block before the CoroEnd.
+    // We do this here so that the right suspend crossing info is computed for
+    // the uses of the musttail call function call. (Arguments to the coro.end
+    // instructions would be ignored)
+    if (auto *AsyncEnd = dyn_cast<CoroAsyncEndInst>(CE)) {
+      auto *MustTailCallFn = AsyncEnd->getMustTailCallFunction();
+      if (!MustTailCallFn)
+        continue;
+      IRBuilder<> Builder(AsyncEnd);
+      SmallVector<Value *, 8> Args(AsyncEnd->args());
+      auto Arguments = ArrayRef<Value *>(Args).drop_front(3);
+      auto *Call = createMustTailCall(AsyncEnd->getDebugLoc(), MustTailCallFn,
+                                      Arguments, Builder);
+      splitAround(Call, "MustTailCall.Before.CoroEnd");
+    }
+  }
 
   // Transforms multi-edge PHI Nodes, so that any value feeding into a PHI will
   // never has its definition separated from the PHI by the suspend point.
