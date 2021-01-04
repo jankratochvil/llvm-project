@@ -1,5 +1,6 @@
 add_llvm_component_library(LLVMipo
   AlwaysInliner.cpp
+  Annotation2Metadata.cpp
   ArgumentPromotion.cpp
   Attributor.cpp
   AttributorAttributes.cpp
@@ -19,6 +20,7 @@ add_llvm_component_library(LLVMipo
   GlobalSplit.cpp
   HotColdSplitting.cpp
   IPO.cpp
+  IROutliner.cpp
   InferFunctionAttrs.cpp
   InlineSimple.cpp
   Inliner.cpp
@@ -30,7 +32,9 @@ add_llvm_component_library(LLVMipo
   PartialInlining.cpp
   PassManagerBuilder.cpp
   PruneEH.cpp
+  SampleContextTracker.cpp
   SampleProfile.cpp
+  SampleProfileProbe.cpp
   SCCP.cpp
   StripDeadPrototypes.cpp
   StripSymbols.cpp

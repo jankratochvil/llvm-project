@@ -64,13 +64,13 @@ static void emitNameUsingSpelling(raw_ostream &OS, const Record &R) {
 class MarshallingInfo {
 public:
   static constexpr const char *MacroName = "OPTION_WITH_MARSHALLING";
-
   const Record &R;
   bool ShouldAlwaysEmit;
   StringRef KeyPath;
   StringRef DefaultValue;
   StringRef NormalizedValuesScope;
-  StringRef NormalizerRetTy;
+  StringRef ImpliedCheck;
+  StringRef ImpliedValue;
   StringRef Normalizer;
   StringRef Denormalizer;
   StringRef ValueMerger;
@@ -79,6 +79,8 @@ public:
   std::vector<StringRef> Values;
   std::vector<StringRef> NormalizedValues;
   std::string ValueTableName;
+
+  static size_t NextTableIndex;
 
   static constexpr const char *ValueTablePreamble = R"(
 struct SimpleEnumValue {
@@ -95,6 +97,8 @@ struct SimpleEnumValueTable {
   static constexpr const char *ValueTablesDecl =
       "static const SimpleEnumValueTable SimpleEnumValueTables[] = ";
 
+  MarshallingInfo(const Record &R) : R(R) {}
+
   void emit(raw_ostream &OS) const {
     write_cstring(OS, StringRef(getOptionSpelling(R)));
     OS << ", ";
@@ -104,7 +108,9 @@ struct SimpleEnumValueTable {
     OS << ", ";
     emitScopedNormalizedValue(OS, DefaultValue);
     OS << ", ";
-    emitScopedNormalizedValue(OS, NormalizerRetTy);
+    OS << ImpliedCheck;
+    OS << ", ";
+    emitScopedNormalizedValue(OS, ImpliedValue);
     OS << ", ";
     OS << Normalizer;
     OS << ", ";
@@ -133,53 +139,6 @@ struct SimpleEnumValueTable {
     return StringRef(ValueTableName);
   }
 
-  static MarshallingInfo create(const Record &R) {
-    assert(!isa<UnsetInit>(R.getValueInit("KeyPath")) &&
-           !isa<UnsetInit>(R.getValueInit("DefaultValue")) &&
-           !isa<UnsetInit>(R.getValueInit("NormalizerRetTy")) &&
-           !isa<UnsetInit>(R.getValueInit("ValueMerger")) &&
-           "MarshallingInfo must have a type");
-
-    MarshallingInfo Ret(R);
-    Ret.ShouldAlwaysEmit = R.getValueAsBit("ShouldAlwaysEmit");
-    Ret.KeyPath = R.getValueAsString("KeyPath");
-    Ret.DefaultValue = R.getValueAsString("DefaultValue");
-    Ret.NormalizedValuesScope = R.getValueAsString("NormalizedValuesScope");
-    Ret.NormalizerRetTy = R.getValueAsString("NormalizerRetTy");
-
-    Ret.Normalizer = R.getValueAsString("Normalizer");
-    Ret.Denormalizer = R.getValueAsString("Denormalizer");
-    Ret.ValueMerger = R.getValueAsString("ValueMerger");
-    Ret.ValueExtractor = R.getValueAsString("ValueExtractor");
-
-    if (!isa<UnsetInit>(R.getValueInit("NormalizedValues"))) {
-      assert(!isa<UnsetInit>(R.getValueInit("Values")) &&
-             "Cannot provide normalized values for value-less options");
-      Ret.TableIndex = NextTableIndex++;
-      Ret.NormalizedValues = R.getValueAsListOfStrings("NormalizedValues");
-      Ret.Values.reserve(Ret.NormalizedValues.size());
-      Ret.ValueTableName = getOptionName(R) + "ValueTable";
-
-      StringRef ValuesStr = R.getValueAsString("Values");
-      for (;;) {
-        size_t Idx = ValuesStr.find(',');
-        if (Idx == StringRef::npos)
-          break;
-        if (Idx > 0)
-          Ret.Values.push_back(ValuesStr.slice(0, Idx));
-        ValuesStr = ValuesStr.slice(Idx + 1, StringRef::npos);
-      }
-      if (!ValuesStr.empty())
-        Ret.Values.push_back(ValuesStr);
-
-      assert(Ret.Values.size() == Ret.NormalizedValues.size() &&
-             "The number of normalized values doesn't match the number of "
-             "values");
-    }
-
-    return Ret;
-  }
-
 private:
   void emitScopedNormalizedValue(raw_ostream &OS,
                                  StringRef NormalizedValue) const {
@@ -187,13 +146,59 @@ private:
       OS << NormalizedValuesScope << "::";
     OS << NormalizedValue;
   }
-
-  MarshallingInfo(const Record &R) : R(R){};
-
-  static size_t NextTableIndex;
 };
 
 size_t MarshallingInfo::NextTableIndex = 0;
+
+static MarshallingInfo createMarshallingInfo(const Record &R) {
+  assert(!isa<UnsetInit>(R.getValueInit("KeyPath")) &&
+         !isa<UnsetInit>(R.getValueInit("DefaultValue")) &&
+         !isa<UnsetInit>(R.getValueInit("ValueMerger")) &&
+         "MarshallingInfo must have a provide a keypath, default value and a "
+         "value merger");
+
+  MarshallingInfo Ret(R);
+
+  Ret.ShouldAlwaysEmit = R.getValueAsBit("ShouldAlwaysEmit");
+  Ret.KeyPath = R.getValueAsString("KeyPath");
+  Ret.DefaultValue = R.getValueAsString("DefaultValue");
+  Ret.NormalizedValuesScope = R.getValueAsString("NormalizedValuesScope");
+  Ret.ImpliedCheck = R.getValueAsString("ImpliedCheck");
+  Ret.ImpliedValue =
+      R.getValueAsOptionalString("ImpliedValue").getValueOr(Ret.DefaultValue);
+
+  Ret.Normalizer = R.getValueAsString("Normalizer");
+  Ret.Denormalizer = R.getValueAsString("Denormalizer");
+  Ret.ValueMerger = R.getValueAsString("ValueMerger");
+  Ret.ValueExtractor = R.getValueAsString("ValueExtractor");
+
+  if (!isa<UnsetInit>(R.getValueInit("NormalizedValues"))) {
+    assert(!isa<UnsetInit>(R.getValueInit("Values")) &&
+           "Cannot provide normalized values for value-less options");
+    Ret.TableIndex = MarshallingInfo::NextTableIndex++;
+    Ret.NormalizedValues = R.getValueAsListOfStrings("NormalizedValues");
+    Ret.Values.reserve(Ret.NormalizedValues.size());
+    Ret.ValueTableName = getOptionName(R) + "ValueTable";
+
+    StringRef ValuesStr = R.getValueAsString("Values");
+    for (;;) {
+      size_t Idx = ValuesStr.find(',');
+      if (Idx == StringRef::npos)
+        break;
+      if (Idx > 0)
+        Ret.Values.push_back(ValuesStr.slice(0, Idx));
+      ValuesStr = ValuesStr.slice(Idx + 1, StringRef::npos);
+    }
+    if (!ValuesStr.empty())
+      Ret.Values.push_back(ValuesStr);
+
+    assert(Ret.Values.size() == Ret.NormalizedValues.size() &&
+           "The number of normalized values doesn't match the number of "
+           "values");
+  }
+
+  return Ret;
+}
 
 /// OptParserEmitter - This tablegen backend takes an input .td file
 /// describing a list of options and emits a data structure for parsing and
@@ -214,13 +219,12 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
   PrefixesT Prefixes;
   Prefixes.insert(std::make_pair(PrefixKeyT(), "prefix_0"));
   unsigned CurPrefix = 0;
-  for (unsigned i = 0, e = Opts.size(); i != e; ++i) {
-    const Record &R = *Opts[i];
-    std::vector<StringRef> prf = R.getValueAsListOfStrings("Prefixes");
-    PrefixKeyT prfkey(prf.begin(), prf.end());
+  for (const Record &R : llvm::make_pointee_range(Opts)) {
+    std::vector<StringRef> RPrefixes = R.getValueAsListOfStrings("Prefixes");
+    PrefixKeyT PrefixKey(RPrefixes.begin(), RPrefixes.end());
     unsigned NewPrefix = CurPrefix + 1;
-    if (Prefixes.insert(std::make_pair(prfkey, (Twine("prefix_") +
-                                              Twine(NewPrefix)).str())).second)
+    std::string Prefix = (Twine("prefix_") + Twine(NewPrefix)).str();
+    if (Prefixes.insert(std::make_pair(PrefixKey, Prefix)).second)
       CurPrefix = NewPrefix;
   }
 
@@ -230,19 +234,16 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
   OS << "// Prefixes\n\n";
   OS << "#ifdef PREFIX\n";
   OS << "#define COMMA ,\n";
-  for (PrefixesT::const_iterator I = Prefixes.begin(), E = Prefixes.end();
-                                  I != E; ++I) {
+  for (const auto &Prefix : Prefixes) {
     OS << "PREFIX(";
 
     // Prefix name.
-    OS << I->second;
+    OS << Prefix.second;
 
     // Prefix values.
     OS << ", {";
-    for (PrefixKeyT::const_iterator PI = I->first.begin(),
-                                    PE = I->first.end(); PI != PE; ++PI) {
-      OS << "\"" << *PI << "\" COMMA ";
-    }
+    for (StringRef PrefixKey : Prefix.first)
+      OS << "\"" << PrefixKey << "\" COMMA ";
     OS << "nullptr})\n";
   }
   OS << "#undef COMMA\n";
@@ -251,9 +252,7 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
   OS << "/////////\n";
   OS << "// Groups\n\n";
   OS << "#ifdef OPTION\n";
-  for (unsigned i = 0, e = Groups.size(); i != e; ++i) {
-    const Record &R = *Groups[i];
-
+  for (const Record &R : llvm::make_pointee_range(Groups)) {
     // Start a single option entry.
     OS << "OPTION(";
 
@@ -300,8 +299,8 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
 
   auto WriteOptRecordFields = [&](raw_ostream &OS, const Record &R) {
     // The option prefix;
-    std::vector<StringRef> prf = R.getValueAsListOfStrings("Prefixes");
-    OS << Prefixes[PrefixKeyT(prf.begin(), prf.end())] << ", ";
+    std::vector<StringRef> RPrefixes = R.getValueAsListOfStrings("Prefixes");
+    OS << Prefixes[PrefixKeyT(RPrefixes.begin(), RPrefixes.end())] << ", ";
 
     // The option string.
     emitNameUsingSpelling(OS, R);
@@ -338,8 +337,8 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
       OS << "nullptr";
     } else {
       OS << "\"";
-      for (size_t i = 0, e = AliasArgs.size(); i != e; ++i)
-        OS << AliasArgs[i] << "\\0";
+      for (StringRef AliasArg : AliasArgs)
+        OS << AliasArg << "\\0";
       OS << "\"";
     }
 
@@ -389,9 +388,7 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
   };
 
   std::vector<const Record *> OptsWithMarshalling;
-  for (unsigned I = 0, E = Opts.size(); I != E; ++I) {
-    const Record &R = *Opts[I];
-
+  for (const Record &R : llvm::make_pointee_range(Opts)) {
     // Start a single option entry.
     OS << "OPTION(";
     WriteOptRecordFields(OS, R);
@@ -420,7 +417,7 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
 
   std::vector<MarshallingInfo> MarshallingInfos;
   for (const auto *R : OptsWithMarshalling)
-    MarshallingInfos.push_back(MarshallingInfo::create(*R));
+    MarshallingInfos.push_back(createMarshallingInfo(*R));
 
   for (const auto &MI : MarshallingInfos) {
     OS << "#ifdef " << MarshallingInfo::MacroName << "\n";
@@ -457,8 +454,7 @@ void EmitOptParser(RecordKeeper &Records, raw_ostream &OS) {
   OS << "#ifdef OPTTABLE_ARG_INIT\n";
   OS << "//////////\n";
   OS << "// Option Values\n\n";
-  for (unsigned I = 0, E = Opts.size(); I != E; ++I) {
-    const Record &R = *Opts[I];
+  for (const Record &R : llvm::make_pointee_range(Opts)) {
     if (isa<UnsetInit>(R.getValueInit("ValuesCode")))
       continue;
     OS << "{\n";
