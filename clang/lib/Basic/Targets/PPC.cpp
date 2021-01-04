@@ -92,7 +92,8 @@ void PPCTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 
   // Target properties.
-  if (getTriple().getArch() == llvm::Triple::ppc64le) {
+  if (getTriple().getArch() == llvm::Triple::ppc64le ||
+      getTriple().getArch() == llvm::Triple::ppcle) {
     Builder.defineMacro("_LITTLE_ENDIAN");
   } else {
     if (!getTriple().isOSNetBSD() &&
@@ -316,6 +317,9 @@ bool PPCTargetInfo::initFeatureMap(
                         .Case("ppc64le", true)
                         .Case("pwr9", true)
                         .Case("pwr8", true)
+                        .Default(false);
+  Features["float128"] = llvm::StringSwitch<bool>(CPU)
+                        .Case("pwr9", true)
                         .Default(false);
 
   Features["spe"] = llvm::StringSwitch<bool>(CPU)
