@@ -12,11 +12,14 @@
   iterator_types = ["parallel"]
 }
 
-func @invalid_memref(%arga: memref<32xf32>, %argb: f32) -> tensor<32xf32> {
- // expected-error@+1 {{'linalg.generic' op expected sparse annotations on tensors only}}
+func @invalid_memref(%arga: memref<32xf32>, %argb: f32, %shape: tensor<32xf32>)
+  -> tensor<32xf32>
+{
+  // expected-error@+1 {{'linalg.generic' op expected sparse annotations on tensors only}}
   %0 = linalg.generic #trait_memref
-    ins(%arga: memref<32xf32>) {
-      ^bb(%a: f32):
+     ins(%arga: memref<32xf32>)
+    outs(%shape: tensor<32xf32>) {
+      ^bb(%a: f32, %s: f32):
         %0 = addf %a, %argb  : f32
         linalg.yield %0 : f32
   } -> tensor<32xf32>
@@ -39,10 +42,11 @@ func @invalid_memref(%arga: memref<32xf32>, %argb: f32) -> tensor<32xf32> {
 }
 
 func @invalid_too_many(%arga: tensor<32xf32>, %argb: f32) -> tensor<32xf32> {
- // expected-error@+1 {{'linalg.generic' op expected one sparse annotation for each tensor}}
+  // expected-error@+1 {{'linalg.generic' op expected one sparse annotation for each tensor}}
   %0 = linalg.generic #trait_too_many
-    ins(%arga: tensor<32xf32>) {
-      ^bb(%a: f32):
+     ins(%arga: tensor<32xf32>)
+    outs(%arga: tensor<32xf32>) {
+      ^bb(%a: f32, %s: f32):
         %0 = addf %a, %argb  : f32
         linalg.yield %0 : f32
   } -> tensor<32xf32>
@@ -61,10 +65,11 @@ func @invalid_too_many(%arga: tensor<32xf32>, %argb: f32) -> tensor<32xf32> {
 }
 
 func @invalid_no_array(%arga: tensor<32xf32>, %argb: f32) -> tensor<32xf32> {
- // expected-error@+1 {{'linalg.generic' op expected sparse annotation array for tensor 0}}
+  // expected-error@+1 {{'linalg.generic' op expected sparse annotation array for tensor 0}}
   %0 = linalg.generic #trait_no_array
-    ins(%arga: tensor<32xf32>) {
-      ^bb(%a: f32):
+     ins(%arga: tensor<32xf32>)
+    outs(%arga: tensor<32xf32>) {
+      ^bb(%a: f32, %s: f32):
         %0 = addf %a, %argb  : f32
         linalg.yield %0 : f32
   } -> tensor<32xf32>
@@ -86,10 +91,11 @@ func @invalid_no_array(%arga: tensor<32xf32>, %argb: f32) -> tensor<32xf32> {
 }
 
 func @invalid_wrong_rank(%arga: tensor<32xf32>, %argb: f32) -> tensor<32xf32> {
- // expected-error@+1 {{'linalg.generic' op expected sparse annotation with rank 1 for tensor 1}}
+  // expected-error@+1 {{'linalg.generic' op expected sparse annotation with rank 1 for tensor 1}}
   %0 = linalg.generic #trait_wrong_rank
-    ins(%arga: tensor<32xf32>) {
-      ^bb(%a: f32):
+     ins(%arga: tensor<32xf32>)
+    outs(%arga: tensor<32xf32>) {
+      ^bb(%a: f32, %s: f32):
         %0 = addf %a, %argb  : f32
         linalg.yield %0 : f32
   } -> tensor<32xf32>
@@ -111,10 +117,11 @@ func @invalid_wrong_rank(%arga: tensor<32xf32>, %argb: f32) -> tensor<32xf32> {
 }
 
 func @invalid_no_string(%arga: tensor<32x16xf32>, %argb: f32) -> tensor<32x16xf32> {
- // expected-error@+1 {{'linalg.generic' op expected sparse annotation at position 1 for tensor 0}}
+  // expected-error@+1 {{'linalg.generic' op expected sparse annotation at position 1 for tensor 0}}
   %0 = linalg.generic #trait_no_string
-    ins(%arga: tensor<32x16xf32>) {
-      ^bb(%a: f32):
+     ins(%arga: tensor<32x16xf32>)
+    outs(%arga: tensor<32x16xf32>) {
+      ^bb(%a: f32, %s: f32):
         %0 = addf %a, %argb  : f32
         linalg.yield %0 : f32
   } -> tensor<32x16xf32>
@@ -138,8 +145,9 @@ func @invalid_no_string(%arga: tensor<32x16xf32>, %argb: f32) -> tensor<32x16xf3
 func @invalid_wrong_symbol(%arga: tensor<32x16xf32>, %argb: f32) -> tensor<32x16xf32> {
   // expected-error@+1 {{'linalg.generic' op expected sparse annotation at position 1 for tensor 1}}
   %0 = linalg.generic #trait_wrong_symbol
-    ins(%arga: tensor<32x16xf32>) {
-      ^bb(%a: f32):
+     ins(%arga: tensor<32x16xf32>)
+    outs(%arga: tensor<32x16xf32>) {
+      ^bb(%a: f32, %s: f32):
         %0 = addf %a, %argb  : f32
         linalg.yield %0 : f32
   } -> tensor<32x16xf32>
@@ -163,8 +171,9 @@ func @invalid_wrong_symbol(%arga: tensor<32x16xf32>, %argb: f32) -> tensor<32x16
 func @invalid_no_sparse_output(%arga: tensor<32x16xf32>, %argb: f32) -> tensor<32x16xf32> {
   // expected-error@+1 {{'linalg.generic' op sparse output tensors not supported (yet)}}
   %0 = linalg.generic #trait_no_sparse_output
-    ins(%arga: tensor<32x16xf32>) {
-      ^bb(%a: f32):
+     ins(%arga: tensor<32x16xf32>)
+    outs(%arga: tensor<32x16xf32>) {
+      ^bb(%a: f32, %s: f32):
         %0 = addf %a, %argb  : f32
         linalg.yield %0 : f32
   } -> tensor<32x16xf32>

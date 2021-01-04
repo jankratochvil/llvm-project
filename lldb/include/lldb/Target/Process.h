@@ -364,7 +364,6 @@ inline bool operator!=(const ProcessModID &lhs, const ProcessModID &rhs) {
 /// A plug-in interface definition class for debugging a process.
 class Process : public std::enable_shared_from_this<Process>,
                 public ProcessProperties,
-                public UserID,
                 public Broadcaster,
                 public ExecutionContextScope,
                 public PluginInterface {
@@ -538,7 +537,8 @@ public:
   static lldb::ProcessSP FindPlugin(lldb::TargetSP target_sp,
                                     llvm::StringRef plugin_name,
                                     lldb::ListenerSP listener_sp,
-                                    const FileSpec *crash_file_path);
+                                    const FileSpec *crash_file_path,
+                                    bool can_connect);
 
   /// Static function that can be used with the \b host function
   /// Host::StartMonitoringChildProcess ().
@@ -559,6 +559,15 @@ public:
   lldb::ByteOrder GetByteOrder() const;
 
   uint32_t GetAddressByteSize() const;
+
+  /// Sets the stored pid.
+  ///
+  /// This does not change the pid of underlying process.
+  lldb::pid_t GetID() const { return m_pid; }
+
+  /// Returns the pid of the process or LLDB_INVALID_PROCESS_ID if there is
+  /// no known pid.
+  void SetID(lldb::pid_t new_pid) { m_pid = new_pid; }
 
   uint32_t GetUniqueID() const { return m_process_unique_id; }
 
@@ -585,7 +594,7 @@ public:
   /// \return
   ///     Returns \b true if this Process has not been finalized
   ///     and \b false otherwise.
-  bool IsValid() const { return !m_finalize_called; }
+  bool IsValid() const { return !m_finalizing; }
 
   /// Return a multi-word command object that can be used to expose plug-in
   /// specific commands.
@@ -1391,6 +1400,8 @@ public:
   ///     Returns \b true if the process is still valid, \b false
   ///     otherwise.
   virtual bool IsAlive();
+
+  virtual bool IsLiveDebugSession() const { return true; };
 
   /// Before lldb detaches from a process, it warns the user that they are
   /// about to lose their debug session. In some cases, this warning doesn't
@@ -2551,9 +2562,7 @@ void PruneThreadPlans();
   ///  \return
   ///     The supported trace type or an \a llvm::Error if tracing is
   ///     not supported for the inferior.
-  virtual llvm::Expected<TraceTypeInfo> GetSupportedTraceType() {
-    return llvm::make_error<UnimplementedError>();
-  }
+  virtual llvm::Expected<TraceTypeInfo> GetSupportedTraceType();
 
   // This calls a function of the form "void * (*)(void)".
   bool CallVoidArgVoidPtrReturn(const Address *address,
@@ -2730,6 +2739,7 @@ protected:
 
   // Member variables
   std::weak_ptr<Target> m_target_wp; ///< The target that owns this process.
+  lldb::pid_t m_pid = LLDB_INVALID_PROCESS_ID;
   ThreadSafeValue<lldb::StateType> m_public_state;
   ThreadSafeValue<lldb::StateType>
       m_private_state;                     // The actual state of our process
@@ -2821,10 +2831,11 @@ protected:
                            // m_currently_handling_do_on_removals are true,
                            // Resume will only request a resume, using this
                            // flag to check.
-  bool m_finalizing; // This is set at the beginning of Process::Finalize() to
-                     // stop functions from looking up or creating things
-                     // during a finalize call
-  bool m_finalize_called; // This is set at the end of Process::Finalize()
+
+  /// This is set at the beginning of Process::Finalize() to stop functions
+  /// from looking up or creating things during or after a finalize call.
+  std::atomic<bool> m_finalizing;
+
   bool m_clear_thread_plans_on_stop;
   bool m_force_next_event_delivery;
   lldb::StateType m_last_broadcast_state; /// This helps with the Public event
@@ -2928,6 +2939,8 @@ protected:
   void LoadOperatingSystemPlugin(bool flush);
 
 private:
+  Status DestroyImpl(bool force_kill);
+
   /// This is the part of the event handling that for a process event. It
   /// decides what to do with the event and returns true if the event needs to
   /// be propagated to the user, and false otherwise. If the event is not

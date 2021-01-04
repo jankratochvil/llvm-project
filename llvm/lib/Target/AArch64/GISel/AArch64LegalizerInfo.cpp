@@ -444,7 +444,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({{s32, s1}, {s64, s1}, {p0, s1}})
       .clampScalar(0, s32, s64)
       .widenScalarToNextPow2(0)
-      .minScalarEltSameAsIf(isVector(0), 1, 0)
+      .minScalarEltSameAsIf(all(isVector(0), isVector(1)), 1, 0)
       .lowerIf(isVector(0));
 
   // Pointer-handling
@@ -589,7 +589,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         const LLT &VecTy = Query.Types[1];
         return VecTy == v2s16 || VecTy == v4s16 || VecTy == v8s16 ||
                VecTy == v4s32 || VecTy == v2s64 || VecTy == v2s32 ||
-               VecTy == v16s8 || VecTy == v2s32;
+               VecTy == v16s8 || VecTy == v2s32 || VecTy == v2p0;
       })
       .minScalarOrEltIf(
           [=](const LegalityQuery &Query) {
@@ -650,7 +650,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         // to be the same size as the dest.
         if (DstTy != SrcTy)
           return false;
-        for (auto &Ty : {v2s32, v4s32, v2s64, v16s8, v8s16}) {
+        for (auto &Ty : {v2s32, v4s32, v2s64, v2p0, v16s8, v8s16}) {
           if (DstTy == Ty)
             return true;
         }
@@ -837,11 +837,13 @@ bool AArch64LegalizerInfo::legalizeShlAshrLshr(
   if (!VRegAndVal)
     return true;
   // Check the shift amount is in range for an immediate form.
-  int64_t Amount = VRegAndVal->Value;
+  int64_t Amount = VRegAndVal->Value.getSExtValue();
   if (Amount > 31)
     return true; // This will have to remain a register variant.
   auto ExtCst = MIRBuilder.buildConstant(LLT::scalar(64), Amount);
+  Observer.changingInstr(MI);
   MI.getOperand(2).setReg(ExtCst.getReg(0));
+  Observer.changedInstr(MI);
   return true;
 }
 

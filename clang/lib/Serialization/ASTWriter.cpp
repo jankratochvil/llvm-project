@@ -198,7 +198,7 @@ void TypeLocWriter::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
   Record.AddSourceLocation(TL.getBuiltinLoc());
   if (TL.needsExtraLocalData()) {
     Record.push_back(TL.getWrittenTypeSpec());
-    Record.push_back(TL.getWrittenSignSpec());
+    Record.push_back(static_cast<uint64_t>(TL.getWrittenSignSpec()));
     Record.push_back(static_cast<uint64_t>(TL.getWrittenWidthSpec()));
     Record.push_back(TL.hasModeAttr());
   }
@@ -1622,7 +1622,7 @@ namespace {
     ASTWriter &Writer;
 
     // Keep track of the framework names we've used during serialization.
-    SmallVector<char, 128> FrameworkStringData;
+    SmallString<128> FrameworkStringData;
     llvm::StringMap<unsigned> FrameworkNameOffset;
 
   public:
@@ -1709,8 +1709,7 @@ namespace {
           = FrameworkNameOffset.find(Data.HFI.Framework);
         if (Pos == FrameworkNameOffset.end()) {
           Offset = FrameworkStringData.size() + 1;
-          FrameworkStringData.append(Data.HFI.Framework.begin(),
-                                     Data.HFI.Framework.end());
+          FrameworkStringData.append(Data.HFI.Framework);
           FrameworkStringData.push_back(0);
 
           FrameworkNameOffset[Data.HFI.Framework] = Offset;
@@ -6211,8 +6210,9 @@ class OMPClauseWriter : public OMPClauseVisitor<OMPClauseWriter> {
 
 public:
   OMPClauseWriter(ASTRecordWriter &Record) : Record(Record) {}
-#define OMP_CLAUSE_CLASS(Enum, Str, Class) void Visit##Class(Class *S);
-#include "llvm/Frontend/OpenMP/OMPKinds.def"
+#define GEN_CLANG_CLAUSE_CLASS
+#define CLAUSE_CLASS(Enum, Str, Class) void Visit##Class(Class *S);
+#include "llvm/Frontend/OpenMP/OMP.inc"
   void writeClause(OMPClause *C);
   void VisitOMPClauseWithPreInit(OMPClauseWithPreInit *C);
   void VisitOMPClauseWithPostUpdate(OMPClauseWithPostUpdate *C);
