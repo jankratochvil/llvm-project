@@ -44,6 +44,10 @@ function(add_mlir_python_extension libname extname)
     "${pybind11_INCLUDE_DIR}"
   )
 
+  target_link_directories(${libname} PRIVATE
+    "${Python3_LIBRARY_DIRS}"
+  )
+
   # The extension itself must be compiled with RTTI and exceptions enabled.
   # Also, some warning classes triggered by pybind11 are disabled.
   target_compile_options(${libname} PRIVATE
@@ -132,16 +136,10 @@ function(add_mlir_python_extension libname extname)
 
 endfunction()
 
-function(add_mlir_dialect_python_bindings filename dialectname)
+function(add_mlir_dialect_python_bindings tblgen_target filename dialectname)
   set(LLVM_TARGET_DEFINITIONS ${filename})
   mlir_tablegen("${dialectname}.py" -gen-python-op-bindings
                 -bind-dialect=${dialectname})
-  if (${ARGC} GREATER 2)
-    set(suffix ${ARGV2})
-  else()
-    get_filename_component(suffix ${filename} NAME_WE)
-  endif()
-  set(tblgen_target "MLIRBindingsPython${suffix}")
   add_public_tablegen_target(${tblgen_target})
 
   add_custom_command(
@@ -150,6 +148,5 @@ function(add_mlir_dialect_python_bindings filename dialectname)
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different
       "${CMAKE_CURRENT_BINARY_DIR}/${dialectname}.py"
       "${PROJECT_BINARY_DIR}/python/mlir/dialects/${dialectname}.py")
-  add_dependencies(MLIRBindingsPythonIncGen ${tblgen_target})
 endfunction()
 

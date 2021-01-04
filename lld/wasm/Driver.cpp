@@ -21,6 +21,7 @@
 #include "lld/Common/Strings.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Object/Wasm.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
@@ -66,7 +67,7 @@ static void initLLVM() {
 
 class LinkerDriver {
 public:
-  void link(ArrayRef<const char *> argsArr);
+  void linkerMain(ArrayRef<const char *> argsArr);
 
 private:
   void createFiles(opt::InputArgList &args);
@@ -97,7 +98,7 @@ bool link(ArrayRef<const char *> args, bool canExitEarly, raw_ostream &stdoutOS,
   symtab = make<SymbolTable>();
 
   initLLVM();
-  LinkerDriver().link(args);
+  LinkerDriver().linkerMain(args);
 
   // Exit immediately if we don't need to return to the caller.
   // This saves time because the overhead of calling destructors
@@ -331,9 +332,35 @@ static StringRef getEntry(opt::InputArgList &args) {
   return arg->getValue();
 }
 
+// Determines what we should do if there are remaining unresolved
+// symbols after the name resolution.
+static UnresolvedPolicy getUnresolvedSymbolPolicy(opt::InputArgList &args) {
+  UnresolvedPolicy errorOrWarn = args.hasFlag(OPT_error_unresolved_symbols,
+                                              OPT_warn_unresolved_symbols, true)
+                                     ? UnresolvedPolicy::ReportError
+                                     : UnresolvedPolicy::Warn;
+
+  if (auto *arg = args.getLastArg(OPT_unresolved_symbols)) {
+    StringRef s = arg->getValue();
+    if (s == "ignore-all")
+      return UnresolvedPolicy::Ignore;
+    if (s == "import-functions")
+      return UnresolvedPolicy::ImportFuncs;
+    if (s == "report-all")
+      return errorOrWarn;
+    error("unknown --unresolved-symbols value: " + s);
+  }
+
+  // Legacy --allow-undefined flag which is equivalent to
+  // --unresolve-symbols=ignore-all
+  if (args.hasArg(OPT_allow_undefined))
+    return UnresolvedPolicy::ImportFuncs;
+
+  return errorOrWarn;
+}
+
 // Initializes Config members by the command line options.
 static void readConfigs(opt::InputArgList &args) {
-  config->allowUndefined = args.hasArg(OPT_allow_undefined);
   config->bsymbolic = args.hasArg(OPT_Bsymbolic);
   config->checkFeatures =
       args.hasFlag(OPT_check_features, OPT_no_check_features, true);
@@ -353,6 +380,10 @@ static void readConfigs(opt::InputArgList &args) {
   config->importTable = args.hasArg(OPT_import_table);
   config->ltoo = args::getInteger(args, OPT_lto_O, 2);
   config->ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
+  config->ltoNewPassManager =
+      args.hasFlag(OPT_lto_new_pass_manager, OPT_no_lto_new_pass_manager,
+                   LLVM_ENABLE_NEW_PASS_MANAGER);
+  config->ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
   config->mapFile = args.getLastArgValue(OPT_Map);
   config->optimize = args::getInteger(args, OPT_O, 0);
   config->outputFile = args.getLastArgValue(OPT_o);
@@ -376,6 +407,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->thinLTOCachePolicy = CHECK(
       parseCachePruningPolicy(args.getLastArgValue(OPT_thinlto_cache_policy)),
       "--thinlto-cache-policy: invalid cache policy");
+  config->unresolvedSymbols = getUnresolvedSymbolPolicy(args);
   errorHandler().verbose = args.hasArg(OPT_verbose);
   LLVM_DEBUG(errorHandler().verbose = true);
 
@@ -440,7 +472,7 @@ static void setConfigs() {
 
   if (config->shared) {
     config->importMemory = true;
-    config->allowUndefined = true;
+    config->unresolvedSymbols = UnresolvedPolicy::ImportFuncs;
   }
 }
 
@@ -586,14 +618,6 @@ static void createSyntheticSymbols() {
       make<SyntheticFunction>(nullSignature, "__wasm_call_ctors"));
 
   if (config->isPic) {
-    // For PIC code we create a synthetic function __wasm_apply_relocs which
-    // is called from __wasm_call_ctors before the user-level constructors.
-    WasmSym::applyRelocs = symtab->addSyntheticFunction(
-        "__wasm_apply_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
-        make<SyntheticFunction>(nullSignature, "__wasm_apply_relocs"));
-  }
-
-  if (config->isPic) {
     WasmSym::stackPointer =
         createUndefinedGlobal("__stack_pointer", config->is64.getValueOr(false)
                                                      ? &mutableGlobalTypeI64
@@ -615,16 +639,7 @@ static void createSyntheticSymbols() {
     WasmSym::stackPointer->markLive();
   }
 
-  if (config->sharedMemory && !config->shared) {
-    // Passive segments are used to avoid memory being reinitialized on each
-    // thread's instantiation. These passive segments are initialized and
-    // dropped in __wasm_init_memory, which is registered as the start function
-    WasmSym::initMemory = symtab->addSyntheticFunction(
-        "__wasm_init_memory", WASM_SYMBOL_VISIBILITY_HIDDEN,
-        make<SyntheticFunction>(nullSignature, "__wasm_init_memory"));
-    WasmSym::initMemoryFlag = symtab->addSyntheticDataSymbol(
-        "__wasm_init_memory_flag", WASM_SYMBOL_VISIBILITY_HIDDEN);
-    assert(WasmSym::initMemoryFlag);
+  if (config->sharedMemory) {
     WasmSym::tlsBase = createGlobalVariable("__tls_base", true);
     WasmSym::tlsSize = createGlobalVariable("__tls_size", false);
     WasmSym::tlsAlign = createGlobalVariable("__tls_align", false);
@@ -772,7 +787,7 @@ static void wrapSymbols(ArrayRef<WrappedSymbol> wrapped) {
     symtab->wrap(w.sym, w.real, w.wrap);
 }
 
-void LinkerDriver::link(ArrayRef<const char *> argsArr) {
+void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   WasmOptTable parser;
   opt::InputArgList args = parser.parse(argsArr.slice(1));
 
@@ -939,12 +954,14 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     Symbol *sym = symtab->find(arg->getValue());
     if (sym && sym->isDefined())
       sym->forceExport = true;
-    else if (!config->allowUndefined)
+    else if (config->unresolvedSymbols == UnresolvedPolicy::ReportError)
       error(Twine("symbol exported via --export not found: ") +
             arg->getValue());
+    else if (config->unresolvedSymbols == UnresolvedPolicy::Warn)
+      warn(Twine("symbol exported via --export not found: ") + arg->getValue());
   }
 
-  if (!config->relocatable) {
+  if (!config->relocatable && !config->isPic) {
     // Add synthetic dummies for weak undefined functions.  Must happen
     // after LTO otherwise functions may not yet have signatures.
     symtab->handleWeakUndefines();
