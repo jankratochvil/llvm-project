@@ -29,8 +29,8 @@ define void @vdiv(double* %x, double* %y, double %a, i32 %N) #0 {
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[FOR_BODY_PREHEADER]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 4294967292
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x double> undef, double [[A:%.*]], i32 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x double> [[BROADCAST_SPLATINSERT]], <4 x double> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x double> poison, double [[A:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x double> [[BROADCAST_SPLATINSERT]], <4 x double> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[N_VEC]], -4
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
@@ -38,7 +38,7 @@ define void @vdiv(double* %x, double* %y, double %a, i32 %N) #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP0]], 12
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK_UNR_LCSSA:%.*]], label [[VECTOR_PH_NEW:%.*]]
 ; CHECK:       vector.ph.new:
-; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[TMP2]], -4
+; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[TMP2]], 9223372036854775804
 ; CHECK-NEXT:    [[TMP4:%.*]] = fdiv fast <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fdiv fast <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fdiv fast <4 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, [[BROADCAST_SPLAT]]
