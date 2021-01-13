@@ -867,6 +867,33 @@ def checkDebugServerSupport():
             configuration.skip_categories.append("llgs")
             print(skip_msg%"lldb-server");
 
+def canRunDWZTests():
+    from lldbsuite.test import lldbplatformutil
+
+    platform = lldbplatformutil.getPlatform()
+
+    if platform == "linux":
+        import distutils.spawn
+
+        if not os.access("/usr/lib/rpm/sepdebugcrcfix", os.X_OK):
+            return False, "Unable to find /usr/lib/rpm/sepdebugcrcfix"
+        if distutils.spawn.find_executable("eu-strip") is None:
+            return False, "Unable to find executable eu-strip"
+        if distutils.spawn.find_executable("dwz") is None:
+            return False, "Unable to find executable dwz"
+        return True, "/usr/lib/rpm/sepdebugcrcfix, eu-strip and dwz found"
+
+    return False, "Don't know how to build with DWZ on %s" % platform
+
+def checkDWZSupport():
+    result, reason = canRunDWZTests()
+    if result:
+        return # dwz supported
+    if "dwz" in configuration.categories_list:
+        return # dwz category explicitly requested, let it run.
+    print("dwz tests will not be run because: " + reason)
+    configuration.skip_categories.append("dwz")
+
 def run_suite():
     # On MacOS X, check to make sure that domain for com.apple.DebugSymbols defaults
     # does not exist before proceeding to running the test suite.
@@ -963,6 +990,7 @@ def run_suite():
     checkDebugInfoSupport()
     checkDebugServerSupport()
     checkObjcSupport()
+    checkDWZSupport()
 
     for testdir in configuration.testdirs:
         for (dirpath, dirnames, filenames) in os.walk(testdir):

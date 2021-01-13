@@ -1670,6 +1670,23 @@ class Base(unittest2.TestCase):
                                     dictionary, testdir, testname):
             raise Exception("Don't know how to build binary with gmodules")
 
+    def buildDWZ(
+            self,
+            architecture=None,
+            compiler=None,
+            dictionary=None):
+        """Platform specific way to build binaries with dwz optimizer."""
+        testdir = self.mydir
+        testname = self.getBuildDirBasename()
+        if self.getDebugInfo() != "dwz":
+            raise Exception("NO_DEBUG_INFO_TESTCASE must build with buildDefault")
+
+        module = builder_module()
+        dictionary = lldbplatformutil.finalize_build_dictionary(dictionary)
+        if not module.buildDWZ(self, architecture, compiler,
+                               dictionary, testdir, testname):
+            raise Exception("Don't know how to build binary with dwz")
+
     def signBinary(self, binary_path):
         if sys.platform.startswith("darwin"):
             codesign_cmd = "codesign --force --sign \"%s\" %s" % (
@@ -2659,6 +2676,8 @@ FileCheck output:
             return self.buildDwo(architecture, compiler, dictionary)
         elif self.getDebugInfo() == "gmodules":
             return self.buildGModules(architecture, compiler, dictionary)
+        elif self.getDebugInfo() == "dwz":
+            return self.buildDWZ(architecture, compiler, dictionary)
         else:
             self.fail("Can't build for debug info: %s" % self.getDebugInfo())
 
