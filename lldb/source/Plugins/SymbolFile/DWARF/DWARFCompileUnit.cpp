@@ -37,9 +37,15 @@ void DWARFCompileUnit::BuildAddressRangeTable(
   // First get the compile unit DIE only and check contains ranges information.
   const DWARFDebugInfoEntry *die = GetUnitDIEPtrOnly();
 
+  // DWZ partial units never contain PC.
+  if (die && die->Tag() == DW_TAG_partial_unit)
+    return;
+
   const dw_offset_t cu_offset = GetOffset();
   if (die) {
     DWARFRangeList ranges;
+    // It does not make sense to build address table for DW_TAG_partial_unit as
+    // those never contain any addresses.
     const size_t num_ranges =
         die->GetAttributeAddressRanges(this, ranges, /*check_hi_lo_pc=*/true);
     if (num_ranges > 0) {
@@ -118,8 +124,8 @@ DWARFDIE DWARFCompileUnit::LookupAddress(const dw_addr_t address) {
 
 DWARFCompileUnit *
 DWARFCompileUnit::GetDWARFCompileUnit(DWARFUnit *main_unit) {
-  // if (GetUnitDIEOnly().Tag() != DW_TAG_partial_unit)
-  main_unit = reinterpret_cast<DWARFCompileUnit *>(this);
+  if (GetUnitDIEOnly().Tag() != DW_TAG_partial_unit)
+    main_unit = reinterpret_cast<DWARFCompileUnit *>(this);
   return DWARFUnit::GetDWARFCompileUnit(main_unit);
 }
 

@@ -37,6 +37,7 @@ add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN
   NameToDIE.cpp
   SymbolFileDWARF.cpp
   SymbolFileDWARFDwo.cpp
+  SymbolFileDWARFDwz.cpp
   SymbolFileDWARFDebugMap.cpp
   UniqueDWARFASTType.cpp
 

@@ -524,6 +524,8 @@ DWARFUnit::GetDIE(dw_offset_t die_offset) {
   if (die_offset == DW_INVALID_OFFSET)
     return DWARFDIE(); // Not found
 
+  lldbassert(!GetDwoSymbolFile()); // FIXME: Or maybe just leave it running here now?
+
   if (!ContainsDIEOffset(die_offset)) {
     GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
         "GetDIE for DIE 0x%" PRIx32 " is outside of its CU 0x%" PRIx32,
@@ -644,6 +646,8 @@ uint32_t DWARFUnit::GetProducerVersionUpdate() {
 }
 
 uint64_t DWARFUnit::GetDWARFLanguageType() {
+  lldbassert(!GetSymbolFileDWARF().GetIsDwz());
+
   if (m_language_type)
     return *m_language_type;
 
@@ -793,6 +797,9 @@ DWARFUnitHeader::extract(const DWARFDataExtractor &data,
   } else {
     header.m_abbr_offset = data.GetDWARFOffset(offset_ptr);
     header.m_addr_size = data.GetU8(offset_ptr);
+    // For DIERef::Section::DWZDebugInfo it should be DW_UT_partial but there
+    // are DW_UT_partial even in DWARF-4 DIERef::Section::DebugInfo recognized
+    // only by its DW_TAG_partial_unit.
     header.m_unit_type =
         section == DIERef::Section::DebugTypes ? DW_UT_type : DW_UT_compile;
   }

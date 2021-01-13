@@ -24,6 +24,7 @@
 #include "DWARFDebugInfoEntry.h"
 #include "DWARFFormValue.h"
 #include "DWARFTypeUnit.h"
+#include "SymbolFileDWARFDwz.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -37,6 +38,8 @@ DWARFDebugInfo::DWARFDebugInfo(SymbolFileDWARF &dwarf,
 llvm::Expected<DWARFDebugAranges &> DWARFDebugInfo::GetCompileUnitAranges() {
   if (m_cu_aranges_up)
     return *m_cu_aranges_up;
+
+  lldbassert(!m_dwarf.GetIsDwz());
 
   m_cu_aranges_up = std::make_unique<DWARFDebugAranges>();
   const DWARFDataExtractor &debug_aranges_data =
@@ -58,6 +61,7 @@ llvm::Expected<DWARFDebugAranges &> DWARFDebugInfo::GetCompileUnitAranges() {
   for (size_t idx = 0; idx < num_units; ++idx) {
     DWARFUnit *cu = GetUnitAtIndex(idx);
 
+    // FIXME - or: if (!llvm::isa<DWARFCompileUnit>(cu))
     if (cu->GetUnitDIEOnly().Tag() == DW_TAG_partial_unit)
       continue;
     dw_offset_t offset = cu->GetOffset();
@@ -156,11 +160,21 @@ DWARFUnit *DWARFDebugInfo::GetUnitAtOffset(DIERef::Section section,
 }
 
 DWARFUnit *DWARFDebugInfo::GetUnit(const DIERef &die_ref) {
+  bool dwz_common = die_ref.main_cu() && die_ref.dwz_common() == DIERef::CommonDwz;
+  if (dwz_common && !m_dwarf.GetIsDwz()) {
+    lldbassert(m_dwarf.GetDwzSymbolFile());
+    return m_dwarf.GetDwzSymbolFile()->DebugInfo().GetUnit(die_ref);
+  }
+  lldbassert(dwz_common == m_dwarf.GetIsDwz());
   return GetUnitContainingDIEOffset(die_ref.section(), die_ref.die_offset());
 }
 
 DWARFCompileUnit *DWARFDebugInfo::GetMainUnit(const DIERef &die_ref) {
-  DWARFUnit *cu = GetUnit(die_ref);
+  DWARFUnit *cu;
+  if (!die_ref.main_cu())
+    cu = GetUnit(die_ref);
+  else
+    cu = GetUnitAtIndex(*m_dwarf.GetDWARFUnitIndex(*die_ref.main_cu()));
   if (!cu || cu->IsTypeUnit())
     return nullptr;
   return llvm::cast<DWARFCompileUnit>(cu);
