@@ -216,7 +216,7 @@ DWARFDebugInfo::GetDIEForDIEOffset(DIERef::Section section,
 //
 // Get the DIE (Debug Information Entry) with the specified offset.
 DWARFDIE
-DWARFDebugInfo::GetDIE(const DIERef &die_ref, DWARFCompileUnit **main_unit_return) {
+DWARFDebugInfo::GetDIE(const DIERef &die_ref, DWARFUnit **main_unit_return) {
   DWARFUnit *cu = GetUnit(die_ref);
   if (cu) {
     DWARFCompileUnit *main_cu = GetMainUnit(die_ref);
