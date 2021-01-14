@@ -124,9 +124,10 @@ DWARFDIE DWARFCompileUnit::LookupAddress(const dw_addr_t address) {
 
 DWARFCompileUnit *
 DWARFCompileUnit::GetDWARFCompileUnit(DWARFUnit *main_unit) {
+  DWARFCompileUnit *cu = reinterpret_cast<DWARFCompileUnit *>(main_unit);
   if (GetUnitDIEOnly().Tag() != DW_TAG_partial_unit)
-    main_unit = reinterpret_cast<DWARFCompileUnit *>(this);
-  return DWARFUnit::GetDWARFCompileUnit(main_unit);
+    cu = reinterpret_cast<DWARFCompileUnit *>(this);
+  return cu;
 }
 
 CompileUnit *DWARFCompileUnit::GetCompUnit() {
