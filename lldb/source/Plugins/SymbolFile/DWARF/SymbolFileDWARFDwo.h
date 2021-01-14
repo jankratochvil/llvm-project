@@ -40,7 +40,7 @@ public:
   GetTypeSystemForLanguage(lldb::LanguageType language) override;
 
   DWARFDIE
-  GetDIE(const DIERef &die_ref, DWARFCompileUnit **main_unit_return = nullptr) override;
+  GetDIE(const DIERef &die_ref, DWARFUnit **main_unit_return = nullptr) override;
 
   llvm::Optional<uint32_t> GetDwoNum() override { return GetID() >> 32; }
 

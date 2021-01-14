@@ -79,7 +79,7 @@ void AppleDWARFIndex::GetGlobalVariables(
 }
 
 void AppleDWARFIndex::GetGlobalVariables(
-    const DWARFCompileUnit &main_unit,
+    const DWARFUnit &main_unit,
     llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)>
         callback) {
   if (!m_apple_names_up)
