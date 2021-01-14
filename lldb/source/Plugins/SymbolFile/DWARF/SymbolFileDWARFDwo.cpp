@@ -125,7 +125,7 @@ SymbolFileDWARFDwo::GetTypeSystemForLanguage(LanguageType language) {
 }
 
 DWARFDIE
-SymbolFileDWARFDwo::GetDIE(const DIERef &die_ref, DWARFCompileUnit **main_unit_return) {
+SymbolFileDWARFDwo::GetDIE(const DIERef &die_ref, DWARFUnit **main_unit_return) {
   if (die_ref.dwo_num() == GetDwoNum())
     return DebugInfo().GetDIE(die_ref, main_unit_return);
   return GetBaseSymbolFile().GetDIE(die_ref, main_unit_return);
