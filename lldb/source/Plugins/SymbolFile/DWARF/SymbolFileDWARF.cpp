@@ -1308,7 +1308,7 @@ user_id_t SymbolFileDWARF::GetUID(DWARFUnit *main_unit, DIERef ref) {
          lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes) << 63;
 
 #ifndef NDEBUG
-  DWARFCompileUnit *main_unit_check;
+  DWARFUnit *main_unit_check;
   DWARFDIE dwarfdie_check2 = GetDIEUnlocked(retval, &main_unit_check);
   lldbassert(dwarfdie_check2 == dwarfdie_check);
 #endif
@@ -1357,7 +1357,7 @@ SymbolFileDWARF::DecodeUID(lldb::user_id_t uid) {
 
 DWARFDIE
 SymbolFileDWARF::GetDIEUnlocked(lldb::user_id_t uid,
-                                DWARFCompileUnit **main_unit_return) {
+                                DWARFUnit **main_unit_return) {
   llvm::Optional<DecodedUID> decoded = DecodeUIDUnlocked(uid);
 
   if (decoded) {
@@ -1607,9 +1607,10 @@ bool SymbolFileDWARF::GetFunction(DWARFUnit *main_unit,
     return false;
 
   // Check if the symbol vendor already knows about this compile unit?
-  if (!main_unit)
+  DWARFCompileUnit *main_cu = llvm::dyn_cast_or_null<DWARFCompileUnit>(main_unit);
+  if (!main_cu)
     return false;
-  sc.comp_unit = main_unit->GetCompUnit();
+  sc.comp_unit = main_cu->GetCompUnit();
 
   sc.function = sc.comp_unit->FindFunctionByUID(die.GetID(main_unit)).get();
   if (sc.function == nullptr)
@@ -1631,7 +1632,7 @@ lldb::ModuleSP SymbolFileDWARF::GetExternalModule(ConstString name) {
 }
 
 DWARFDIE
-SymbolFileDWARF::GetDIE(const DIERef &die_ref, DWARFCompileUnit **main_unit_return) {
+SymbolFileDWARF::GetDIE(const DIERef &die_ref, DWARFUnit **main_unit_return) {
   if (die_ref.dwo_num()) {
     SymbolFileDWARF *dwarf = *die_ref.dwo_num() == 0x3fffffff
                                  ? m_dwp_symfile.get()
@@ -2191,9 +2192,10 @@ void SymbolFileDWARF::FindGlobalVariables(
         if (die.Tag() != DW_TAG_variable)
           return true;
 
-        if (!main_unit)
-          return true;
-        sc.comp_unit = main_unit->GetCompUnit();
+	DWARFCompileUnit *main_cu = llvm::dyn_cast_or_null<DWARFCompileUnit>(main_unit);
+	if (!main_cu)
+	  return false;
+	sc.comp_unit = main_cu->GetCompUnit();
 
         if (parent_decl_ctx) {
           if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.GetMainDWARFUnit(main_unit))) {
@@ -2254,9 +2256,10 @@ void SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
           sc.module_sp = m_objfile_sp->GetModule();
         assert(sc.module_sp);
 
-        if (!main_unit)
-          return true;
-        sc.comp_unit = main_unit->GetCompUnit();
+	DWARFCompileUnit *main_cu = llvm::dyn_cast_or_null<DWARFCompileUnit>(main_unit);
+	if (!main_cu)
+	  return false;
+	sc.comp_unit = main_cu->GetCompUnit();
 
         ParseVariables(sc, die, LLDB_INVALID_ADDRESS, false, false, &variables);
 
@@ -2375,7 +2378,7 @@ void SymbolFileDWARF::FindFunctions(ConstString name,
 
   const uint32_t original_size = sc_list.GetSize();
 
-  llvm::DenseSet<std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>>
+  llvm::DenseSet<std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>>
       resolved_dies;
 
   m_index->GetFunctions(
@@ -2415,7 +2418,7 @@ void SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
         regex.GetText().str().c_str());
   }
 
-  llvm::DenseSet<std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>>
+  llvm::DenseSet<std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>>
       resolved_dies;
   m_index->GetFunctions(regex, [&](DWARFUnit *main_unit, DWARFDIE die) {
     if (resolved_dies.insert(std::make_pair(main_unit, die.GetDIE())).second)
@@ -2619,8 +2622,9 @@ TypeSP SymbolFileDWARF::GetTypeForDIE(DWARFUnit *main_unit,
     Type *type_ptr = GetDIEToType().lookup(die.MainCUtoDIEPair(main_unit));
     if (type_ptr == nullptr) {
       SymbolContextScope *scope;
-      if (main_unit)
-        scope = main_unit->GetCompUnit();
+      DWARFCompileUnit *main_cu = llvm::dyn_cast_or_null<DWARFCompileUnit>(main_unit);
+      if (main_cu)
+        scope = main_cu->GetCompUnit();
       else
         scope = GetObjectFile()->GetModule().get();
       assert(scope);
@@ -3153,7 +3157,7 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
 
         m_index->GetGlobalVariables(
             *main_unit,
-            [&](DWARFCompileUnit *main_unit_check, DWARFDIE die) {
+            [&](DWARFUnit *main_unit_check, DWARFDIE die) {
               lldbassert(main_unit_check == main_unit || main_unit_check == nullptr);
               VariableSP var_sp(
                   ParseVariableDIE(sc, die, LLDB_INVALID_ADDRESS));

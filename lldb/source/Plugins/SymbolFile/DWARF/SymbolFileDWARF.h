@@ -262,7 +262,7 @@ public:
       return m_external_type_modules;
   }
 
-  virtual DWARFDIE GetDIE(const DIERef &die_ref, DWARFCompileUnit **main_unit_return = nullptr);
+  virtual DWARFDIE GetDIE(const DIERef &die_ref, DWARFUnit **main_unit_return = nullptr);
 
   DWARFDIE GetDIE(lldb::user_id_t uid);
 

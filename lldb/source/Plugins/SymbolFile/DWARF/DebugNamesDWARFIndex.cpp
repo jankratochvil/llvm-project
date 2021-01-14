@@ -131,7 +131,7 @@ void DebugNamesDWARFIndex::GetGlobalVariables(
 }
 
 void DebugNamesDWARFIndex::GetGlobalVariables(
-    const DWARFCompileUnit &main_unit,
+    const DWARFUnit &main_unit,
     llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)>
         callback) {
   uint64_t cu_offset = main_unit.GetOffset();
