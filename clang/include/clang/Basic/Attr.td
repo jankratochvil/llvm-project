@@ -681,6 +681,13 @@ def AlignMac68k : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def AlignNatural : InheritableAttr {
+  // This attribute has no spellings as it is only ever created implicitly.
+  let Spellings = [];
+  let SemaHandler = 0;
+  let Documentation = [Undocumented];
+}
+
 def AlwaysInline : InheritableAttr {
   let Spellings = [GCC<"always_inline">, Keyword<"__forceinline">];
   let Subjects = SubjectList<[Function]>;
@@ -1796,6 +1803,13 @@ def ReturnsNonNull : InheritableAttr {
   let Spellings = [GCC<"returns_nonnull">];
   let Subjects = SubjectList<[ObjCMethod, Function]>;
   let Documentation = [ReturnsNonNullDocs];
+}
+
+def CalledOnce : Attr {
+  let Spellings = [Clang<"called_once">];
+  let Subjects = SubjectList<[ParmVar]>;
+  let LangOpts = [ObjC];
+  let Documentation = [CalledOnceDocs];
 }
 
 // pass_object_size(N) indicates that the parameter should have
@@ -3368,8 +3382,10 @@ def LoopHint : Attr {
                            "PipelineDisabled", "PipelineInitiationInterval", "Distribute",
                            "VectorizePredicate"]>,
               EnumArgument<"State", "LoopHintState",
-                           ["enable", "disable", "numeric", "assume_safety", "full"],
-                           ["Enable", "Disable", "Numeric", "AssumeSafety", "Full"]>,
+                           ["enable", "disable", "numeric", "fixed_width",
+                            "scalable_width", "assume_safety", "full"],
+                           ["Enable", "Disable", "Numeric", "FixedWidth",
+                            "ScalableWidth", "AssumeSafety", "Full"]>,
               ExprArgument<"Value">];
 
   let AdditionalMembers = [{
@@ -3643,4 +3659,20 @@ def Builtin : InheritableAttr {
   let Subjects = SubjectList<[Function]>;
   let SemaHandler = 0;
   let Documentation = [Undocumented];
+}
+
+def EnforceTCB : InheritableAttr {
+  let Spellings = [Clang<"enforce_tcb">];
+  let Subjects = SubjectList<[Function]>;
+  let Args = [StringArgument<"TCBName">];
+  let Documentation = [EnforceTCBDocs];
+  bit InheritEvenIfAlreadyPresent = 1;
+}
+
+def EnforceTCBLeaf : InheritableAttr {
+  let Spellings = [Clang<"enforce_tcb_leaf">];
+  let Subjects = SubjectList<[Function]>;
+  let Args = [StringArgument<"TCBName">];
+  let Documentation = [EnforceTCBLeafDocs];
+  bit InheritEvenIfAlreadyPresent = 1;
 }
