@@ -226,7 +226,6 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::iPTR:      return "MVT::iPTR";
   case MVT::iPTRAny:   return "MVT::iPTRAny";
   case MVT::Untyped:   return "MVT::Untyped";
-  case MVT::exnref:    return "MVT::exnref";
   case MVT::funcref:   return "MVT::funcref";
   case MVT::externref: return "MVT::externref";
   default: llvm_unreachable("ILLEGAL VALUE TYPE!");
@@ -344,7 +343,8 @@ CodeGenRegBank &CodeGenTarget::getRegBank() const {
 Optional<CodeGenRegisterClass *>
 CodeGenTarget::getSuperRegForSubReg(const ValueTypeByHwMode &ValueTy,
                                     CodeGenRegBank &RegBank,
-                                    const CodeGenSubRegIndex *SubIdx) const {
+                                    const CodeGenSubRegIndex *SubIdx,
+                                    bool MustBeAllocatable) const {
   std::vector<CodeGenRegisterClass *> Candidates;
   auto &RegClasses = RegBank.getRegClasses();
 
@@ -358,6 +358,10 @@ CodeGenTarget::getSuperRegForSubReg(const ValueTypeByHwMode &ValueTy,
 
     // We have a class. Check if it supports this value type.
     if (!llvm::is_contained(SubClassWithSubReg->VTs, ValueTy))
+      continue;
+
+    // If necessary, check that it is allocatable.
+    if (MustBeAllocatable && !SubClassWithSubReg->Allocatable)
       continue;
 
     // We have a register class which supports both the value type and

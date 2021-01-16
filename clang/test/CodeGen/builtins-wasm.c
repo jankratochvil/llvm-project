@@ -49,10 +49,10 @@ void throw(void *obj) {
   // WEBASSEMBLY64: call void @llvm.wasm.throw(i32 0, i8* %{{.*}})
 }
 
-void rethrow_in_catch(void) {
-  return __builtin_wasm_rethrow_in_catch();
-  // WEBASSEMBLY32: call void @llvm.wasm.rethrow.in.catch()
-  // WEBASSEMBLY64: call void @llvm.wasm.rethrow.in.catch()
+void rethrow(void) {
+  return __builtin_wasm_rethrow();
+  // WEBASSEMBLY32: call void @llvm.wasm.rethrow()
+  // WEBASSEMBLY64: call void @llvm.wasm.rethrow()
 }
 
 int memory_atomic_wait32(int *addr, int expected, long long timeout) {
@@ -1001,4 +1001,14 @@ i8x16 shuffle(i8x16 x, i8x16 y) {
   // WEBASSEMBLY-SAME: i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14,
   // WEBASSEMBLY-SAME: i32 15
   // WEBASSEMBLY-NEXT: ret
+}
+
+void prefetch_t(void *p) {
+  return __builtin_wasm_prefetch_t(p);
+  // WEBASSEMBLY: call void @llvm.wasm.prefetch.t(i8* %p)
+}
+
+void prefetch_nt(void *p) {
+  return __builtin_wasm_prefetch_nt(p);
+  // WEBASSEMBLY: call void @llvm.wasm.prefetch.nt(i8* %p)
 }
