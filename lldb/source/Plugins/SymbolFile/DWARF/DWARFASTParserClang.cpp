@@ -13,7 +13,6 @@
 #include "DWARFDebugInfo.h"
 #include "DWARFDeclContext.h"
 #include "DWARFDefines.h"
-#include "DWARFCompileUnit.h"
 #include "SymbolFileDWARF.h"
 #include "SymbolFileDWARFDebugMap.h"
 #include "SymbolFileDWARFDwo.h"
@@ -1983,13 +1982,13 @@ bool DWARFASTParserClang::CompleteRecordType(DWARFUnit *main_unit, const DWARFDI
                                              lldb_private::Type *type,
                                              CompilerType &clang_type) {
   const dw_tag_t tag = die.Tag();
-  SymbolFileDWARF *dwarf = main_unit ? &main_unit->GetSymbolFileDWARF() : llvm::cast<SymbolFileDWARF>(type->GetSymbolContextScope()->CalculateSymbolContextModule()->GetSymbolFile());
+  SymbolFileDWARF *dwarf = &main_unit->GetSymbolFileDWARF();
   CompileUnit *comp_unit =
       type->GetSymbolContextScope()->CalculateSymbolContextCompileUnit();
   // comp_unit may be a CU with DIE being only declaration.
   // Then 'die' will be a definition in a different CU with different 'main_unit'.
-  //DWARFCompileUnit *main_unit_check = sc.GetDWARFCompileUnit(&dwarf);
-  //lldbassert(main_unit_check && &main_unit_check->GetNonSkeletonUnit() == main_unit);
+  // This assertion will therefore not work:
+  // lldbassert(&sc.GetDWARFCompileUnit(&dwarf)->GetNonSkeletonUnit() == sc.GetDWARFCompileUnit(&dwarf));
 
   ClangASTImporter::LayoutInfo layout_info;
 
@@ -2126,11 +2125,7 @@ bool DWARFASTParserClang::CompleteEnumType(const DWARFDIE &die,
 bool DWARFASTParserClang::CompleteTypeFromDWARF(DWARFUnit *main_unit, const DWARFDIE &die,
                                                 lldb_private::Type *type,
                                                 CompilerType &clang_type) {
-  SymbolFileDWARF *dwarf = main_unit ? &main_unit->GetSymbolFileDWARF() : llvm::cast<SymbolFileDWARF>(type->GetSymbolContextScope()->CalculateSymbolContextModule()->GetSymbolFile());
-  // sc.comp_unit may be a CU with DIE being only declaration.
-  // Then 'die' will be a definition in a different CU with different 'main_unit'.
-  //DWARFCompileUnit *main_unit_check = sc.GetDWARFCompileUnit(&dwarf);
-  //lldbassert(main_unit_check && &main_unit_check->GetNonSkeletonUnit() == main_unit);
+  SymbolFileDWARF *dwarf = &main_unit->GetSymbolFileDWARF();
 
   std::lock_guard<std::recursive_mutex> guard(
       dwarf->GetObjectFile()->GetModule()->GetMutex());
