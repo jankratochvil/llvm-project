@@ -63,6 +63,7 @@ static cl::opt<bool> ForceReductionIntrinsic(
 
 static const char *LLVMLoopDisableNonforced = "llvm.loop.disable_nonforced";
 static const char *LLVMLoopDisableLICM = "llvm.licm.disable";
+static const char *LLVMLoopMustProgress = "llvm.loop.mustprogress";
 
 bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
                                    MemorySSAUpdater *MSSAU,
@@ -309,8 +310,7 @@ llvm::getOptionalElementCountLoopAttribute(Loop *TheLoop) {
   if (Width.hasValue()) {
     Optional<int> IsScalable = getOptionalIntLoopAttribute(
         TheLoop, "llvm.loop.vectorize.scalable.enable");
-    return ElementCount::get(*Width,
-                             IsScalable.hasValue() ? *IsScalable : false);
+    return ElementCount::get(*Width, IsScalable.getValueOr(false));
   }
 
   return None;
@@ -417,6 +417,10 @@ bool llvm::hasDisableAllTransformsHint(const Loop *L) {
 
 bool llvm::hasDisableLICMTransformsHint(const Loop *L) {
   return getBooleanLoopAttribute(L, LLVMLoopDisableLICM);
+}
+
+bool llvm::hasMustProgress(const Loop *L) {
+  return getBooleanLoopAttribute(L, LLVMLoopMustProgress);
 }
 
 TransformationMode llvm::hasUnrollTransformation(Loop *L) {
@@ -589,6 +593,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
   IRBuilder<> Builder(OldBr);
 
   auto *ExitBlock = L->getUniqueExitBlock();
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   if (ExitBlock) {
     assert(ExitBlock && "Should have a unique exit block!");
     assert(L->hasDedicatedExits() && "Loop should have dedicated exits!");
@@ -620,7 +625,6 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
              "Should have exactly one value and that's from the preheader!");
     }
 
-    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
     if (DT) {
       DTU.applyUpdates({{DominatorTree::Insert, Preheader, ExitBlock}});
       if (MSSA) {
@@ -636,25 +640,26 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     Builder.CreateBr(ExitBlock);
     // Remove the old branch.
     Preheader->getTerminator()->eraseFromParent();
-
-    if (DT) {
-      DTU.applyUpdates({{DominatorTree::Delete, Preheader, L->getHeader()}});
-      if (MSSA) {
-        MSSAU->applyUpdates(
-            {{DominatorTree::Delete, Preheader, L->getHeader()}}, *DT);
-        SmallSetVector<BasicBlock *, 8> DeadBlockSet(L->block_begin(),
-                                                     L->block_end());
-        MSSAU->removeBlocks(DeadBlockSet);
-        if (VerifyMemorySSA)
-          MSSA->verifyMemorySSA();
-      }
-    }
   } else {
     assert(L->hasNoExitBlocks() &&
            "Loop should have either zero or one exit blocks.");
+
     Builder.SetInsertPoint(OldBr);
     Builder.CreateUnreachable();
     Preheader->getTerminator()->eraseFromParent();
+  }
+
+  if (DT) {
+    DTU.applyUpdates({{DominatorTree::Delete, Preheader, L->getHeader()}});
+    if (MSSA) {
+      MSSAU->applyUpdates({{DominatorTree::Delete, Preheader, L->getHeader()}},
+                          *DT);
+      SmallSetVector<BasicBlock *, 8> DeadBlockSet(L->block_begin(),
+                                                   L->block_end());
+      MSSAU->removeBlocks(DeadBlockSet);
+      if (VerifyMemorySSA)
+        MSSA->verifyMemorySSA();
+    }
   }
 
   // Use a map to unique and a vector to guarantee deterministic ordering.
@@ -755,6 +760,38 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     LI->destroy(L);
   }
 }
+
+void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
+                             LoopInfo &LI, MemorySSA *MSSA) {
+
+  assert(L->isOutermost() && "Can't yet preserve LCSSA for this case");
+  auto *Latch = L->getLoopLatch();
+  assert(Latch && "multiple latches not yet supported");
+  auto *Header = L->getHeader();
+
+  SE.forgetLoop(L);
+
+  // Note: By splitting the backedge, and then explicitly making it unreachable
+  // we gracefully handle corner cases such as non-bottom tested loops and the
+  // like.  We also have the benefit of being able to reuse existing well tested
+  // code.  It might be worth special casing the common bottom tested case at
+  // some point to avoid code churn.
+
+  std::unique_ptr<MemorySSAUpdater> MSSAU;
+  if (MSSA)
+    MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
+
+  auto *BackedgeBB = SplitEdge(Latch, Header, &DT, &LI, MSSAU.get());
+
+  DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Eager);
+  (void)changeToUnreachable(BackedgeBB->getTerminator(), /*UseTrap*/false,
+                            /*PreserveLCSSA*/true, &DTU, MSSAU.get());
+
+  // Erase (and destroy) this loop instance.  Handles relinking sub-loops
+  // and blocks within the loop as needed.
+  LI.erase(L);
+}
+
 
 /// Checks if \p L has single exit through latch block except possibly
 /// "deoptimizing" exits. Returns branch instruction terminating the loop
@@ -979,80 +1016,49 @@ Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
 
 Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder,
                                          const TargetTransformInfo *TTI,
-                                         unsigned Opcode, Value *Src,
-                                         RecurKind RdxKind,
+                                         Value *Src, RecurKind RdxKind,
                                          ArrayRef<Value *> RedOps) {
-  auto *SrcVTy = cast<VectorType>(Src->getType());
+  unsigned Opcode = RecurrenceDescriptor::getOpcode(RdxKind);
+  TargetTransformInfo::ReductionFlags RdxFlags;
+  RdxFlags.IsMaxOp = RdxKind == RecurKind::SMax || RdxKind == RecurKind::UMax ||
+                     RdxKind == RecurKind::FMax;
+  RdxFlags.IsSigned = RdxKind == RecurKind::SMax || RdxKind == RecurKind::SMin;
+  if (!ForceReductionIntrinsic &&
+      !TTI->useReductionIntrinsic(Opcode, Src->getType(), RdxFlags))
+    return getShuffleReduction(Builder, Src, Opcode, RdxKind, RedOps);
 
-  std::function<Value *()> BuildFunc;
-  switch (Opcode) {
-  case Instruction::Add:
-    BuildFunc = [&]() { return Builder.CreateAddReduce(Src); };
-    break;
-  case Instruction::Mul:
-    BuildFunc = [&]() { return Builder.CreateMulReduce(Src); };
-    break;
-  case Instruction::And:
-    BuildFunc = [&]() { return Builder.CreateAndReduce(Src); };
-    break;
-  case Instruction::Or:
-    BuildFunc = [&]() { return Builder.CreateOrReduce(Src); };
-    break;
-  case Instruction::Xor:
-    BuildFunc = [&]() { return Builder.CreateXorReduce(Src); };
-    break;
-  case Instruction::FAdd:
-    BuildFunc = [&]() {
-      auto Rdx = Builder.CreateFAddReduce(
-          ConstantFP::getNegativeZero(SrcVTy->getElementType()), Src);
-      return Rdx;
-    };
-    break;
-  case Instruction::FMul:
-    BuildFunc = [&]() {
-      Type *Ty = SrcVTy->getElementType();
-      auto Rdx = Builder.CreateFMulReduce(ConstantFP::get(Ty, 1.0), Src);
-      return Rdx;
-    };
-    break;
-  case Instruction::ICmp:
-    switch (RdxKind) {
-    case RecurKind::SMax:
-      BuildFunc = [&]() { return Builder.CreateIntMaxReduce(Src, true); };
-      break;
-    case RecurKind::SMin:
-      BuildFunc = [&]() { return Builder.CreateIntMinReduce(Src, true); };
-      break;
-    case RecurKind::UMax:
-      BuildFunc = [&]() { return Builder.CreateIntMaxReduce(Src, false); };
-      break;
-    case RecurKind::UMin:
-      BuildFunc = [&]() { return Builder.CreateIntMinReduce(Src, false); };
-      break;
-    default:
-      llvm_unreachable("Unexpected min/max reduction type");
-    }
-    break;
-  case Instruction::FCmp:
-    assert((RdxKind == RecurKind::FMax || RdxKind == RecurKind::FMin) &&
-           "Unexpected min/max reduction type");
-    if (RdxKind == RecurKind::FMax)
-      BuildFunc = [&]() { return Builder.CreateFPMaxReduce(Src); };
-    else
-      BuildFunc = [&]() { return Builder.CreateFPMinReduce(Src); };
-    break;
+  auto *SrcVecEltTy = cast<VectorType>(Src->getType())->getElementType();
+  switch (RdxKind) {
+  case RecurKind::Add:
+    return Builder.CreateAddReduce(Src);
+  case RecurKind::Mul:
+    return Builder.CreateMulReduce(Src);
+  case RecurKind::And:
+    return Builder.CreateAndReduce(Src);
+  case RecurKind::Or:
+    return Builder.CreateOrReduce(Src);
+  case RecurKind::Xor:
+    return Builder.CreateXorReduce(Src);
+  case RecurKind::FAdd:
+    return Builder.CreateFAddReduce(ConstantFP::getNegativeZero(SrcVecEltTy),
+                                    Src);
+  case RecurKind::FMul:
+    return Builder.CreateFMulReduce(ConstantFP::get(SrcVecEltTy, 1.0), Src);
+  case RecurKind::SMax:
+    return Builder.CreateIntMaxReduce(Src, true);
+  case RecurKind::SMin:
+    return Builder.CreateIntMinReduce(Src, true);
+  case RecurKind::UMax:
+    return Builder.CreateIntMaxReduce(Src, false);
+  case RecurKind::UMin:
+    return Builder.CreateIntMinReduce(Src, false);
+  case RecurKind::FMax:
+    return Builder.CreateFPMaxReduce(Src);
+  case RecurKind::FMin:
+    return Builder.CreateFPMinReduce(Src);
   default:
     llvm_unreachable("Unhandled opcode");
   }
-  TargetTransformInfo::ReductionFlags RdxFlags;
-  RdxFlags.IsMaxOp = RdxKind == RecurKind::SMax ||
-                     RdxKind == RecurKind::UMax ||
-                     RdxKind == RecurKind::FMax;
-  RdxFlags.IsSigned = RdxKind == RecurKind::SMax || RdxKind == RecurKind::SMin;
-  if (ForceReductionIntrinsic ||
-      TTI->useReductionIntrinsic(Opcode, Src->getType(), RdxFlags))
-    return BuildFunc();
-  return getShuffleReduction(Builder, Src, Opcode, RdxKind, RedOps);
 }
 
 Value *llvm::createTargetReduction(IRBuilderBase &B,
@@ -1063,8 +1069,7 @@ Value *llvm::createTargetReduction(IRBuilderBase &B,
   // descriptor.
   IRBuilderBase::FastMathFlagGuard FMFGuard(B);
   B.setFastMathFlags(Desc.getFastMathFlags());
-  return createSimpleTargetReduction(B, TTI, Desc.getRecurrenceBinOp(), Src,
-                                     Desc.getRecurrenceKind());
+  return createSimpleTargetReduction(B, TTI, Src, Desc.getRecurrenceKind());
 }
 
 void llvm::propagateIRFlags(Value *I, ArrayRef<Value *> VL, Value *OpValue) {
