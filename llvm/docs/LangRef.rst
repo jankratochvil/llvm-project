@@ -1193,7 +1193,8 @@ Currently, only the following parameter attributes are defined:
 
 ``nocapture``
     This indicates that the callee does not make any copies of the
-    pointer that outlive the callee itself. This is not a valid
+    pointer that outlive the callee itself in any form such as a pointer stored
+    in the memory or as a return value. This is not a valid
     attribute for return values.  Addresses used in volatile operations
     are considered to be captured.
 
@@ -5283,6 +5284,33 @@ The current supported opcode vocabulary is limited:
   of the stack. This opcode can be used to calculate bounds of fortran assumed
   rank array which has rank known at run time and current dimension number is
   implicitly first element of the stack.
+- ``DW_OP_LLVM_implicit_pointer`` It specifies the dereferenced value. It can
+  be used to represent pointer variables which are optimized out but the value
+  it points to is known. This operator is required as it is different than DWARF
+  operator DW_OP_implicit_pointer in representation and specification (number
+  and types of operands) and later can not be used as multiple level.
+
+.. code-block:: text
+
+    IR for "*ptr = 4;"
+    --------------
+    call void @llvm.dbg.value(metadata i32 4, metadata !17, metadata !20)
+    !17 = !DILocalVariable(name: "ptr1", scope: !12, file: !3, line: 5,
+                           type: !18)
+    !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
+    !19 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+    !20 = !DIExpression(DW_OP_LLVM_implicit_pointer))
+
+    IR for "**ptr = 4;"
+    --------------
+    call void @llvm.dbg.value(metadata i32 4, metadata !17, metadata !21)
+    !17 = !DILocalVariable(name: "ptr1", scope: !12, file: !3, line: 5,
+                           type: !18)
+    !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
+    !19 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !20, size: 64)
+    !20 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+    !21 = !DIExpression(DW_OP_LLVM_implicit_pointer,
+                        DW_OP_LLVM_implicit_pointer))
 
 DWARF specifies three kinds of simple location descriptions: Register, memory,
 and implicit location descriptions.  Note that a location description is
@@ -20062,7 +20090,7 @@ optimizer.
 
 .. _int_ssa_copy:
 
-'``llvm.ssa_copy``' Intrinsic
+'``llvm.ssa.copy``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -20070,7 +20098,7 @@ Syntax:
 
 ::
 
-      declare type @llvm.ssa_copy(type %operand) returned(1) readnone
+      declare type @llvm.ssa.copy(type %operand) returned(1) readnone
 
 Arguments:
 """"""""""
@@ -20080,7 +20108,7 @@ The first argument is an operand which is used as the returned value.
 Overview:
 """"""""""
 
-The ``llvm.ssa_copy`` intrinsic can be used to attach information to
+The ``llvm.ssa.copy`` intrinsic can be used to attach information to
 operations by copying them and giving them new names.  For example,
 the PredicateInfo utility uses it to build Extended SSA form, and
 attach various forms of information to operands that dominate specific

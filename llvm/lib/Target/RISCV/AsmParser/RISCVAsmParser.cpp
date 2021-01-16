@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/RISCVAsmBackend.h"
+#include "MCTargetDesc/RISCVBaseInfo.h"
 #include "MCTargetDesc/RISCVInstPrinter.h"
 #include "MCTargetDesc/RISCVMCExpr.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
+#include "MCTargetDesc/RISCVMatInt.h"
 #include "MCTargetDesc/RISCVTargetStreamer.h"
 #include "TargetInfo/RISCVTargetInfo.h"
-#include "Utils/RISCVBaseInfo.h"
-#include "Utils/RISCVMatInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallString.h"
@@ -830,16 +830,6 @@ public:
   void addImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     addExpr(Inst, getImm());
-  }
-
-  void addSImm5Plus1Operands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    int64_t Imm = 0;
-    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
-    bool IsConstant = evaluateConstantImm(getImm(), Imm, VK);
-    assert(IsConstant && "Expect constant value!");
-    (void)IsConstant;
-    Inst.addOperand(MCOperand::createImm(Imm - 1));
   }
 
   void addFenceArgOperands(MCInst &Inst, unsigned N) const {
@@ -2324,27 +2314,27 @@ std::unique_ptr<RISCVOperand> RISCVAsmParser::defaultMaskRegOp() const {
 bool RISCVAsmParser::validateInstruction(MCInst &Inst,
                                          OperandVector &Operands) {
   const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
-  unsigned TargetFlags =
-      (MCID.TSFlags >> RISCVII::ConstraintOffset) & RISCVII::ConstraintMask;
-  if (TargetFlags == RISCVII::NoConstraint)
+  unsigned Constraints =
+      (MCID.TSFlags & RISCVII::ConstraintMask) >> RISCVII::ConstraintShift;
+  if (Constraints == RISCVII::NoConstraint)
     return false;
 
   unsigned DestReg = Inst.getOperand(0).getReg();
   // Operands[1] will be the first operand, DestReg.
   SMLoc Loc = Operands[1]->getStartLoc();
-  if (TargetFlags & RISCVII::VS2Constraint) {
+  if (Constraints & RISCVII::VS2Constraint) {
     unsigned CheckReg = Inst.getOperand(1).getReg();
     if (DestReg == CheckReg)
       return Error(Loc, "The destination vector register group cannot overlap"
                         " the source vector register group.");
   }
-  if ((TargetFlags & RISCVII::VS1Constraint) && (Inst.getOperand(2).isReg())) {
+  if ((Constraints & RISCVII::VS1Constraint) && (Inst.getOperand(2).isReg())) {
     unsigned CheckReg = Inst.getOperand(2).getReg();
     if (DestReg == CheckReg)
       return Error(Loc, "The destination vector register group cannot overlap"
                         " the source vector register group.");
   }
-  if ((TargetFlags & RISCVII::VMConstraint) && (DestReg == RISCV::V0)) {
+  if ((Constraints & RISCVII::VMConstraint) && (DestReg == RISCV::V0)) {
     // vadc, vsbc are special cases. These instructions have no mask register.
     // The destination register could not be V0.
     unsigned Opcode = Inst.getOpcode();
@@ -2488,6 +2478,50 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   case RISCV::PseudoVMSGE_VX_M_T:
     emitVMSGE(Inst, RISCV::VMSLT_VX, IDLoc, Out);
     return false;
+  case RISCV::PseudoVMSGE_VI:
+  case RISCV::PseudoVMSLT_VI: {
+    // These instructions are signed and so is immediate so we can subtract one
+    // and change the opcode.
+    int64_t Imm = Inst.getOperand(2).getImm();
+    unsigned Opc = Inst.getOpcode() == RISCV::PseudoVMSGE_VI ? RISCV::VMSGT_VI
+                                                             : RISCV::VMSLE_VI;
+    emitToStreamer(Out, MCInstBuilder(Opc)
+                            .addOperand(Inst.getOperand(0))
+                            .addOperand(Inst.getOperand(1))
+                            .addImm(Imm - 1)
+                            .addOperand(Inst.getOperand(3)));
+    return false;
+  }
+  case RISCV::PseudoVMSGEU_VI:
+  case RISCV::PseudoVMSLTU_VI: {
+    int64_t Imm = Inst.getOperand(2).getImm();
+    // Unsigned comparisons are tricky because the immediate is signed. If the
+    // immediate is 0 we can't just subtract one. vmsltu.vi v0, v1, 0 is always
+    // false, but vmsle.vi v0, v1, -1 is always true. Instead we use
+    // vmsne v0, v1, v1 which is always false.
+    if (Imm == 0) {
+      unsigned Opc = Inst.getOpcode() == RISCV::PseudoVMSGEU_VI
+                         ? RISCV::VMSEQ_VV
+                         : RISCV::VMSNE_VV;
+      emitToStreamer(Out, MCInstBuilder(Opc)
+                              .addOperand(Inst.getOperand(0))
+                              .addOperand(Inst.getOperand(1))
+                              .addOperand(Inst.getOperand(1))
+                              .addOperand(Inst.getOperand(3)));
+    } else {
+      // Other immediate values can subtract one like signed.
+      unsigned Opc = Inst.getOpcode() == RISCV::PseudoVMSGEU_VI
+                         ? RISCV::VMSGTU_VI
+                         : RISCV::VMSLEU_VI;
+      emitToStreamer(Out, MCInstBuilder(Opc)
+                              .addOperand(Inst.getOperand(0))
+                              .addOperand(Inst.getOperand(1))
+                              .addImm(Imm - 1)
+                              .addOperand(Inst.getOperand(3)));
+    }
+
+    return false;
+  }
   }
 
   emitToStreamer(Out, Inst);

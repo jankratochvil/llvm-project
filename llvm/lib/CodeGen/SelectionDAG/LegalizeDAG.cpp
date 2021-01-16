@@ -431,7 +431,6 @@ SDValue SelectionDAGLegalize::OptimizeFloatStore(StoreSDNode* ST) {
 
   LLVM_DEBUG(dbgs() << "Optimizing float store operations\n");
   // Turn 'store float 1.0, Ptr' -> 'store int 0x12345678, Ptr'
-  // FIXME: We shouldn't do this for TargetConstantFP's.
   // FIXME: move this to the DAG Combiner!  Note that we can't regress due
   // to phase ordering between legalized code and the dag combiner.  This
   // probably means that we need to integrate dag combiner and legalizer
@@ -439,10 +438,16 @@ SDValue SelectionDAGLegalize::OptimizeFloatStore(StoreSDNode* ST) {
   // We generally can't do this one for long doubles.
   SDValue Chain = ST->getChain();
   SDValue Ptr = ST->getBasePtr();
+  SDValue Value = ST->getValue();
   MachineMemOperand::Flags MMOFlags = ST->getMemOperand()->getFlags();
   AAMDNodes AAInfo = ST->getAAInfo();
   SDLoc dl(ST);
-  if (ConstantFPSDNode *CFP = dyn_cast<ConstantFPSDNode>(ST->getValue())) {
+
+  // Don't optimise TargetConstantFP
+  if (Value.getOpcode() == ISD::TargetConstantFP)
+    return SDValue();
+
+  if (ConstantFPSDNode *CFP = dyn_cast<ConstantFPSDNode>(Value)) {
     if (CFP->getValueType(0) == MVT::f32 &&
         TLI.isTypeLegal(MVT::i32)) {
       SDValue Con = DAG.getConstant(CFP->getValueAPF().
@@ -482,7 +487,7 @@ SDValue SelectionDAGLegalize::OptimizeFloatStore(StoreSDNode* ST) {
       }
     }
   }
-  return SDValue(nullptr, 0);
+  return SDValue();
 }
 
 void SelectionDAGLegalize::LegalizeStoreOps(SDNode *Node) {
@@ -1741,13 +1746,28 @@ bool SelectionDAGLegalize::LegalizeSetCCCondCode(
         assert(TLI.isCondCodeLegal(ISD::SETOEQ, OpVT)
             && "If SETO is expanded, SETOEQ must be legal!");
         CC1 = ISD::SETOEQ; CC2 = ISD::SETOEQ; Opc = ISD::AND; break;
+    case ISD::SETONE:
+    case ISD::SETUEQ:
+        // If the SETUO or SETO CC isn't legal, we might be able to use
+        // SETOGT || SETOLT, inverting the result for SETUEQ. We only need one
+        // of SETOGT/SETOLT to be legal, the other can be emulated by swapping
+        // the operands.
+        CC2 = ((unsigned)CCCode & 0x8U) ? ISD::SETUO : ISD::SETO;
+        if (!TLI.isCondCodeLegal(CC2, OpVT) &&
+            (TLI.isCondCodeLegal(ISD::SETOGT, OpVT) ||
+             TLI.isCondCodeLegal(ISD::SETOLT, OpVT))) {
+          CC1 = ISD::SETOGT;
+          CC2 = ISD::SETOLT;
+          Opc = ISD::OR;
+          NeedInvert = ((unsigned)CCCode & 0x8U);
+          break;
+        }
+        LLVM_FALLTHROUGH;
     case ISD::SETOEQ:
     case ISD::SETOGT:
     case ISD::SETOGE:
     case ISD::SETOLT:
     case ISD::SETOLE:
-    case ISD::SETONE:
-    case ISD::SETUEQ:
     case ISD::SETUNE:
     case ISD::SETUGT:
     case ISD::SETUGE:

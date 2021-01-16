@@ -1831,7 +1831,7 @@ public:
     Word(llvm::acc::getOpenACCDirectiveName(x).str());
   }
 #define GEN_FLANG_CLAUSE_UNPARSE
-#include "llvm/Frontend/OpenACC/ACC.cpp.inc"
+#include "llvm/Frontend/OpenACC/ACC.inc"
   void Unparse(const AccObjectListWithModifier &x) {
     Walk(std::get<std::optional<AccDataModifier>>(x.t), ":");
     Walk(std::get<AccObjectList>(x.t));
@@ -2013,11 +2013,9 @@ public:
     Put(")");
   }
   void Unparse(const OmpReductionClause &x) {
-    Word("REDUCTION(");
     Walk(std::get<OmpReductionOperator>(x.t));
     Put(":");
     Walk(std::get<OmpObjectList>(x.t));
-    Put(")");
   }
   void Unparse(const OmpAllocateClause &x) {
     Walk(std::get<std::optional<OmpAllocateClause::Allocator>>(x.t));
