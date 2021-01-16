@@ -179,6 +179,12 @@ bool hoistRegion(DomTreeNode *, AAResults *, LoopInfo *, DominatorTree *,
 void deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
                     LoopInfo *LI, MemorySSA *MSSA = nullptr);
 
+/// Remove the backedge of the specified loop.  Handles loop nests and general
+/// loop structures subject to the precondition that the loop has no parent
+/// loop and has a single latch block.  Preserves all listed analyses.
+void breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
+                       LoopInfo &LI, MemorySSA *MSSA);
+
 /// Try to promote memory values to scalars by sinking stores out of
 /// the loop and moving loads to before the loop.  We do this by looping over
 /// the stores in the loop, looking for stores to Must pointers which are
@@ -254,6 +260,9 @@ bool hasDisableAllTransformsHint(const Loop *L);
 
 /// Look for the loop attribute that disables the LICM transformation heuristics.
 bool hasDisableLICMTransformsHint(const Loop *L);
+
+/// Look for the loop attribute that requires progress within the loop.
+bool hasMustProgress(const Loop *L);
 
 /// The mode sets how eager a transformation should be applied.
 enum TransformationMode {
@@ -366,8 +375,7 @@ Value *getShuffleReduction(IRBuilderBase &Builder, Value *Src, unsigned Op,
 /// required to implement the reduction.
 /// Fast-math-flags are propagated using the IRBuilder's setting.
 Value *createSimpleTargetReduction(IRBuilderBase &B,
-                                   const TargetTransformInfo *TTI,
-                                   unsigned Opcode, Value *Src,
+                                   const TargetTransformInfo *TTI, Value *Src,
                                    RecurKind RdxKind,
                                    ArrayRef<Value *> RedOps = None);
 
