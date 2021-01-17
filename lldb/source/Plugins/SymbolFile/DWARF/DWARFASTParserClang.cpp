@@ -947,7 +947,7 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const SymbolContext &sc,
 
   if (die.HasChildren()) {
     bool skip_artificial = true;
-    ParseChildParameters(sc.comp_unit, containing_decl_ctx, die,
+    ParseChildParameters(sc.comp_unit, containing_decl_ctx, main_unit, die,
                          skip_artificial, is_static, is_variadic,
                          has_template_params, function_param_types,
                          function_param_decls, type_quals);
@@ -1465,7 +1465,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
     }
 
     if (dwarf->GetUniqueDWARFASTTypeMap().Find(
-            unique_typename, die, unique_decl, attrs.byte_size.getValueOr(-1),
+            unique_typename, main_unit, die, unique_decl, attrs.byte_size.getValueOr(-1),
             *unique_ast_entry_up)) {
       type_sp = unique_ast_entry_up->m_type_sp;
       if (type_sp) {
@@ -1603,8 +1603,10 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
       // We found a real definition for this type elsewhere so lets use
       // it and cache the fact that we found a complete type for this die
       dwarf->GetDIEToType()[die.MainCUtoDIEPair(main_unit)] = type_sp.get();
+      DWARFUnit *type_main_unit;
+      DWARFDIE type_die = dwarf->GetDIEUnlocked(type_sp->GetID(), &type_main_unit);
       clang::DeclContext *defn_decl_ctx =
-          GetCachedClangDeclContextForDIE(main_unit, dwarf->GetDIEUnlocked(type_sp->GetID(), &main_unit));
+          GetCachedClangDeclContextForDIE(type_main_unit, type_die);
       if (defn_decl_ctx)
         LinkDeclContextToDIE(defn_decl_ctx, main_unit, die);
       return type_sp;
@@ -1690,6 +1692,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   // copies of the same type over and over in the ASTContext for our
   // module
   unique_ast_entry_up->m_type_sp = type_sp;
+  unique_ast_entry_up->m_main_unit = main_unit;
   unique_ast_entry_up->m_die = die;
   unique_ast_entry_up->m_declaration = unique_decl;
   unique_ast_entry_up->m_byte_size = attrs.byte_size.getValueOr(0);
@@ -2021,7 +2024,7 @@ bool DWARFASTParserClang::CompleteRecordType(DWARFUnit *main_unit, const DWARFDI
     std::vector<DWARFDIE> member_function_dies;
 
     DelayedPropertyList delayed_properties;
-    ParseChildMembers(comp_unit, die, clang_type, bases, member_accessibilities,
+    ParseChildMembers(comp_unit, main_unit, die, clang_type, bases, member_accessibilities,
                       member_function_dies, delayed_properties,
                       default_accessibility, is_a_class, layout_info);
 
@@ -2335,7 +2338,7 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
 
         clang::DeclContext *containing_decl_ctx =
             GetClangDeclContextContainingDIE(main_unit, die, nullptr);
-        ParseChildParameters(&comp_unit, containing_decl_ctx, die, true,
+        ParseChildParameters(&comp_unit, containing_decl_ctx, main_unit, die, true,
                              is_static, is_variadic, has_template_params,
                              param_types, param_decls, type_quals);
         sstr << "(";
@@ -2386,7 +2389,7 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
   return nullptr;
 }
 
-void DWARFASTParserClang::ParseSingleMember(lldb_private::CompileUnit *comp_unit, const DWARFDIE &die, const DWARFDIE &parent_die,
+void DWARFASTParserClang::ParseSingleMember(lldb_private::CompileUnit *comp_unit, DWARFUnit *main_unit, const DWARFDIE &die, const DWARFDIE &parent_die,
     const lldb_private::CompilerType &class_clang_type,
     std::vector<int> &member_accessibilities,
     lldb::AccessType default_accessibility,
@@ -2569,8 +2572,6 @@ void DWARFASTParserClang::ParseSingleMember(lldb_private::CompileUnit *comp_unit
   // FIXME: Make Clang ignore Objective-C accessibility for expressions
   if (class_is_objc_object_or_interface)
     accessibility = eAccessNone;
-
-  DWARFUnit *main_unit = !comp_unit ? nullptr : comp_unit->GetDWARFCompileUnit();
 
   // Handle static members
   if (is_external && member_byte_offset == UINT32_MAX) {
@@ -2806,7 +2807,7 @@ void DWARFASTParserClang::ParseSingleMember(lldb_private::CompileUnit *comp_unit
 }
 
 bool DWARFASTParserClang::ParseChildMembers(
-    CompileUnit *comp_unit,
+    CompileUnit *comp_unit, DWARFUnit *main_unit,
     const DWARFDIE &parent_die, CompilerType &class_clang_type,
     std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
     std::vector<int> &member_accessibilities,
@@ -2824,8 +2825,6 @@ bool DWARFASTParserClang::ParseChildMembers(
   if (ast == nullptr)
     return false;
 
-  DWARFUnit *main_unit = !comp_unit ? nullptr : comp_unit->GetDWARFCompileUnit();
-
   for (DWARFDIE die = parent_die.GetFirstChild(); die.IsValid();
        die = die.GetSibling()) {
     dw_tag_t tag = die.Tag();
@@ -2833,7 +2832,7 @@ bool DWARFASTParserClang::ParseChildMembers(
     switch (tag) {
     case DW_TAG_member:
     case DW_TAG_APPLE_property:
-      ParseSingleMember(comp_unit, die, parent_die, class_clang_type,
+      ParseSingleMember(comp_unit, main_unit, die, parent_die, class_clang_type,
                         member_accessibilities, default_accessibility,
                         delayed_properties, layout_info, last_field_info);
       break;
@@ -2969,6 +2968,7 @@ bool DWARFASTParserClang::ParseChildMembers(
 
 size_t DWARFASTParserClang::ParseChildParameters(
     CompileUnit *comp_unit, clang::DeclContext *containing_decl_ctx,
+    DWARFUnit *main_unit,
     const DWARFDIE &parent_die, bool skip_artificial, bool &is_static,
     bool &is_variadic, bool &has_template_params,
     std::vector<CompilerType> &function_param_types,
@@ -2976,8 +2976,6 @@ size_t DWARFASTParserClang::ParseChildParameters(
     unsigned &type_quals) {
   if (!parent_die)
     return 0;
-
-  DWARFUnit *main_unit = !comp_unit ? nullptr : comp_unit->GetDWARFCompileUnit();
 
   size_t arg_idx = 0;
   for (DWARFDIE die = parent_die.GetFirstChild(); die.IsValid();
