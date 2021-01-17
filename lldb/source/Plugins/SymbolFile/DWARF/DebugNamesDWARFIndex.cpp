@@ -49,7 +49,7 @@ DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) {
     return llvm::None;
 
   // FIXME: .debug_names have no DWZ support yet.
-  DWARFCompileUnit *cu = llvm::dyn_cast_or_null<DWARFCompileUnit>(m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo, *cu_offset));
+  DWARFUnit *cu = m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo, *cu_offset);
   if (!cu)
     return llvm::None;
 
