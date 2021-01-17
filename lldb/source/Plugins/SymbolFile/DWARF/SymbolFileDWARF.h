@@ -345,15 +345,15 @@ public:
 
 protected:
   typedef llvm::DenseMap<
-      std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>,
+      std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>,
       lldb_private::Type *>
       DIEToTypePtr;
   typedef llvm::DenseMap<
-      std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>,
+      std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>,
       lldb::VariableSP>
       DIEToVariableSP;
   typedef llvm::DenseMap<
-      std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>,
+      std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>,
       lldb::opaque_compiler_type_t>
       DIEToClangType;
   typedef llvm::DenseMap<lldb::opaque_compiler_type_t, lldb::user_id_t>

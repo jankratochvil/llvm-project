@@ -30,7 +30,7 @@ bool DWARFIndex::ProcessFunctionDIE(
     ReportInvalidDIERef(ref, name);
     return true;
   }
-  main_unit = die.GetDWARFCompileUnit(main_unit);
+  main_unit = die.GetMainDWARFUnit(main_unit);
 
   // Exit early if we're searching exclusively for methods or selectors and
   // we have a context specified (no methods in namespaces).
