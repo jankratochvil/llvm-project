@@ -10,13 +10,13 @@
 
 #include "lldb/Symbol/Declaration.h"
 
-bool UniqueDWARFASTTypeList::Find(const DWARFDIE &die,
+bool UniqueDWARFASTTypeList::Find(DWARFUnit *main_unit, const DWARFDIE &die,
                                   const lldb_private::Declaration &decl,
                                   const int32_t byte_size,
                                   UniqueDWARFASTType &entry) const {
   for (const UniqueDWARFASTType &udt : m_collection) {
     // Make sure the tags match
-    if (udt.m_die.Tag() == die.Tag()) {
+    if (udt.m_die.Tag() == die.Tag() && udt.m_main_unit == main_unit) {
       // Validate byte sizes of both types only if both are valid.
       if (udt.m_byte_size < 0 || byte_size < 0 ||
           udt.m_byte_size == byte_size) {
