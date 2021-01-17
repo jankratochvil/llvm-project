@@ -22,6 +22,8 @@ void DWARFTypeUnit::Dump(Stream *s) const {
             GetAddressByteSize(), GetNextUnitOffset());
 }
 
-DWARFCompileUnit *DWARFTypeUnit::GetDWARFCompileUnit(DWARFUnit *main_unit) {
-  return nullptr;
+DWARFUnit *DWARFTypeUnit::GetMainDWARFUnit(DWARFUnit *main_unit) {
+  main_unit = this;
+  main_unit = &main_unit->GetNonSkeletonUnit();
+  return main_unit;
 }
