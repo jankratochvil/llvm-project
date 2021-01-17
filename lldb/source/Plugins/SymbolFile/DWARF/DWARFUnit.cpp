@@ -972,19 +972,3 @@ DWARFUnit::FindRnglistFromIndex(uint32_t index) {
   return llvm::createStringError(errc::invalid_argument,
                                  "missing or invalid range list table");
 }
-
-#if 0
-DWARFCompileUnit *
-DWARFUnit::GetDWARFCompileUnit(DWARFUnit *main_unit) {
-  lldbassert(main_unit);
-  main_unit = &main_unit->GetNonSkeletonUnit();
-  return main_unit;
-}
-#endif
-
-DWARFUnit *DWARFUnit::GetMainDWARFUnit(DWARFUnit *main_unit) {
-  main_unit = GetDWARFCompileUnit(main_unit);
-  if (main_unit)
-    return main_unit;
-  return this;
-}

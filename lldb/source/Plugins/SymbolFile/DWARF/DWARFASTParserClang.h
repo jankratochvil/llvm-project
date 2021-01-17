@@ -77,21 +77,21 @@ protected:
   typedef std::vector<DelayedAddObjCClassProperty> DelayedPropertyList;
 
   typedef llvm::SmallSet<
-      std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>, 4>
+      std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>, 4>
       DIEPointerSet;
   typedef llvm::DenseMap<
-      std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>,
+      std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>,
       clang::DeclContext *>
       DIEToDeclContextMap;
   typedef std::multimap<const clang::DeclContext *,
-                        std::pair<DWARFCompileUnit *, const DWARFDIE>>
+                        std::pair<DWARFUnit *, const DWARFDIE>>
       DeclContextToDIEMap;
   typedef llvm::DenseMap<
-      std::pair<const DWARFCompileUnit *, const DWARFDebugInfoEntry *>,
+      std::pair<const DWARFUnit *, const DWARFDebugInfoEntry *>,
       lldb_private::OptionalClangModuleID>
       DIEToModuleMap;
   typedef llvm::DenseMap<
-      std::pair<DWARFCompileUnit *, const DWARFDebugInfoEntry *>, clang::Decl *>
+      std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>, clang::Decl *>
       DIEToDeclMap;
   typedef llvm::DenseMap<const clang::Decl *, DIEPointerSet> DeclToDIEMap;
 
@@ -123,6 +123,7 @@ protected:
 
   bool ParseChildMembers(
       lldb_private::CompileUnit *comp_unit,
+      DWARFUnit *main_unit,
       const DWARFDIE &die, lldb_private::CompilerType &class_compiler_type,
       std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
       std::vector<int> &member_accessibilities,
@@ -133,7 +134,7 @@ protected:
 
   size_t
   ParseChildParameters(lldb_private::CompileUnit *comp_unit,
-                       clang::DeclContext *containing_decl_ctx,
+                       clang::DeclContext *containing_decl_ctx, DWARFUnit *main_unit,
                        const DWARFDIE &parent_die, bool skip_artificial,
                        bool &is_static, bool &is_variadic,
                        bool &has_template_params,
@@ -216,7 +217,7 @@ private:
   };
 
   void
-  ParseSingleMember(lldb_private::CompileUnit *comp_unit, const DWARFDIE &die,
+  ParseSingleMember(lldb_private::CompileUnit *comp_unit, DWARFUnit *main_unit, const DWARFDIE &die,
                     const DWARFDIE &parent_die,
                     const lldb_private::CompilerType &class_clang_type,
                     std::vector<int> &member_accessibilities,

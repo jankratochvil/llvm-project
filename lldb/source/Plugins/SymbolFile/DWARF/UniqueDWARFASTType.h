@@ -20,18 +20,18 @@ class UniqueDWARFASTType {
 public:
   // Constructors and Destructors
   UniqueDWARFASTType()
-      : m_type_sp(), m_die(), m_declaration(),
+      : m_type_sp(), m_main_unit(nullptr), m_die(), m_declaration(),
         m_byte_size(
             -1) // Set to negative value to make sure we have a valid value
   {}
 
-  UniqueDWARFASTType(lldb::TypeSP &type_sp, const DWARFDIE &die,
+  UniqueDWARFASTType(lldb::TypeSP &type_sp, DWARFUnit *main_unit, const DWARFDIE &die,
                      const lldb_private::Declaration &decl, int32_t byte_size)
-      : m_type_sp(type_sp), m_die(die), m_declaration(decl),
+      : m_type_sp(type_sp), m_main_unit(main_unit), m_die(die), m_declaration(decl),
         m_byte_size(byte_size) {}
 
   UniqueDWARFASTType(const UniqueDWARFASTType &rhs)
-      : m_type_sp(rhs.m_type_sp), m_die(rhs.m_die),
+      : m_type_sp(rhs.m_type_sp), m_main_unit(rhs.m_main_unit), m_die(rhs.m_die),
         m_declaration(rhs.m_declaration), m_byte_size(rhs.m_byte_size) {}
 
   ~UniqueDWARFASTType() {}
@@ -39,6 +39,7 @@ public:
   UniqueDWARFASTType &operator=(const UniqueDWARFASTType &rhs) {
     if (this != &rhs) {
       m_type_sp = rhs.m_type_sp;
+      m_main_unit = rhs.m_main_unit;
       m_die = rhs.m_die;
       m_declaration = rhs.m_declaration;
       m_byte_size = rhs.m_byte_size;
@@ -47,6 +48,7 @@ public:
   }
 
   lldb::TypeSP m_type_sp;
+  DWARFUnit *m_main_unit;
   DWARFDIE m_die;
   lldb_private::Declaration m_declaration;
   int32_t m_byte_size;
@@ -64,7 +66,7 @@ public:
     m_collection.push_back(entry);
   }
 
-  bool Find(const DWARFDIE &die, const lldb_private::Declaration &decl,
+  bool Find(DWARFUnit *main_unit, const DWARFDIE &die, const lldb_private::Declaration &decl,
             const int32_t byte_size, UniqueDWARFASTType &entry) const;
 
 protected:
@@ -83,13 +85,13 @@ public:
     m_collection[name.GetCString()].Append(entry);
   }
 
-  bool Find(lldb_private::ConstString name, const DWARFDIE &die,
+  bool Find(lldb_private::ConstString name, DWARFUnit *main_unit, const DWARFDIE &die,
             const lldb_private::Declaration &decl, const int32_t byte_size,
             UniqueDWARFASTType &entry) const {
     const char *unique_name_cstr = name.GetCString();
     collection::const_iterator pos = m_collection.find(unique_name_cstr);
     if (pos != m_collection.end()) {
-      return pos->second.Find(die, decl, byte_size, entry);
+      return pos->second.Find(main_unit, die, decl, byte_size, entry);
     }
     return false;
   }

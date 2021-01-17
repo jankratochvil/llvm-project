@@ -122,20 +122,19 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
   }
 
   const LanguageType cu_language = SymbolFileDWARF::GetLanguage(unit);
-  DWARFUnit *main_unit = llvm::dyn_cast<DWARFCompileUnit>(&unit);
 
-  IndexUnitImpl(unit, main_unit, cu_language, set);
+  IndexUnitImpl(unit, &unit, cu_language, set);
 
   if (SymbolFileDWARFDwo *dwo_symbol_file = unit.GetDwoSymbolFile()) {
     // Type units in a dwp file are indexed separately, so we just need to
     // process the split unit here. However, if the split unit is in a dwo file,
     // then we need to process type units here.
     if (dwo_symbol_file == dwp) {
-      IndexUnitImpl(unit.GetNonSkeletonUnit(), main_unit, cu_language, set);
+      IndexUnitImpl(unit.GetNonSkeletonUnit(), &unit, cu_language, set);
     } else {
       DWARFDebugInfo &dwo_info = dwo_symbol_file->DebugInfo();
       for (size_t i = 0; i < dwo_info.GetNumUnits(); ++i)
-        IndexUnitImpl(*dwo_info.GetUnitAtIndex(i), main_unit, cu_language, set);
+        IndexUnitImpl(*dwo_info.GetUnitAtIndex(i), &unit, cu_language, set);
     }
   }
 }
