@@ -2192,10 +2192,10 @@ void SymbolFileDWARF::FindGlobalVariables(
         if (die.Tag() != DW_TAG_variable)
           return true;
 
-	DWARFCompileUnit *main_cu = llvm::dyn_cast_or_null<DWARFCompileUnit>(main_unit);
-	if (!main_cu)
-	  return false;
-	sc.comp_unit = main_cu->GetCompUnit();
+        DWARFCompileUnit *main_cu = llvm::dyn_cast_or_null<DWARFCompileUnit>(main_unit);
+        if (!main_cu)
+          return false;
+        sc.comp_unit = main_cu->GetCompUnit();
 
         if (parent_decl_ctx) {
           if (DWARFASTParser *dwarf_ast = GetDWARFParser(*die.GetMainDWARFUnit(main_unit))) {
@@ -2256,10 +2256,10 @@ void SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
           sc.module_sp = m_objfile_sp->GetModule();
         assert(sc.module_sp);
 
-	DWARFCompileUnit *main_cu = llvm::dyn_cast_or_null<DWARFCompileUnit>(main_unit);
-	if (!main_cu)
-	  return false;
-	sc.comp_unit = main_cu->GetCompUnit();
+        DWARFCompileUnit *main_cu = llvm::dyn_cast_or_null<DWARFCompileUnit>(main_unit);
+        if (!main_cu)
+          return false;
+        sc.comp_unit = main_cu->GetCompUnit();
 
         ParseVariables(sc, die, LLDB_INVALID_ADDRESS, false, false, &variables);
 
