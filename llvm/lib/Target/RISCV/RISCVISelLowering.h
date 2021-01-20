@@ -93,6 +93,8 @@ enum NodeType : unsigned {
   SPLAT_VECTOR_I64,
   // Read VLENB CSR
   READ_VLENB,
+  // Truncates a RVV integer vector by one power-of-two.
+  TRUNCATE_VECTOR,
 };
 } // namespace RISCVISD
 
@@ -286,6 +288,9 @@ private:
   SDValue lowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerShiftRightParts(SDValue Op, SelectionDAG &DAG, bool IsSRA) const;
   SDValue lowerSPLATVECTOR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVectorMaskExt(SDValue Op, SelectionDAG &DAG,
+                             int64_t ExtTrueVal) const;
+  SDValue lowerVectorMaskTrunc(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
 
@@ -313,6 +318,22 @@ using namespace RISCV;
 #include "RISCVGenSearchableTables.inc"
 
 } // end namespace RISCVVIntrinsicsTable
+
+namespace RISCVZvlssegTable {
+
+struct RISCVZvlsseg {
+  unsigned int IntrinsicID;
+  unsigned int SEW;
+  unsigned int LMUL;
+  unsigned int Pseudo;
+};
+
+using namespace RISCV;
+
+#define GET_RISCVZvlssegTable_DECL
+#include "RISCVGenSearchableTables.inc"
+
+} // namespace RISCVZvlssegTable
 }
 
 #endif
