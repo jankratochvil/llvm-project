@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.13.4)
 set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 
 if(NOT DEFINED LLVM_VERSION_MAJOR)
-  set(LLVM_VERSION_MAJOR 12)
+  set(LLVM_VERSION_MAJOR 13)
 endif()
 if(NOT DEFINED LLVM_VERSION_MINOR)
   set(LLVM_VERSION_MINOR 0)
@@ -668,10 +668,6 @@ set(LLVM_PROFDATA_FILE "" CACHE FILEPATH
 # BEFORE this include, otherwise options will not be correctly set on
 # first cmake run
 include(config-ix)
-
-string(REPLACE "Native" ${LLVM_NATIVE_ARCH}
-  LLVM_TARGETS_TO_BUILD "${LLVM_TARGETS_TO_BUILD}")
-list(REMOVE_DUPLICATES LLVM_TARGETS_TO_BUILD)
 
 # By default, we target the host, but this can be overridden at CMake
 # invocation time.
