@@ -25,6 +25,7 @@
 namespace llvm {
 
 class AMDGPUTargetLowering;
+class AMDGPUTargetMachine;
 class GCNSubtarget;
 class InstCombiner;
 class Loop;
@@ -203,6 +204,7 @@ public:
                            const Function *Callee) const;
 
   unsigned getInliningThresholdMultiplier() { return 11; }
+  unsigned adjustInliningThreshold(const CallBase *CB) const;
 
   int getInlinerVectorBonusPercent() { return 0; }
 
