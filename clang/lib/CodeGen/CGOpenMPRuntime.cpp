@@ -442,7 +442,7 @@ public:
 
 /// Values for bit flags used in the ident_t to describe the fields.
 /// All enumeric elements are named and described in accordance with the code
-/// from https://github.com/llvm/llvm-project/blob/master/openmp/runtime/src/kmp.h
+/// from https://github.com/llvm/llvm-project/blob/main/openmp/runtime/src/kmp.h
 enum OpenMPLocationFlags : unsigned {
   /// Use trampoline for internal microtask.
   OMP_IDENT_IMD = 0x01,
@@ -497,7 +497,7 @@ enum OpenMPOffloadingReservedDeviceIDs {
 
 /// Describes ident structure that describes a source location.
 /// All descriptions are taken from
-/// https://github.com/llvm/llvm-project/blob/master/openmp/runtime/src/kmp.h
+/// https://github.com/llvm/llvm-project/blob/main/openmp/runtime/src/kmp.h
 /// Original structure:
 /// typedef struct ident {
 ///    kmp_int32 reserved_1;   /**<  might be used in Fortran;
@@ -2098,6 +2098,14 @@ void CGOpenMPRuntime::emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
     OutlinedFnArgs.push_back(ThreadIDAddr.getPointer());
     OutlinedFnArgs.push_back(ZeroAddrBound.getPointer());
     OutlinedFnArgs.append(CapturedVars.begin(), CapturedVars.end());
+
+    // Ensure we do not inline the function. This is trivially true for the ones
+    // passed to __kmpc_fork_call but the ones calles in serialized regions
+    // could be inlined. This is not a perfect but it is closer to the invariant
+    // we want, namely, every data environment starts with a new function.
+    // TODO: We should pass the if condition to the runtime function and do the
+    //       handling there. Much cleaner code.
+    OutlinedFn->addFnAttr(llvm::Attribute::NoInline);
     RT.emitOutlinedFunctionCall(CGF, Loc, OutlinedFn, OutlinedFnArgs);
 
     // __kmpc_end_serialized_parallel(&Loc, GTid);
@@ -4241,7 +4249,7 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   // kmp_int32 flags, size_t sizeof_kmp_task_t, size_t sizeof_shareds,
   // kmp_routine_entry_t *task_entry);
   // Task flags. Format is taken from
-  // https://github.com/llvm/llvm-project/blob/master/openmp/runtime/src/kmp.h,
+  // https://github.com/llvm/llvm-project/blob/main/openmp/runtime/src/kmp.h,
   // description of kmp_tasking_flags struct.
   enum {
     TiedFlag = 0x1,
@@ -9502,7 +9510,8 @@ getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
 /// \code
 /// void .omp_mapper.<type_name>.<mapper_id>.(void *rt_mapper_handle,
 ///                                           void *base, void *begin,
-///                                           int64_t size, int64_t type) {
+///                                           int64_t size, int64_t type,
+///                                           void *name = nullptr) {
 ///   // Allocate space for an array section first.
 ///   if (size > 1 && !maptype.IsDelete)
 ///     __tgt_push_mapper_component(rt_mapper_handle, base, begin,
@@ -9513,10 +9522,11 @@ getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
 ///     for (auto c : all_components) {
 ///       if (c.hasMapper())
 ///         (*c.Mapper())(rt_mapper_handle, c.arg_base, c.arg_begin, c.arg_size,
-///                       c.arg_type);
+///                       c.arg_type, c.arg_name);
 ///       else
 ///         __tgt_push_mapper_component(rt_mapper_handle, c.arg_base,
-///                                     c.arg_begin, c.arg_size, c.arg_type);
+///                                     c.arg_begin, c.arg_size, c.arg_type,
+///                                     c.arg_name);
 ///     }
 ///   }
 ///   // Delete the array section.
@@ -9549,12 +9559,15 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
                             ImplicitParamDecl::Other);
   ImplicitParamDecl TypeArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, Int64Ty,
                             ImplicitParamDecl::Other);
+  ImplicitParamDecl NameArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, C.VoidPtrTy,
+                            ImplicitParamDecl::Other);
   FunctionArgList Args;
   Args.push_back(&HandleArg);
   Args.push_back(&BaseArg);
   Args.push_back(&BeginArg);
   Args.push_back(&SizeArg);
   Args.push_back(&TypeArg);
+  Args.push_back(&NameArg);
   const CGFunctionInfo &FnInfo =
       CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
   llvm::FunctionType *FnTy = CGM.getTypes().GetFunctionType(FnInfo);
@@ -9654,6 +9667,10 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
     llvm::Value *CurBeginArg = MapperCGF.Builder.CreateBitCast(
         Info.Pointers[I], CGM.getTypes().ConvertTypeForMem(C.VoidPtrTy));
     llvm::Value *CurSizeArg = Info.Sizes[I];
+    llvm::Value *CurNameArg =
+        (CGM.getCodeGenOpts().getDebugInfo() == codegenoptions::NoDebugInfo)
+            ? llvm::ConstantPointerNull::get(CGM.VoidPtrTy)
+            : emitMappingInformation(MapperCGF, OMPBuilder, Info.Exprs[I]);
 
     // Extract the MEMBER_OF field from the map type.
     llvm::BasicBlock *MemberBB = MapperCGF.createBasicBlock("omp.member");
@@ -9742,8 +9759,8 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
     CurMapType->addIncoming(FromMapType, FromBB);
     CurMapType->addIncoming(MemberMapType, ToElseBB);
 
-    llvm::Value *OffloadingArgs[] = {Handle, CurBaseArg, CurBeginArg,
-                                     CurSizeArg, CurMapType};
+    llvm::Value *OffloadingArgs[] = {Handle,     CurBaseArg, CurBeginArg,
+                                     CurSizeArg, CurMapType, CurNameArg};
     if (Info.Mappers[I]) {
       // Call the corresponding mapper function.
       llvm::Function *MapperFunc = getOrCreateUserDefinedMapperFunc(
@@ -9833,9 +9850,12 @@ void CGOpenMPRuntime::emitUDMapperArrayInitOrDel(
       MapType,
       MapperCGF.Builder.getInt64(~(MappableExprsHandler::OMP_MAP_TO |
                                    MappableExprsHandler::OMP_MAP_FROM)));
+  llvm::Value *MapNameArg = llvm::ConstantPointerNull::get(CGM.VoidPtrTy);
+
   // Call the runtime API __tgt_push_mapper_component to fill up the runtime
   // data structure.
-  llvm::Value *OffloadingArgs[] = {Handle, Base, Begin, ArraySize, MapTypeArg};
+  llvm::Value *OffloadingArgs[] = {Handle,    Base,       Begin,
+                                   ArraySize, MapTypeArg, MapNameArg};
   MapperCGF.EmitRuntimeCall(
       OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
                                             OMPRTL___tgt_push_mapper_component),

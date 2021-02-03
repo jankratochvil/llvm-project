@@ -741,6 +741,7 @@ public:
   bool Pre(const parser::BindStmt &) { return BeginAttrs(); }
   void Post(const parser::BindStmt &) { EndAttrs(); }
   bool Pre(const parser::BindEntity &);
+  bool Pre(const parser::OldParameterStmt &);
   bool Pre(const parser::NamedConstantDef &);
   bool Pre(const parser::NamedConstant &);
   void Post(const parser::EnumDef &);
@@ -907,6 +908,8 @@ private:
     // Enum value must hold inside a C_INT (7.6.2).
     std::optional<int> value{0};
   } enumerationState_;
+  // Set for OldParameterStmt processing
+  bool inOldStyleParameterStmt_{false};
 
   bool HandleAttributeStmt(Attr, const std::list<parser::Name> &);
   Symbol &HandleAttributeStmt(Attr, const parser::Name &);
@@ -2238,6 +2241,12 @@ std::optional<SourceName> ScopeHandler::HadForwardRef(
 bool ScopeHandler::CheckPossibleBadForwardRef(const Symbol &symbol) {
   if (!context().HasError(symbol)) {
     if (auto fwdRef{HadForwardRef(symbol)}) {
+      const Symbol *outer{symbol.owner().FindSymbol(symbol.name())};
+      if (outer && symbol.has<UseDetails>() &&
+          &symbol.GetUltimate() == &outer->GetUltimate()) {
+        // e.g. IMPORT of host's USE association
+        return false;
+      }
       Say(*fwdRef,
           "Forward reference to '%s' is not allowed in the same specification part"_err_en_US,
           *fwdRef)
@@ -2332,7 +2341,8 @@ void ModuleVisitor::Post(const parser::UseStmt &x) {
     }
     for (const auto &[name, symbol] : *useModuleScope_) {
       if (symbol->attrs().test(Attr::PUBLIC) &&
-          !symbol->attrs().test(Attr::INTRINSIC) &&
+          (!symbol->attrs().test(Attr::INTRINSIC) ||
+              symbol->has<UseDetails>()) &&
           !symbol->has<MiscDetails>() && useNames.count(name) == 0) {
         SourceName location{x.moduleName.source};
         if (auto *localSymbol{FindInScope(name)}) {
@@ -3278,6 +3288,12 @@ bool DeclarationVisitor::Pre(const parser::BindEntity &x) {
   SetBindNameOn(*symbol);
   return false;
 }
+bool DeclarationVisitor::Pre(const parser::OldParameterStmt &x) {
+  inOldStyleParameterStmt_ = true;
+  Walk(x.v);
+  inOldStyleParameterStmt_ = false;
+  return false;
+}
 bool DeclarationVisitor::Pre(const parser::NamedConstantDef &x) {
   auto &name{std::get<parser::NamedConstant>(x.t).v};
   auto &symbol{HandleAttributeStmt(Attr::PARAMETER, name)};
@@ -3289,11 +3305,44 @@ bool DeclarationVisitor::Pre(const parser::NamedConstantDef &x) {
     return false;
   }
   const auto &expr{std::get<parser::ConstantExpr>(x.t)};
-  ApplyImplicitRules(symbol);
-  Walk(expr);
-  if (auto converted{EvaluateNonPointerInitializer(
-          symbol, expr, expr.thing.value().source)}) {
-    symbol.get<ObjectEntityDetails>().set_init(std::move(*converted));
+  auto &details{symbol.get<ObjectEntityDetails>()};
+  if (inOldStyleParameterStmt_) {
+    // non-standard extension PARAMETER statement (no parentheses)
+    Walk(expr);
+    auto folded{EvaluateExpr(expr)};
+    if (details.type()) {
+      SayWithDecl(name, symbol,
+          "Alternative style PARAMETER '%s' must not already have an explicit type"_err_en_US);
+    } else if (folded) {
+      auto at{expr.thing.value().source};
+      if (evaluate::IsActuallyConstant(*folded)) {
+        if (const auto *type{currScope().GetType(*folded)}) {
+          if (type->IsPolymorphic()) {
+            Say(at, "The expression must not be polymorphic"_err_en_US);
+          } else if (auto shape{ToArraySpec(
+                         GetFoldingContext(), evaluate::GetShape(*folded))}) {
+            // The type of the named constant is assumed from the expression.
+            details.set_type(*type);
+            details.set_init(std::move(*folded));
+            details.set_shape(std::move(*shape));
+          } else {
+            Say(at, "The expression must have constant shape"_err_en_US);
+          }
+        } else {
+          Say(at, "The expression must have a known type"_err_en_US);
+        }
+      } else {
+        Say(at, "The expression must be a constant of known type"_err_en_US);
+      }
+    }
+  } else {
+    // standard-conforming PARAMETER statement (with parentheses)
+    ApplyImplicitRules(symbol);
+    Walk(expr);
+    if (auto converted{EvaluateNonPointerInitializer(
+            symbol, expr, expr.thing.value().source)}) {
+      details.set_init(std::move(*converted));
+    }
   }
   return false;
 }
@@ -3310,10 +3359,11 @@ bool DeclarationVisitor::Pre(const parser::NamedConstant &x) {
 bool DeclarationVisitor::Pre(const parser::Enumerator &enumerator) {
   const parser::Name &name{std::get<parser::NamedConstant>(enumerator.t).v};
   Symbol *symbol{FindSymbol(name)};
-  if (symbol) {
+  if (symbol && !symbol->has<UnknownDetails>()) {
     // Contrary to named constants appearing in a PARAMETER statement,
     // enumerator names should not have their type, dimension or any other
-    // attributes defined before they are declared in the enumerator statement.
+    // attributes defined before they are declared in the enumerator statement,
+    // with the exception of accessibility.
     // This is not explicitly forbidden by the standard, but they are scalars
     // which type is left for the compiler to chose, so do not let users try to
     // tamper with that.
