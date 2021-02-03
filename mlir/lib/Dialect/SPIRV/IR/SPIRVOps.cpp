@@ -24,7 +24,10 @@
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/CallInterfaces.h"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
 
@@ -898,6 +901,16 @@ static void buildLogicalBinaryOp(OpBuilder &builder, OperationState &state,
   state.addOperands({lhs, rhs});
 }
 
+static void buildLogicalUnaryOp(OpBuilder &builder, OperationState &state,
+                                Value value) {
+  Type boolType = builder.getI1Type();
+  if (auto vecType = value.getType().dyn_cast<VectorType>())
+    boolType = VectorType::get(vecType.getShape(), boolType);
+  state.addTypes(boolType);
+
+  state.addOperands(value);
+}
+
 //===----------------------------------------------------------------------===//
 // spv.AccessChainOp
 //===----------------------------------------------------------------------===//
@@ -1581,6 +1594,25 @@ spirv::ConstantOp spirv::ConstantOp::getZero(Type type, Location loc,
     return builder.create<spirv::ConstantOp>(
         loc, type, builder.getIntegerAttr(type, APInt(width, 0)));
   }
+  if (auto floatType = type.dyn_cast<FloatType>()) {
+    return builder.create<spirv::ConstantOp>(
+        loc, type, builder.getFloatAttr(floatType, 0.0));
+  }
+  if (auto vectorType = type.dyn_cast<VectorType>()) {
+    Type elemType = vectorType.getElementType();
+    if (elemType.isa<IntegerType>()) {
+      return builder.create<spirv::ConstantOp>(
+          loc, type,
+          DenseElementsAttr::get(vectorType,
+                                 IntegerAttr::get(elemType, 0.0).getValue()));
+    }
+    if (elemType.isa<FloatType>()) {
+      return builder.create<spirv::ConstantOp>(
+          loc, type,
+          DenseFPElementsAttr::get(vectorType,
+                                   FloatAttr::get(elemType, 0.0).getValue()));
+    }
+  }
 
   llvm_unreachable("unimplemented types for ConstantOp::getZero()");
 }
@@ -1594,6 +1626,25 @@ spirv::ConstantOp spirv::ConstantOp::getOne(Type type, Location loc,
                                                builder.getBoolAttr(true));
     return builder.create<spirv::ConstantOp>(
         loc, type, builder.getIntegerAttr(type, APInt(width, 1)));
+  }
+  if (auto floatType = type.dyn_cast<FloatType>()) {
+    return builder.create<spirv::ConstantOp>(
+        loc, type, builder.getFloatAttr(floatType, 1.0));
+  }
+  if (auto vectorType = type.dyn_cast<VectorType>()) {
+    Type elemType = vectorType.getElementType();
+    if (elemType.isa<IntegerType>()) {
+      return builder.create<spirv::ConstantOp>(
+          loc, type,
+          DenseElementsAttr::get(vectorType,
+                                 IntegerAttr::get(elemType, 1.0).getValue()));
+    }
+    if (elemType.isa<FloatType>()) {
+      return builder.create<spirv::ConstantOp>(
+          loc, type,
+          DenseFPElementsAttr::get(vectorType,
+                                   FloatAttr::get(elemType, 1.0).getValue()));
+    }
   }
 
   llvm_unreachable("unimplemented types for ConstantOp::getOne()");
@@ -2983,6 +3034,36 @@ static LogicalResult verify(spirv::VariableOp varOp) {
              << attr << "' attribute (only allowed in spv.globalVariable)";
   }
 
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spv.VectorShuffle
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verify(spirv::VectorShuffleOp shuffleOp) {
+  VectorType resultType = shuffleOp.getType().cast<VectorType>();
+
+  size_t numResultElements = resultType.getNumElements();
+  if (numResultElements != shuffleOp.components().size())
+    return shuffleOp.emitOpError("result type element count (")
+           << numResultElements
+           << ") mismatch with the number of component selectors ("
+           << shuffleOp.components().size() << ")";
+
+  size_t totalSrcElements =
+      shuffleOp.vector1().getType().cast<VectorType>().getNumElements() +
+      shuffleOp.vector2().getType().cast<VectorType>().getNumElements();
+
+  for (const auto &selector :
+       shuffleOp.components().getAsValueRange<IntegerAttr>()) {
+    uint32_t index = selector.getZExtValue();
+    if (index >= totalSrcElements &&
+        index != std::numeric_limits<uint32_t>().max())
+      return shuffleOp.emitOpError("component selector ")
+             << index << " out of range: expected to be in [0, "
+             << totalSrcElements << ") or 0xffffffff";
+  }
   return success();
 }
 

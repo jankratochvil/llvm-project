@@ -11,7 +11,9 @@
 #include "flang/Frontend/FrontendActions.h"
 #include "flang/Frontend/FrontendOptions.h"
 #include "flang/FrontendTool/Utils.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace Fortran::frontend;
 
@@ -31,6 +33,30 @@ bool FrontendAction::BeginSourceFile(
     CompilerInstance &ci, const FrontendInputFile &realInput) {
 
   FrontendInputFile input(realInput);
+
+  // Return immediately if the input file does not exist or is not a file. Note
+  // that we cannot check this for input from stdin.
+  if (input.file() != "-") {
+    if (!llvm::sys::fs::is_regular_file(input.file())) {
+      // Create an diagnostic ID to report
+      unsigned diagID;
+      if (llvm::vfs::getRealFileSystem()->exists(input.file())) {
+        ci.diagnostics().Report(clang::diag::err_fe_error_reading)
+            << input.file();
+        diagID = ci.diagnostics().getCustomDiagID(
+            clang::DiagnosticsEngine::Error, "%0 is not a regular file");
+      } else {
+        diagID = ci.diagnostics().getCustomDiagID(
+            clang::DiagnosticsEngine::Error, "%0 does not exist");
+      }
+
+      // Report the diagnostic and return
+      ci.diagnostics().Report(diagID) << input.file();
+      BeginSourceFileCleanUp(*this, ci);
+      return false;
+    }
+  }
+
   assert(!instance_ && "Already processing a source file!");
   assert(!realInput.IsEmpty() && "Unexpected empty filename!");
   set_currentInput(realInput);
@@ -53,12 +79,6 @@ llvm::Error FrontendAction::Execute() {
 
   Fortran::parser::Options parserOptions =
       this->instance().invocation().fortranOpts();
-  // Set the fixed form flag based on the file extension
-  auto pathDotIndex{currentInputPath.rfind(".")};
-  if (pathDotIndex != std::string::npos) {
-    std::string pathSuffix{currentInputPath.substr(pathDotIndex + 1)};
-    parserOptions.isFixedForm = isFixedFormSuffix(pathSuffix);
-  }
 
   // Prescan. In case of failure, report and return.
   ci.parsing().Prescan(currentInputPath, parserOptions);

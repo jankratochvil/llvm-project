@@ -235,6 +235,22 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return LT.first;
     break;
   }
+  case Intrinsic::sadd_sat:
+  case Intrinsic::ssub_sat:
+  case Intrinsic::uadd_sat:
+  case Intrinsic::usub_sat: {
+    static const auto ValidSatTys = {MVT::v8i8,  MVT::v16i8, MVT::v4i16,
+                                     MVT::v8i16, MVT::v2i32, MVT::v4i32,
+                                     MVT::v2i64};
+    auto LT = TLI->getTypeLegalizationCost(DL, RetTy);
+    // This is a base cost of 1 for the vadd, plus 3 extract shifts if we
+    // need to extend the type, as it uses shr(qadd(shl, shl)).
+    unsigned Instrs =
+        LT.second.getScalarSizeInBits() == RetTy->getScalarSizeInBits() ? 1 : 4;
+    if (any_of(ValidSatTys, [&LT](MVT M) { return M == LT.second; }))
+      return LT.first * Instrs;
+    break;
+  }
   default:
     break;
   }
@@ -707,7 +723,7 @@ int AArch64TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   // We don't lower some vector selects well that are wider than the register
   // width.
-  if (ValTy->isVectorTy() && ISD == ISD::SELECT) {
+  if (isa<FixedVectorType>(ValTy) && ISD == ISD::SELECT) {
     // We would need this many instructions to hide the scalarization happening.
     const int AmortizationCost = 20;
 
@@ -749,6 +765,8 @@ int AArch64TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
         return Entry->Cost;
     }
   }
+  // The base case handles scalable vectors fine for now, since it treats the
+  // cost as 1 * legalization cost.
   return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
 }
 
