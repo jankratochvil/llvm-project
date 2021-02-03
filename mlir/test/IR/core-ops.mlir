@@ -22,6 +22,8 @@
 // CHECK-DAG: #[[$SUBVIEW_MAP6:map[0-9]+]] = affine_map<(d0, d1, d2, d3, d4) -> (d0 * 36 + d1 * 36 + d2 * 4 + d3 * 4 + d4)>
 // CHECK-DAG: #[[$SUBVIEW_MAP7:map[0-9]+]] = affine_map<(d0, d1, d2, d3, d4, d5)[s0, s1, s2, s3, s4, s5, s6] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3 * s4 + d4 * s5 + d5 * s6)>
 // CHECK-DAG: #[[$SUBVIEW_MAP8:map[0-9]+]] = affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3 * s4)>
+// CHECK-DAG: #[[$SUBVIEW_MAP9:map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 3 + d1 + 6)>
+// CHECK-DAG: #[[$SUBVIEW_MAP10:map[0-9]+]] = affine_map<(d0) -> (d0 + 3)>
 
 // CHECK-LABEL: func @func_with_ops
 // CHECK-SAME: %[[ARG:.*]]: f32
@@ -88,24 +90,6 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
 
   // CHECK: %[[F7:.*]] = powf %[[F2]], %[[F2]] : f32
   %f7 = powf %f2, %f2 : f32
-
-  // CHECK: %[[C0:.*]] = create_complex %[[F2]], %[[F2]] : complex<f32>
-  %c0 = "std.create_complex"(%f2, %f2) : (f32, f32) -> complex<f32>
-
-  // CHECK: %[[C1:.*]] = create_complex %[[F2]], %[[F2]] : complex<f32>
-  %c1 = create_complex %f2, %f2 : complex<f32>
-
-  // CHECK: %[[REAL0:.*]] = re %[[CPLX0:.*]] : complex<f32>
-  %real0 = "std.re"(%c0) : (complex<f32>) -> f32
-
-  // CHECK: %[[REAL1:.*]] = re %[[CPLX0]] : complex<f32>
-  %real1 = re %c0 : complex<f32>
-
-  // CHECK: %[[IMAG0:.*]] = im %[[CPLX0]] : complex<f32>
-  %imag0 = "std.im"(%c0) : (complex<f32>) -> f32
-
-  // CHECK: %[[IMAG1:.*]] = im %[[CPLX0]] : complex<f32>
-  %imag1 = im %c0 : complex<f32>
 
   // CHECK: %c42_i32 = constant 42 : i32
   %x = "std.constant"(){value = 42 : i32} : () -> i32
@@ -809,6 +793,16 @@ func @memref_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
 
   %23 = alloc() : memref<f32>
   %78 = subview %23[] [] []  : memref<f32> to memref<f32>
+
+  /// Subview with only leading operands.
+  %24 = alloc() : memref<5x3xf32>
+  // CHECK: subview %{{.*}}[2] [3] [1] : memref<5x3xf32> to memref<3x3xf32, #[[$SUBVIEW_MAP9]]>
+  %25 = subview %24[2][3][1]: memref<5x3xf32> to memref<3x3xf32, offset: 6, strides: [3, 1]>
+
+  /// Rank-reducing subview with only leading operands.
+  // CHECK: subview %{{.*}}[1] [1] [1] : memref<5x3xf32> to memref<3xf32, #[[$SUBVIEW_MAP10]]>
+  %26 = subview %24[1][1][1]: memref<5x3xf32> to memref<3xf32, offset: 3, strides: [1]>
+
   return
 }
 
