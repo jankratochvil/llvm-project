@@ -73,7 +73,10 @@ bool mlir::tensor::canFoldIntoConsumerOp(CastOp castOp) {
   return true;
 }
 
-bool CastOp::areCastCompatible(Type a, Type b) {
+bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  if (inputs.size() != 1 || outputs.size() != 1)
+    return false;
+  Type a = inputs.front(), b = outputs.front();
   auto aT = a.dyn_cast<TensorType>();
   auto bT = b.dyn_cast<TensorType>();
   if (!aT || !bT)
@@ -83,10 +86,6 @@ bool CastOp::areCastCompatible(Type a, Type b) {
     return false;
 
   return succeeded(verifyCompatibleShape(aT, bT));
-}
-
-OpFoldResult CastOp::fold(ArrayRef<Attribute> operands) {
-  return impl::foldCastOp(*this);
 }
 
 /// Compute a TensorType that has the joined shape knowledge of the two
@@ -248,6 +247,11 @@ struct ExtractElementFromTensorFromElements
 
     APInt index;
     if (!matchPattern(*extract.indices().begin(), m_ConstantInt(&index)))
+      return failure();
+    // Prevent out of bounds accesses. This can happen in invalid code that will
+    // never execute.
+    if (tensorFromElements->getNumOperands() <= index.getZExtValue() ||
+        index.getSExtValue() < 0)
       return failure();
     rewriter.replaceOp(extract,
                        tensorFromElements.getOperand(index.getZExtValue()));
