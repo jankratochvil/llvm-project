@@ -377,7 +377,8 @@ protected:
   size_t AddOSOARanges(SymbolFileDWARF *dwarf2Data,
                        DWARFDebugAranges *debug_aranges);
 
-  DWARFCompileUnit *GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) override;
+  DWARFCompileUnit *
+  GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) override;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_SYMBOLFILEDWARFDEBUGMAP_H
