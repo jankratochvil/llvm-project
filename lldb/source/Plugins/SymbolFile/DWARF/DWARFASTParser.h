@@ -35,15 +35,15 @@ public:
                          const DWARFDIE &die) = 0;
 
   virtual bool
-  CompleteTypeFromDWARF(DWARFUnit *main_unit, const DWARFDIE &die, lldb_private::Type *type,
+  CompleteTypeFromDWARF(DWARFUnit *main_unit, const DWARFDIE &die,
+                        lldb_private::Type *type,
                         lldb_private::CompilerType &compiler_type) = 0;
 
   virtual lldb_private::CompilerDecl
   GetDeclForUIDFromDWARF(DWARFUnit *main_unit, const DWARFDIE &die) = 0;
 
   virtual lldb_private::CompilerDeclContext
-  GetDeclContextForUIDFromDWARF(DWARFUnit *main_unit,
-                                const DWARFDIE &die) = 0;
+  GetDeclContextForUIDFromDWARF(DWARFUnit *main_unit, const DWARFDIE &die) = 0;
 
   virtual lldb_private::CompilerDeclContext
   GetDeclContextContainingUIDFromDWARF(DWARFUnit *main_unit,

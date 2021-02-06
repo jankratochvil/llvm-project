@@ -31,16 +31,17 @@ public:
 
   DWARFCompileUnit *GetDWOCompileUnitForHash(uint64_t hash);
 
-  void GetObjCMethods(
-      lldb_private::ConstString class_name,
-      llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)>
-          callback) override;
+  void
+  GetObjCMethods(lldb_private::ConstString class_name,
+                 llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)>
+                     callback) override;
 
   llvm::Expected<lldb_private::TypeSystem &>
   GetTypeSystemForLanguage(lldb::LanguageType language) override;
 
   DWARFDIE
-  GetDIE(const DIERef &die_ref, DWARFUnit **main_unit_return = nullptr) override;
+  GetDIE(const DIERef &die_ref,
+         DWARFUnit **main_unit_return = nullptr) override;
 
   llvm::Optional<uint32_t> GetDwoNum() override { return GetID() >> 32; }
 
