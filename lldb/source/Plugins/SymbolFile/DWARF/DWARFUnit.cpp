@@ -533,8 +533,7 @@ DWARFUnit::GetDIE(dw_offset_t die_offset) {
   if (die_offset == DW_INVALID_OFFSET)
     return DWARFDIE(); // Not found
 
-  lldbassert(
-      !GetDwoSymbolFile());
+  lldbassert(!GetDwoSymbolFile());
 
   if (!ContainsDIEOffset(die_offset)) {
     GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
