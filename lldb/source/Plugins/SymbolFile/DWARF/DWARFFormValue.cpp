@@ -14,10 +14,10 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Stream.h"
 
+#include "DWARFCompileUnit.h"
 #include "DWARFDebugInfo.h"
 #include "DWARFFormValue.h"
 #include "DWARFUnit.h"
-#include "DWARFCompileUnit.h"
 #include "SymbolFileDWARFDwz.h"
 
 class DWARFUnit;
@@ -494,7 +494,8 @@ const char *DWARFFormValue::AsCString() const {
     return context.getOrLoadLineStrData().PeekCStr(m_value.value.uval);
 
   if (m_form == DW_FORM_GNU_strp_alt) {
-    SymbolFileDWARFDwz *dwz_symbol_file = m_unit->GetSymbolFileDWARF().GetDwzSymbolFile();
+    SymbolFileDWARFDwz *dwz_symbol_file =
+        m_unit->GetSymbolFileDWARF().GetDwzSymbolFile();
     if (!dwz_symbol_file) {
       m_unit->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
           "String reference to DWZ offset 0x%8.8" PRIx64

@@ -359,7 +359,8 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
   if (!dwo_symbol_file)
     return;
 
-  DWARFCompileUnit *dwo_cu = dwo_symbol_file->GetDWOCompileUnitForHash(m_dwo_id);
+  DWARFCompileUnit *dwo_cu =
+      dwo_symbol_file->GetDWOCompileUnitForHash(m_dwo_id);
 
   if (!dwo_cu)
     return; // Can't fetch the compile unit from the dwo file.
@@ -532,7 +533,8 @@ DWARFUnit::GetDIE(dw_offset_t die_offset) {
   if (die_offset == DW_INVALID_OFFSET)
     return DWARFDIE(); // Not found
 
-  lldbassert(!GetDwoSymbolFile()); // FIXME: Or maybe just leave it running here now?
+  lldbassert(
+      !GetDwoSymbolFile()); // FIXME: Or maybe just leave it running here now?
 
   if (!ContainsDIEOffset(die_offset)) {
     GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(

@@ -51,9 +51,13 @@ public:
     DwzCommonKind
   };
 
-  DIERef(llvm::Optional<uint32_t> dwo_num, llvm::Optional<uint32_t> main_cu, DwzCommon dwz_common, Section section,
-         dw_offset_t die_offset)
-      : m_data(dwo_num.getValueOr(0) | main_cu.getValueOr(0)), m_data_kind(dwo_num ? DwoKind : (main_cu ? (dwz_common == MainDwz ? MainDwzKind : DwzCommonKind ) : NoneKind)),
+  DIERef(llvm::Optional<uint32_t> dwo_num, llvm::Optional<uint32_t> main_cu,
+         DwzCommon dwz_common, Section section, dw_offset_t die_offset)
+      : m_data(dwo_num.getValueOr(0) | main_cu.getValueOr(0)),
+        m_data_kind(dwo_num ? DwoKind
+                            : (main_cu ? (dwz_common == MainDwz ? MainDwzKind
+                                                                : DwzCommonKind)
+                                       : NoneKind)),
         m_section(section), m_die_offset(die_offset) {
     assert(this->dwo_num() == dwo_num && "Dwo number out of range?");
     assert(this->main_cu() == main_cu && "Main Cu number out of range?");
@@ -69,19 +73,17 @@ public:
   // It indexes DWARFCompileUnit's excl. DWARFTypeUnit's.
   // It is the index used as parameter of SymbolFileDWARF::GetDWARFUnitIndex.
   llvm::Optional<uint32_t> main_cu() const {
-    if (m_data_kind == MainDwzKind || m_data_kind == DwzCommonKind )
+    if (m_data_kind == MainDwzKind || m_data_kind == DwzCommonKind)
       return m_data;
     return llvm::None;
   }
 
   DwzCommon dwz_common() const {
-    assert(m_data_kind == MainDwzKind || m_data_kind == DwzCommonKind );
+    assert(m_data_kind == MainDwzKind || m_data_kind == DwzCommonKind);
     return m_data_kind == MainDwzKind ? MainDwz : CommonDwz;
   }
 
-  Kind kind_get() const {
-    return Kind(m_data_kind);
-  }
+  Kind kind_get() const { return Kind(m_data_kind); }
 
   Section section() const { return static_cast<Section>(m_section); }
 
@@ -110,7 +112,7 @@ public:
 private:
   uint32_t m_data : 29;
   uint32_t m_data_kind : 2; // Kind type
-  uint32_t m_section : 1; // Section type
+  uint32_t m_section : 1;   // Section type
   dw_offset_t m_die_offset;
 };
 static_assert(sizeof(DIERef) == 8, "");

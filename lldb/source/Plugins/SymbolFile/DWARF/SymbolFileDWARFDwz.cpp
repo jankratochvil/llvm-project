@@ -8,10 +8,10 @@
 
 #include "SymbolFileDWARFDwz.h"
 #include "DWARFDebugInfo.h"
-#include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/FileSystem.h"
-#include "lldb/Core/Module.h"
+#include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/FileSpec.h"
 #include "llvm/ADT/PointerUnion.h"
 
@@ -20,7 +20,7 @@ using namespace lldb_private;
 
 SymbolFileDWARFDwz::SymbolFileDWARFDwz(ObjectFileSP objfile, ModuleSP module)
     : SymbolFileDWARF(std::move(objfile), /*dwo_section_list*/ nullptr),
-    m_module(std::move(module)) {
+      m_module(std::move(module)) {
   InitializeObject();
   // Call private DWARFDebugInfo::ParseCompileUnitHeadersIfNeeded() as
   // otherwise DWARFCompileUnit::GetAbbreviations() would have no data.
@@ -33,7 +33,9 @@ public:
   DwzAsKey(SymbolFileDWARFDwz &dwz) : ptr(&dwz) {}
   DwzAsKey(FileSpec &fspec) : ptr(&fspec) {}
   DwzAsKey() {}
-  SymbolFileDWARFDwz &GetDwz() const { return *ptr.get<SymbolFileDWARFDwz *>(); }
+  SymbolFileDWARFDwz &GetDwz() const {
+    return *ptr.get<SymbolFileDWARFDwz *>();
+  }
   FileSpec &GetFileSpec() const {
     if (ptr.is<FileSpec *>())
       return *ptr.get<FileSpec *>();
@@ -54,7 +56,8 @@ private:
   llvm::PointerUnion<SymbolFileDWARFDwz *, FileSpec *> ptr;
 };
 
-static std::unordered_map<DwzAsKey, SymbolFileDWARFDwzUP, DwzAsKey::Hasher> dwz_map;
+static std::unordered_map<DwzAsKey, SymbolFileDWARFDwzUP, DwzAsKey::Hasher>
+    dwz_map;
 static llvm::sys::RWMutex dwz_map_mutex;
 
 void SymbolFileDWARFDwz::InitializeForDWARF(SymbolFileDWARF &dwarf) {
@@ -137,8 +140,8 @@ void SymbolFileDWARFDwz::InitializeForDWARF(SymbolFileDWARF &dwarf) {
         dwz_uuid.GetAsString().c_str());
     return;
   }
-  auto dwz_symbol_file = std::make_unique<SymbolFileDWARFDwz>(
-      dwz_obj_file, std::move(dwz_module));
+  auto dwz_symbol_file =
+      std::make_unique<SymbolFileDWARFDwz>(dwz_obj_file, std::move(dwz_module));
   assert(DwzAsKey(*dwz_symbol_file) == dwz_fspec_lookup);
   {
     llvm::sys::ScopedWriter lock(dwz_map_mutex);
@@ -147,8 +150,8 @@ void SymbolFileDWARFDwz::InitializeForDWARF(SymbolFileDWARF &dwarf) {
       it->second->SetForDWARF(dwarf);
     else {
       dwz_symbol_file->SetForDWARF(dwarf);
-      const auto insertpair = dwz_map.emplace(
-          DwzAsKey(*dwz_symbol_file), std::move(dwz_symbol_file));
+      const auto insertpair = dwz_map.emplace(DwzAsKey(*dwz_symbol_file),
+                                              std::move(dwz_symbol_file));
       lldbassert(insertpair.second);
     }
   }
