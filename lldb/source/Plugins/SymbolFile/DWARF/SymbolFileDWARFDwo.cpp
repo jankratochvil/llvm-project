@@ -96,8 +96,7 @@ SymbolFileDWARFDwo::GetForwardDeclClangTypeToDie() {
 
 void SymbolFileDWARFDwo::GetObjCMethods(
     lldb_private::ConstString class_name,
-    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)>
-        callback) {
+    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)> callback) {
   GetBaseSymbolFile().GetObjCMethods(class_name, callback);
 }
 
@@ -124,7 +123,8 @@ SymbolFileDWARFDwo::GetTypeSystemForLanguage(LanguageType language) {
 }
 
 DWARFDIE
-SymbolFileDWARFDwo::GetDIE(const DIERef &die_ref, DWARFUnit **main_unit_return) {
+SymbolFileDWARFDwo::GetDIE(const DIERef &die_ref,
+                           DWARFUnit **main_unit_return) {
   if (die_ref.dwo_num() == GetDwoNum())
     return DebugInfo().GetDIE(die_ref, main_unit_return);
   return GetBaseSymbolFile().GetDIE(die_ref, main_unit_return);

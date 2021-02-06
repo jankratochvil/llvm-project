@@ -14,9 +14,9 @@
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 #include "Plugins/SymbolVendor/ELF/SymbolVendorELF.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Host/HostInfo.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
@@ -78,8 +78,8 @@ TEST_F(SymbolFileDWZTests, TestSimpleClassTypes) {
   SymbolContext sc;
   llvm::DenseSet<SymbolFile *> searched_files;
   TypeMap results;
-  symfile->FindTypes(ConstString("StructMovedToDWZCommonFile"), CompilerDeclContext(), 0,
-                     searched_files, results);
+  symfile->FindTypes(ConstString("StructMovedToDWZCommonFile"),
+                     CompilerDeclContext(), 0, searched_files, results);
   EXPECT_EQ(1u, results.GetSize());
   lldb::TypeSP udt_type = results.GetTypeAtIndex(0);
   EXPECT_EQ(ConstString("StructMovedToDWZCommonFile"), udt_type->GetName());

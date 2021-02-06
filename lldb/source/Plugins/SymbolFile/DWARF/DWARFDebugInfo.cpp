@@ -160,7 +160,8 @@ DWARFUnit *DWARFDebugInfo::GetUnitAtOffset(DIERef::Section section,
 }
 
 DWARFUnit *DWARFDebugInfo::GetUnit(const DIERef &die_ref) {
-  bool dwz_common = die_ref.main_cu() && die_ref.dwz_common() == DIERef::CommonDwz;
+  bool dwz_common =
+      die_ref.main_cu() && die_ref.dwz_common() == DIERef::CommonDwz;
   if (dwz_common && !m_dwarf.GetIsDwz()) {
     lldbassert(m_dwarf.GetDwzSymbolFile());
     return m_dwarf.GetDwzSymbolFile()->DebugInfo().GetUnit(die_ref);

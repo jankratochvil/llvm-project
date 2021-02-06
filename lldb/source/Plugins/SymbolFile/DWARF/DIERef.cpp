@@ -17,15 +17,15 @@ void llvm::format_provider<DIERef>::format(const DIERef &ref, raw_ostream &OS,
     OS << format_hex_no_prefix(*ref.main_cu(), 8) << "/";
   OS << (ref.section() == DIERef::Section::DebugInfo ? "INFO" : "TYPE");
   switch (ref.kind_get()) {
-    case DIERef::Kind::NoneKind:
-    case DIERef::Kind::DwoKind:
-      break;
-    case DIERef::Kind::MainDwzKind:
-      OS << "/DWZ";
-      break;
-    case DIERef::Kind::DwzCommonKind:
-      OS << "/DWZCOMMON";
-      break;
+  case DIERef::Kind::NoneKind:
+  case DIERef::Kind::DwoKind:
+    break;
+  case DIERef::Kind::MainDwzKind:
+    OS << "/DWZ";
+    break;
+  case DIERef::Kind::DwzCommonKind:
+    OS << "/DWZCOMMON";
+    break;
   }
   OS << "/" << format_hex_no_prefix(ref.die_offset(), 8);
 }

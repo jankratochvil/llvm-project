@@ -23,8 +23,7 @@ bool DWARFIndex::ProcessFunctionDIE(
     llvm::StringRef name, DWARFUnit *main_unit, DIERef ref,
     SymbolFileDWARF &dwarf, const CompilerDeclContext &parent_decl_ctx,
     uint32_t name_type_mask,
-    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)>
-        callback) {
+    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)> callback) {
   DWARFDIE die = dwarf.GetDIE(ref);
   if (!die) {
     ReportInvalidDIERef(ref, name);
@@ -70,8 +69,7 @@ bool DWARFIndex::ProcessFunctionDIE(
 
 DWARFIndex::DIECallbackImpl::DIECallbackImpl(
     const DWARFIndex &index,
-    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)>
-        callback,
+    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)> callback,
     llvm::StringRef name)
     : m_index(index),
       m_dwarf(*llvm::cast<SymbolFileDWARF>(index.m_module.GetSymbolFile())),

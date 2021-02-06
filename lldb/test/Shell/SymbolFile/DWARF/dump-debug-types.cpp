@@ -7,6 +7,7 @@
 // RUN: %clangxx_host -g -fdebug-types-section -c -o %t.o %s
 // RUN: lldb-test symbols -dump-clang-ast %t.o | FileCheck %s
 
-struct StructName {} a;
+struct StructName {
+} a;
 
 // CHECK: StructName

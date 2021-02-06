@@ -11,7 +11,6 @@
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDwo.h"
-#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
@@ -56,16 +55,16 @@ DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) {
   cu = &cu->GetNonSkeletonUnit();
   if (llvm::Optional<uint64_t> die_offset = entry.getDIEUnitOffset())
     // FIXME: .debug_names have no DWZ support yet.
-    return DIERef(cu->GetSymbolFileDWARF().GetDwoNum(), llvm::None, DIERef::MainDwz,
-                  DIERef::Section::DebugInfo, cu->GetOffset() + *die_offset);
+    return DIERef(cu->GetSymbolFileDWARF().GetDwoNum(), llvm::None,
+                  DIERef::MainDwz, DIERef::Section::DebugInfo,
+                  cu->GetOffset() + *die_offset);
 
   return llvm::None;
 }
 
 bool DebugNamesDWARFIndex::ProcessEntry(
     const DebugNames::Entry &entry,
-    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)>
-        callback,
+    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)> callback,
     llvm::StringRef name) {
   llvm::Optional<DIERef> ref = ToDIERef(entry);
   if (!ref)
@@ -93,8 +92,7 @@ void DebugNamesDWARFIndex::MaybeLogLookupError(llvm::Error error,
 
 void DebugNamesDWARFIndex::GetGlobalVariables(
     ConstString basename,
-    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)>
-        callback) {
+    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)> callback) {
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(basename.GetStringRef())) {
     if (entry.tag() != DW_TAG_variable)
@@ -109,8 +107,7 @@ void DebugNamesDWARFIndex::GetGlobalVariables(
 
 void DebugNamesDWARFIndex::GetGlobalVariables(
     const RegularExpression &regex,
-    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)>
-        callback) {
+    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)> callback) {
   for (const DebugNames::NameIndex &ni: *m_debug_names_up) {
     for (DebugNames::NameTableEntry nte: ni) {
       if (!regex.Execute(nte.getString()))
@@ -135,8 +132,7 @@ void DebugNamesDWARFIndex::GetGlobalVariables(
 
 void DebugNamesDWARFIndex::GetGlobalVariables(
     const DWARFUnit &main_unit,
-    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)>
-        callback) {
+    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)> callback) {
   uint64_t cu_offset = main_unit.GetOffset();
   for (const DebugNames::NameIndex &ni: *m_debug_names_up) {
     for (DebugNames::NameTableEntry nte: ni) {
@@ -161,8 +157,7 @@ void DebugNamesDWARFIndex::GetGlobalVariables(
 
 void DebugNamesDWARFIndex::GetCompleteObjCClass(
     ConstString class_name, bool must_be_implementation,
-    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)>
-        callback) {
+    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)> callback) {
   // Keep a list of incomplete types as fallback for when we don't find the
   // complete type.
   // FIXME: DWZ
@@ -211,8 +206,7 @@ void DebugNamesDWARFIndex::GetCompleteObjCClass(
 
 void DebugNamesDWARFIndex::GetTypes(
     ConstString name,
-    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)>
-        callback) {
+    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)> callback) {
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(name.GetStringRef())) {
     if (isType(entry.tag())) {
@@ -226,8 +220,7 @@ void DebugNamesDWARFIndex::GetTypes(
 
 void DebugNamesDWARFIndex::GetTypes(
     const DWARFDeclContext &context,
-    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)>
-        callback) {
+    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)> callback) {
   auto name = context[0].name;
   for (const DebugNames::Entry &entry : m_debug_names_up->equal_range(name)) {
     if (entry.tag() == context[0].tag) {
@@ -241,8 +234,7 @@ void DebugNamesDWARFIndex::GetTypes(
 
 void DebugNamesDWARFIndex::GetNamespaces(
     ConstString name,
-    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)>
-        callback) {
+    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)> callback) {
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(name.GetStringRef())) {
     if (entry.tag() == DW_TAG_namespace) {
@@ -257,8 +249,7 @@ void DebugNamesDWARFIndex::GetNamespaces(
 void DebugNamesDWARFIndex::GetFunctions(
     ConstString name, SymbolFileDWARF &dwarf,
     const CompilerDeclContext &parent_decl_ctx, uint32_t name_type_mask,
-    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)>
-        callback) {
+    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)> callback) {
 
   // FIXME: DWZ
   std::set<DWARFDebugInfoEntry *> seen;
@@ -271,17 +262,16 @@ void DebugNamesDWARFIndex::GetFunctions(
     if (llvm::Optional<DIERef> ref = ToDIERef(entry)) {
       // FIXME: DWZ
       DWARFUnit *main_unit = nullptr;
-      if (!ProcessFunctionDIE(
-              name.GetStringRef(), main_unit, *ref, dwarf, parent_decl_ctx,
-              name_type_mask,
-              [&](DWARFUnit *main_unit_check, DWARFDIE die) {
-                // FIXME: DWZ
-                //lldbassert(main_unit_check == main_unit);
-                if (!seen.insert(die.GetDIE()).second)
-                  return true;
-                // FIXME: DWZ
-                return callback(main_unit_check, die);
-              }))
+      if (!ProcessFunctionDIE(name.GetStringRef(), main_unit, *ref, dwarf,
+                              parent_decl_ctx, name_type_mask,
+                              [&](DWARFUnit *main_unit_check, DWARFDIE die) {
+                                // FIXME: DWZ
+                                // lldbassert(main_unit_check == main_unit);
+                                if (!seen.insert(die.GetDIE()).second)
+                                  return true;
+                                // FIXME: DWZ
+                                return callback(main_unit_check, die);
+                              }))
         return;
     }
   }
@@ -292,8 +282,7 @@ void DebugNamesDWARFIndex::GetFunctions(
 
 void DebugNamesDWARFIndex::GetFunctions(
     const RegularExpression &regex,
-    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)>
-        callback) {
+    llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)> callback) {
   for (const DebugNames::NameIndex &ni: *m_debug_names_up) {
     for (DebugNames::NameTableEntry nte: ni) {
       if (!regex.Execute(nte.getString()))
