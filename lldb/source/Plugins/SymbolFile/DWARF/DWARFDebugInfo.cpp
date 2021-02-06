@@ -61,7 +61,6 @@ llvm::Expected<DWARFDebugAranges &> DWARFDebugInfo::GetCompileUnitAranges() {
   for (size_t idx = 0; idx < num_units; ++idx) {
     DWARFUnit *cu = GetUnitAtIndex(idx);
 
-    // FIXME - or: if (!llvm::isa<DWARFCompileUnit>(cu))
     if (cu->GetUnitDIEOnly().Tag() == DW_TAG_partial_unit)
       continue;
     dw_offset_t offset = cu->GetOffset();
