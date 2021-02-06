@@ -46,7 +46,8 @@ public:
   bool ContainsTypeUnits();
   DWARFDIE GetDIEForDIEOffset(DIERef::Section section,
                               dw_offset_t die_offset);
-  DWARFDIE GetDIE(const DIERef &die_ref, DWARFUnit **main_unit_return = nullptr);
+  DWARFDIE GetDIE(const DIERef &die_ref,
+                  DWARFUnit **main_unit_return = nullptr);
 
   enum {
     eDumpFlag_Verbose = (1 << 0),  // Verbose dumping
