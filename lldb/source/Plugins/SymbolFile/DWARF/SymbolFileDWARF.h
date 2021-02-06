@@ -142,8 +142,7 @@ public:
 
   bool CompleteType(lldb_private::CompilerType &compiler_type) override;
 
-  lldb_private::Type *ResolveType(DWARFUnit *main_unit,
-                                  const DWARFDIE &die,
+  lldb_private::Type *ResolveType(DWARFUnit *main_unit, const DWARFDIE &die,
                                   bool assert_not_being_parsed = true,
                                   bool resolve_function_context = false);
 
@@ -243,8 +242,7 @@ public:
 
   virtual void GetObjCMethods(
       lldb_private::ConstString class_name,
-      llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)>
-          callback);
+      llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)> callback);
 
   bool Supports_DW_AT_APPLE_objc_complete_type(DWARFUnit *cu);
 
@@ -262,7 +260,8 @@ public:
       return m_external_type_modules;
   }
 
-  virtual DWARFDIE GetDIE(const DIERef &die_ref, DWARFUnit **main_unit_return = nullptr);
+  virtual DWARFDIE GetDIE(const DIERef &die_ref,
+                          DWARFUnit **main_unit_return = nullptr);
 
   DWARFDIE GetDIE(lldb::user_id_t uid);
 
@@ -314,13 +313,14 @@ public:
   static lldb_private::CompilerDecl GetDecl(DWARFUnit *main_unit,
                                             const DWARFDIE &die);
 
-  static lldb_private::CompilerDeclContext
-  GetDeclContext(DWARFUnit *main_unit, const DWARFDIE &die);
+  static lldb_private::CompilerDeclContext GetDeclContext(DWARFUnit *main_unit,
+                                                          const DWARFDIE &die);
 
   static lldb_private::CompilerDeclContext
   GetContainingDeclContext(DWARFUnit *main_unit, const DWARFDIE &die);
 
-  static DWARFDeclContext GetDWARFDeclContext(DWARFUnit *main_unit, const DWARFDIE &die);
+  static DWARFDeclContext GetDWARFDeclContext(DWARFUnit *main_unit,
+                                              const DWARFDIE &die);
 
   static lldb::LanguageType LanguageTypeFromDWARF(uint64_t val);
 
@@ -335,17 +335,14 @@ public:
   llvm::Optional<uint32_t> GetDWARFUnitIndex(uint32_t cu_idx);
 
 protected:
-  typedef llvm::DenseMap<
-      std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>,
-      lldb_private::Type *>
+  typedef llvm::DenseMap<std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>,
+                         lldb_private::Type *>
       DIEToTypePtr;
-  typedef llvm::DenseMap<
-      std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>,
-      lldb::VariableSP>
+  typedef llvm::DenseMap<std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>,
+                         lldb::VariableSP>
       DIEToVariableSP;
-  typedef llvm::DenseMap<
-      std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>,
-      lldb::opaque_compiler_type_t>
+  typedef llvm::DenseMap<std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>,
+                         lldb::opaque_compiler_type_t>
       DIEToClangType;
   typedef llvm::DenseMap<lldb::opaque_compiler_type_t, lldb::user_id_t>
       ClangTypeToDIE;
@@ -367,7 +364,8 @@ protected:
 
   lldb::CompUnitSP ParseCompileUnit(DWARFCompileUnit &dwarf_cu);
 
-  DWARFCompileUnit *GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) override;
+  DWARFCompileUnit *
+  GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) override;
 
   DWARFUnit *GetNextUnparsedDWARFCompileUnit(DWARFUnit *prev_cu);
 
@@ -388,8 +386,7 @@ protected:
   lldb::TypeSP ParseType(const lldb_private::SymbolContext &sc,
                          const DWARFDIE &die, bool *type_is_new);
 
-  lldb_private::Type *ResolveTypeUID(DWARFUnit *main_unit,
-                                     const DWARFDIE &die,
+  lldb_private::Type *ResolveTypeUID(DWARFUnit *main_unit, const DWARFDIE &die,
                                      bool assert_not_being_parsed);
 
   lldb_private::Type *ResolveTypeUID(DWARFUnit *main_unit,

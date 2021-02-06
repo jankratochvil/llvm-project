@@ -123,7 +123,9 @@ DWARFUnit *DWARFCompileUnit::GetMainDWARFUnit(DWARFUnit *main_unit) {
 
 CompileUnit *DWARFCompileUnit::GetCompUnit() {
   lldbassert(this);
-  CompileUnit *comp_unit = GetNonSkeletonUnit().GetSymbolFileDWARF().GetCompUnitForDWARFCompUnit(*this);
+  CompileUnit *comp_unit =
+      GetNonSkeletonUnit().GetSymbolFileDWARF().GetCompUnitForDWARFCompUnit(
+          *this);
   lldbassert(comp_unit);
   return comp_unit;
 }
