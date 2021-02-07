@@ -2000,7 +2000,6 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(const Address &so_addr,
       }
     } else {
       uint32_t cu_idx = DW_INVALID_INDEX;
-      // DIERef::Section::DWZDebugInfo never contains any PC (arange).
       if (auto *dwarf_cu = llvm::dyn_cast_or_null<DWARFCompileUnit>(
               debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo, cu_offset,
                                          &cu_idx))) {
