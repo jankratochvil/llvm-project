@@ -1545,7 +1545,7 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
     // to SymbolFileDWARF::ResolveClangOpaqueTypeDefinition are done.
     GetForwardDeclClangTypeToDie().erase(die_it);
 
-    Type *type = GetDIEToType().lookup(dwarf_die.MainCUtoDIEPair(main_unit));
+    Type *type = GetDIEToType().lookup(dwarf_die.MainUnitToDIEPair(main_unit));
     lldbassert(type);
 
     Log *log(LogChannelDWARF::GetLogIfAny(DWARF_LOG_DEBUG_INFO |
@@ -2630,7 +2630,7 @@ TypeSP SymbolFileDWARF::GetTypeForDIE(DWARFUnit *main_unit, const DWARFDIE &die,
                                       bool resolve_function_context) {
   TypeSP type_sp;
   if (die) {
-    Type *type_ptr = GetDIEToType().lookup(die.MainCUtoDIEPair(main_unit));
+    Type *type_ptr = GetDIEToType().lookup(die.MainUnitToDIEPair(main_unit));
     if (type_ptr == nullptr) {
       SymbolContextScope *scope;
       DWARFCompileUnit *main_cu =
@@ -2806,7 +2806,7 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
             type_die.GetID(), type_cu->GetID());
 
         if (die)
-          GetDIEToType()[die.MainCUtoDIEPair(main_unit)] = resolved_type;
+          GetDIEToType()[die.MainUnitToDIEPair(main_unit)] = resolved_type;
         type_sp = resolved_type->shared_from_this();
         return false;
       });
@@ -3203,7 +3203,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
 
   DWARFUnit *main_unit = sc.GetDWARFCompileUnit();
 
-  if (VariableSP var_sp = GetDIEToVariable()[die.MainCUtoDIEPair(main_unit)])
+  if (VariableSP var_sp = GetDIEToVariable()[die.MainUnitToDIEPair(main_unit)])
     return var_sp; // Already been parsed!
 
   const dw_tag_t tag = die.Tag();
@@ -3540,9 +3540,9 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
   // missing vital information to be able to be displayed in the debugger
   // (missing location due to optimization, etc)) so we don't re-parse this
   // DIE over and over later...
-  GetDIEToVariable()[die.MainCUtoDIEPair(main_unit)] = var_sp;
+  GetDIEToVariable()[die.MainUnitToDIEPair(main_unit)] = var_sp;
   if (spec_die)
-    GetDIEToVariable()[spec_die.MainCUtoDIEPair(main_unit)] = var_sp;
+    GetDIEToVariable()[spec_die.MainUnitToDIEPair(main_unit)] = var_sp;
 
   return var_sp;
 }
@@ -3609,7 +3609,7 @@ size_t SymbolFileDWARF::ParseVariables(const SymbolContext &sc,
     dw_tag_t tag = die.Tag();
 
     // Check to see if we have already parsed this variable or constant?
-    VariableSP var_sp = GetDIEToVariable()[die.MainCUtoDIEPair(main_unit)];
+    VariableSP var_sp = GetDIEToVariable()[die.MainUnitToDIEPair(main_unit)];
     if (var_sp) {
       if (cc_variable_list)
         cc_variable_list->AddVariableIfUnique(var_sp);
