@@ -533,8 +533,6 @@ DWARFUnit::GetDIE(dw_offset_t die_offset) {
   if (die_offset == DW_INVALID_OFFSET)
     return DWARFDIE(); // Not found
 
-  lldbassert(!GetDwoSymbolFile());
-
   if (!ContainsDIEOffset(die_offset)) {
     GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
         "GetDIE for DIE 0x%" PRIx32 " is outside of its CU 0x%" PRIx32,
