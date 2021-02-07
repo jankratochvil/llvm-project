@@ -461,6 +461,8 @@ bool DWARFDIE::GetDIENamesAndRanges(
 
 DWARFUnit *DWARFDIE::GetMainDWARFUnit(DWARFUnit *main_unit) const {
   lldbassert(IsValid());
+  if (main_unit == nullptr)
+    main_unit = GetCU();
   return GetCU()->GetMainDWARFUnit(main_unit);
 }
 
