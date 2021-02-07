@@ -200,6 +200,12 @@ DWARFDIE::LookupDeepestBlock(lldb::addr_t address) const {
   return result;
 }
 
+lldb::user_id_t DWARFDIE::GetID() const {
+  if (IsValid())
+    return GetDWARF()->GetUID(*this);
+  return LLDB_INVALID_UID;
+}
+
 const char *DWARFDIE::GetMangledName() const {
   if (IsValid())
     return m_die->GetMangledName(m_cu);
