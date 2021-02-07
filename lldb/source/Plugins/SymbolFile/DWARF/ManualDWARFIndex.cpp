@@ -121,9 +121,10 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
         unit.GetOffset());
   }
 
-  // DWZ DW_TAG_partial_unit will get indexed by DW_AT_import
-  // from its DW_TAG_compile_unit (possibly transitively).
-  // Try to prevent GetUnitDIEOnly() which is expensive.
+  // DWZ DW_TAG_partial_unit will get indexed through DW_TAG_imported_unit from
+  // its main DW_TAG_compile_unit (possibly transitively). Indexing it
+  // standalone is not possible as we would not have its main CU. Also try to
+  // prevent calling GetUnitDIEOnly() which may be expensive.
   if (unit.GetSymbolFileDWARF().GetIsDwz())
     return;
   if (unit.GetUnitDIEOnly().Tag() == DW_TAG_partial_unit)
@@ -354,8 +355,6 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit, DWARFUnit *main_unit,
         DWARFDIE import_die = import_die_form.Reference();
         if (!import_die.IsValid())
           break;
-        // main_unit may be different from our callers as GetMainCU() returns
-        // only the first unit which DW_TAG_imported this unit.
         DWARFUnit *import_cu = import_die.GetCU();
         dw_offset_t import_cu_firstdie_offset = import_cu->GetFirstDIEOffset();
         if (import_die.GetOffset() != import_cu_firstdie_offset) {
