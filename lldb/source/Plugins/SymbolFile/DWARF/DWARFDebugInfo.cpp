@@ -159,6 +159,12 @@ DWARFUnit *DWARFDebugInfo::GetUnit(const DIERef &die_ref) {
   return GetUnitContainingDIEOffset(die_ref.section(), die_ref.die_offset());
 }
 
+DWARFUnit *DWARFDebugInfo::GetMainUnit(const DIERef &die_ref) {
+  // This function will be extended by a later DWZ patch.
+  DWARFUnit *main_unit = GetUnit(die_ref);
+  return main_unit;
+}
+
 DWARFUnit *
 DWARFDebugInfo::GetUnitContainingDIEOffset(DIERef::Section section,
                                            dw_offset_t die_offset) {
@@ -198,7 +204,7 @@ DWARFDIE
 DWARFDebugInfo::GetDIE(const DIERef &die_ref, DWARFUnit **main_unit_return) {
   DWARFUnit *cu = GetUnit(die_ref);
   if (cu) {
-    DWARFUnit *main_unit = GetUnit(die_ref);
+    DWARFUnit *main_unit = GetMainUnit(die_ref);
     if (main_unit == cu)
       cu = main_unit = &main_unit->GetNonSkeletonUnit();
     if (main_unit_return)
