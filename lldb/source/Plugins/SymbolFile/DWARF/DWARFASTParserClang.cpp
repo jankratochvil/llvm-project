@@ -466,7 +466,8 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
         die.GetTagAsCString(), die.GetName());
   }
 
-  Type *type_ptr = dwarf->GetDIEToType().lookup(die.MainUnitToDIEPair(main_unit));
+  Type *type_ptr =
+      dwarf->GetDIEToType().lookup(die.MainUnitToDIEPair(main_unit));
   if (type_ptr == DIE_IS_BEING_PARSED)
     return nullptr;
   if (type_ptr)
@@ -3735,7 +3736,8 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
                   ") from 0x%8.8x for 0x%8.8x",
                   static_cast<void *>(src_child_type), src_child_type->GetID(),
                   src_die.GetOffset(), dst_die.GetOffset());
-        dst_die.GetDWARF()->GetDIEToType()[dst_die.MainUnitToDIEPair(main_unit)] =
+        dst_die.GetDWARF()
+            ->GetDIEToType()[dst_die.MainUnitToDIEPair(main_unit)] =
             src_child_type;
       } else {
         LLDB_LOGF(log,
