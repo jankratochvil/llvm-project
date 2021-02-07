@@ -98,9 +98,9 @@ public:
 
   DWARFUnit *GetMainDWARFUnit(DWARFUnit *main_unit) const;
   std::pair<DWARFUnit *, DWARFDIE>
-  MainCUtoDWARFDIEPair(DWARFUnit *main_unit) const;
+  MainUnitToDWARFDIEPair(DWARFUnit *main_unit) const;
   std::pair<DWARFUnit *, DWARFDebugInfoEntry *>
-  MainCUtoDIEPair(DWARFUnit *main_unit) const;
+  MainUnitToDIEPair(DWARFUnit *main_unit) const;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDIE_H
