@@ -646,10 +646,6 @@ DWARFCompileUnit *SymbolFileDWARF::GetDWARFCompileUnit(CompileUnit *comp_unit) {
   if (!comp_unit)
     return nullptr;
 
-  if (SymbolFileDWARFDwo *dwo = llvm::dyn_cast<SymbolFileDWARFDwo>(this))
-    return dwo->GetBaseSymbolFile().GetDWARFCompileUnit(comp_unit);
-  lldbassert(!GetIsDwz());
-
   // The compile unit ID is the index of the DWARF unit.
   DWARFUnit *dwarf_cu = DebugInfo().GetUnitAtIndex(comp_unit->GetID());
   if (!dwarf_cu)
@@ -855,7 +851,7 @@ XcodeSDK SymbolFileDWARF::ParseXcodeSDK(CompileUnit &comp_unit) {
 size_t SymbolFileDWARF::ParseFunctions(CompileUnit &comp_unit) {
   LLDB_SCOPED_TIMER();
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  DWARFCompileUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
+  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
   if (!dwarf_cu)
     return 0;
 

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NameToDIE.h"
-#include "DWARFCompileUnit.h"
+#include "DWARFUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RegularExpression.h"
