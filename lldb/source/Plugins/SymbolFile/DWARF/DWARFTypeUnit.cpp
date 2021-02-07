@@ -8,7 +8,7 @@
 
 #include "DWARFTypeUnit.h"
 
-#include "SymbolFileDWARFDwo.h"
+#include "SymbolFileDWARF.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
