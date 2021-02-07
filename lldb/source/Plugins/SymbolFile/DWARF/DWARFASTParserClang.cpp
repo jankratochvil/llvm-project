@@ -1995,9 +1995,9 @@ bool DWARFASTParserClang::CompleteRecordType(DWARFUnit *main_unit,
   SymbolFileDWARF *dwarf = &main_unit->GetSymbolFileDWARF();
   CompileUnit *comp_unit =
       type->GetSymbolContextScope()->CalculateSymbolContextCompileUnit();
-  // comp_unit may be a CU with DIE being only declaration.
+  // comp_unit may be a CU with DIE being only a declaration.
   // Then 'die' will be a definition in a different CU with different
-  // 'main_unit'. This assertion will therefore not work:
+  // 'main_unit'. This assertion therefore would not work:
   // lldbassert(&sc.GetDWARFCompileUnit(&dwarf)->GetNonSkeletonUnit() ==
   // sc.GetDWARFCompileUnit(&dwarf));
 
