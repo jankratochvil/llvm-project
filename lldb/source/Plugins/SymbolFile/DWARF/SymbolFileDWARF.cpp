@@ -1288,7 +1288,7 @@ void SymbolFileDWARF::ParseDeclsForContext(CompilerDeclContext decl_ctx) {
         decl_ctx);
 }
 
-user_id_t SymbolFileDWARF::GetUID(DWARFUnit *main_unit, const DWARFDIE &die) {
+user_id_t SymbolFileDWARF::GetUID(DWARFUnit *main_unit, const DWARFBaseDIE &die) {
   if (!die.IsValid())
     return LLDB_INVALID_UID;
   // Try to prevent GetUnitDIEOnly() which may be expensive.
