@@ -160,6 +160,7 @@ DWARFUnit *DWARFDebugInfo::GetUnit(const DIERef &die_ref) {
 }
 
 DWARFUnit *DWARFDebugInfo::GetMainUnit(const DIERef &die_ref) {
+  // This function will be extended by a later DWZ patch.
   DWARFUnit *main_unit = GetUnit(die_ref);
   return main_unit;
 }
