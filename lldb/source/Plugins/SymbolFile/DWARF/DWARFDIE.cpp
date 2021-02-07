@@ -465,11 +465,11 @@ DWARFUnit *DWARFDIE::GetMainDWARFUnit(DWARFUnit *main_unit) const {
 }
 
 std::pair<DWARFUnit *, DWARFDIE>
-DWARFDIE::MainCUtoDWARFDIEPair(DWARFUnit *main_unit) const {
+DWARFDIE::MainUnitToDWARFDIEPair(DWARFUnit *main_unit) const {
   return std::make_pair(GetMainDWARFUnit(main_unit), *this);
 }
 
 std::pair<DWARFUnit *, DWARFDebugInfoEntry *>
-DWARFDIE::MainCUtoDIEPair(DWARFUnit *main_unit) const {
+DWARFDIE::MainUnitToDIEPair(DWARFUnit *main_unit) const {
   return std::make_pair(GetMainDWARFUnit(main_unit), GetDIE());
 }
