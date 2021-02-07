@@ -805,9 +805,6 @@ DWARFUnitHeader::extract(const DWARFDataExtractor &data,
   } else {
     header.m_abbr_offset = data.GetDWARFOffset(offset_ptr);
     header.m_addr_size = data.GetU8(offset_ptr);
-    // For DIERef::Section::DWZDebugInfo it should be DW_UT_partial but there
-    // are DW_UT_partial even in DWARF-4 DIERef::Section::DebugInfo recognized
-    // only by its DW_TAG_partial_unit.
     header.m_unit_type =
         section == DIERef::Section::DebugTypes ? DW_UT_type : DW_UT_compile;
   }
