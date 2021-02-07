@@ -587,7 +587,7 @@ endif
 else
 	$(LD) $(DYLIB_OBJECTS) $(LDFLAGS) -shared -o "$(DYLIB_FILENAME)"
 ifeq "$(DWZ)" "YES"
-        # DWZ always does SPLIT_DEBUG_SYMBOLS (as otherwise the dwz command fails)
+	# DWZ always does SPLIT_DEBUG_SYMBOLS (as otherwise the dwz command fails)
 	$(call dwz_strip,$(DYLIB_FILENAME))
 else
 ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
