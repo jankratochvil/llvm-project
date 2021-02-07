@@ -8,10 +8,8 @@
 
 #include "DWARFBaseDIE.h"
 
-#include "DWARFCompileUnit.h"
-#include "DWARFDebugInfoEntry.h"
-#include "DWARFTypeUnit.h"
 #include "DWARFUnit.h"
+#include "DWARFDebugInfoEntry.h"
 #include "SymbolFileDWARF.h"
 
 #include "lldb/Core/Module.h"
