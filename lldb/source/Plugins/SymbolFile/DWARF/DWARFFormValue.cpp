@@ -535,7 +535,7 @@ DWARFDIE DWARFFormValue::Reference() const {
   case DW_FORM_ref2:
   case DW_FORM_ref4:
   case DW_FORM_ref8:
-  case DW_FORM_ref_udata: {
+  case DW_FORM_ref_udata:
     assert(m_unit); // Unit must be valid for DW_FORM_ref forms that are compile
                     // unit relative or we will get this wrong
     // The offset adjustment is already appropriate inside this CU.
@@ -547,7 +547,6 @@ DWARFDIE DWARFFormValue::Reference() const {
       return {};
     }
     return const_cast<DWARFUnit *>(m_unit)->GetDIE(value);
-  }
 
   case DW_FORM_GNU_ref_alt: {
     assert(m_unit);

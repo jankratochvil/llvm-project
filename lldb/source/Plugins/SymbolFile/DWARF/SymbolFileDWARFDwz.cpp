@@ -27,7 +27,7 @@ SymbolFileDWARFDwz::SymbolFileDWARFDwz(ObjectFileSP objfile, ModuleSP module)
   DebugInfo().GetNumUnits();
 }
 
-// C++14: Use heterogenous lookup instead.
+// C++20: Use heterogeneous lookup for unordered container instead.
 class DwzAsKey {
 public:
   DwzAsKey(SymbolFileDWARFDwz &dwz) : ptr(&dwz) {}

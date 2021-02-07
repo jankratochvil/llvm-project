@@ -928,7 +928,7 @@ bool SymbolFileDWARF::ParseSupportFiles(CompileUnit &comp_unit,
 
 FileSpec SymbolFileDWARF::GetFile(DWARFUnit &unit, size_t file_idx) {
   if (auto *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(&unit)) {
-    // Try to prevent GetUnitDIEOnly() which is expensive.
+    // Try to prevent GetUnitDIEOnly() which may be expensive.
     if (!unit.GetSymbolFileDWARF().GetIsDwz() &&
         unit.GetUnitDIEOnly().Tag() == DW_TAG_compile_unit) {
       if (CompileUnit *lldb_cu = GetCompUnitForDWARFCompUnit(*dwarf_cu))
@@ -1295,13 +1295,8 @@ void SymbolFileDWARF::ParseDeclsForContext(CompilerDeclContext decl_ctx) {
 user_id_t SymbolFileDWARF::GetUID(DWARFUnit *main_unit, const DWARFDIE &die) {
   if (!die.IsValid())
     return LLDB_INVALID_UID;
-  // Do not use 'llvm::isa<SymbolFileDWARFDwo>(this)' as we may be in Dwp which
-  // is not Dwo.
-  // Do not use
-  // 'llvm::isa<SymbolFileDWARFDwo>(die.GetCU()->GetSymbolFileDWARF())' as DIE
-  // can be from .debug_types during indexing with no Dwo anywhere.
-  //  lldbassert(main_unit||llvm::isa<DWARFTypeUnit>(die.GetCU()));
-  if (die.GetCU()->GetUnitDIEOnly().Tag() != DW_TAG_partial_unit)
+  // Try to prevent GetUnitDIEOnly() which may be expensive.
+  if (!GetIsDwz() && die.GetCU()->GetUnitDIEOnly().Tag() != DW_TAG_partial_unit)
     main_unit = nullptr;
   else
     lldbassert(main_unit);
@@ -2005,7 +2000,6 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(const Address &so_addr,
       }
     } else {
       uint32_t cu_idx = DW_INVALID_INDEX;
-      // DIERef::Section::DWZDebugInfo never contains any PC (arange).
       if (auto *dwarf_cu = llvm::dyn_cast_or_null<DWARFCompileUnit>(
               debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo, cu_offset,
                                          &cu_idx))) {
@@ -3087,12 +3081,6 @@ TypeSP SymbolFileDWARF::ParseType(const SymbolContext &sc, const DWARFDIE &die,
 
   TypeSP type_sp = dwarf_ast->ParseTypeFromDWARF(sc, die, type_is_new_ptr);
   if (type_sp) {
-    // No classof():
-    // !llvm::cast<SymbolFileDWARF>(type_sp->GetSymbolFile())->GetIsDwz()
-    //    lldbassert(type_sp->GetSymbolFile()->GetPluginName() ==
-    //    GetPluginNameStatic()); lldbassert(!static_cast<SymbolFileDWARF
-    //    *>(type_sp->GetSymbolFile())->GetIsDwz());
-
     GetTypeList().Insert(type_sp);
 
     if (die.Tag() == DW_TAG_subprogram) {
