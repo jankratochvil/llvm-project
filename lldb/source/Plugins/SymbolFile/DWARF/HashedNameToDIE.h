@@ -16,7 +16,6 @@
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/lldb-defines.h"
 
-#include "DIERef.h"
 #include "DWARFDefines.h"
 #include "DWARFFormValue.h"
 #include "NameToDIE.h"
