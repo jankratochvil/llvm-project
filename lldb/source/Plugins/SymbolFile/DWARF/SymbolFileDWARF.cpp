@@ -3081,12 +3081,6 @@ TypeSP SymbolFileDWARF::ParseType(const SymbolContext &sc, const DWARFDIE &die,
 
   TypeSP type_sp = dwarf_ast->ParseTypeFromDWARF(sc, die, type_is_new_ptr);
   if (type_sp) {
-    // No classof():
-    // !llvm::cast<SymbolFileDWARF>(type_sp->GetSymbolFile())->GetIsDwz()
-    //    lldbassert(type_sp->GetSymbolFile()->GetPluginName() ==
-    //    GetPluginNameStatic()); lldbassert(!static_cast<SymbolFileDWARF
-    //    *>(type_sp->GetSymbolFile())->GetIsDwz());
-
     GetTypeList().Insert(type_sp);
 
     if (die.Tag() == DW_TAG_subprogram) {
