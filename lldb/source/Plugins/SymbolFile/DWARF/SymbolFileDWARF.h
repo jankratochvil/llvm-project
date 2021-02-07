@@ -13,12 +13,10 @@
 #include <map>
 #include <mutex>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/Support/RWMutex.h"
 #include "llvm/Support/Threading.h"
 
 #include "lldb/Core/UniqueCStringMap.h"
