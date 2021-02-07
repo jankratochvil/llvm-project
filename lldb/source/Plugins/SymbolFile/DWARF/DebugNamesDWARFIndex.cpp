@@ -71,7 +71,7 @@ bool DebugNamesDWARFIndex::ProcessEntry(
   DWARFDIE die = dwarf.GetDIE(*ref);
   if (!die)
     return true;
-  // FIXME: DWZ
+  // FIXME: .debug_names have no DWZ support yet.
   DWARFUnit *main_unit = die.GetMainDWARFUnit(nullptr);
   return callback(main_unit, die);
 }
@@ -157,7 +157,7 @@ void DebugNamesDWARFIndex::GetCompleteObjCClass(
     llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)> callback) {
   // Keep a list of incomplete types as fallback for when we don't find the
   // complete type.
-  // FIXME: DWZ
+  // FIXME: .debug_names have no DWZ support yet.
   DIEArray incomplete_types;
 
   for (const DebugNames::Entry &entry :
@@ -184,14 +184,14 @@ void DebugNamesDWARFIndex::GetCompleteObjCClass(
 
     if (die.GetAttributeValueAsUnsigned(DW_AT_APPLE_objc_complete_type, 0)) {
       // If we find the complete version we're done.
-      // FIXME: DWZ
+      // FIXME: .debug_names have no DWZ support yet.
       callback(nullptr /* main_unit */, die);
       return;
     }
     incomplete_types.push_back(*ref);
   }
 
-  // FIXME: DWZ
+  // FIXME: .debug_names have no DWZ support yet.
   auto dierefcallback = DIERefCallback(callback, class_name.GetStringRef());
   for (DIERef ref : incomplete_types)
     if (!dierefcallback(ref))
@@ -247,7 +247,7 @@ void DebugNamesDWARFIndex::GetFunctions(
     const CompilerDeclContext &parent_decl_ctx, uint32_t name_type_mask,
     llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)> callback) {
 
-  // FIXME: DWZ
+  // FIXME: .debug_names have no DWZ support yet.
   std::set<DWARFDebugInfoEntry *> seen;
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(name.GetStringRef())) {
@@ -256,16 +256,16 @@ void DebugNamesDWARFIndex::GetFunctions(
       continue;
 
     if (llvm::Optional<DIERef> ref = ToDIERef(entry)) {
-      // FIXME: DWZ
+      // FIXME: .debug_names have no DWZ support yet.
       DWARFUnit *main_unit = nullptr;
       if (!ProcessFunctionDIE(name.GetStringRef(), main_unit, *ref, dwarf,
                               parent_decl_ctx, name_type_mask,
                               [&](DWARFUnit *main_unit_check, DWARFDIE die) {
-                                // FIXME: DWZ
+                                // FIXME: .debug_names have no DWZ support yet.
                                 // lldbassert(main_unit_check == main_unit);
                                 if (!seen.insert(die.GetDIE()).second)
                                   return true;
-                                // FIXME: DWZ
+                                // FIXME: .debug_names have no DWZ support yet.
                                 return callback(main_unit_check, die);
                               }))
         return;
