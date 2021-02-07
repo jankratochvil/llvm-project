@@ -9,11 +9,10 @@
 #include "DWARFDIE.h"
 
 #include "DWARFASTParser.h"
-#include "DWARFCompileUnit.h"
 #include "DWARFDebugInfo.h"
 #include "DWARFDebugInfoEntry.h"
 #include "DWARFDeclContext.h"
-#include "SymbolFileDWARFDwo.h"
+#include "DWARFUnit.h"
 
 using namespace lldb_private;
 
