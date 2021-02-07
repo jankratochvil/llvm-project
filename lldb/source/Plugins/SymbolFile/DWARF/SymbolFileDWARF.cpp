@@ -637,9 +637,6 @@ DWARFCompileUnit *SymbolFileDWARF::GetDWARFCompileUnit(CompileUnit *comp_unit) {
   if (!comp_unit)
     return nullptr;
 
-  if (SymbolFileDWARFDwo *dwo = llvm::dyn_cast<SymbolFileDWARFDwo>(this))
-    return dwo->GetBaseSymbolFile().GetDWARFCompileUnit(comp_unit);
-
   // The compile unit ID is the index of the DWARF unit.
   DWARFUnit *dwarf_cu = DebugInfo().GetUnitAtIndex(comp_unit->GetID());
   if (!dwarf_cu)
