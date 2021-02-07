@@ -9,7 +9,6 @@
 #include "DWARFCompileUnit.h"
 #include "DWARFDebugAranges.h"
 #include "SymbolFileDWARFDebugMap.h"
-#include "SymbolFileDWARFDwo.h"
 
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineTable.h"
