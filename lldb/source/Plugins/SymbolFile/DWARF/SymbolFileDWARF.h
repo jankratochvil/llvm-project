@@ -265,10 +265,7 @@ public:
   virtual DWARFDIE GetDIE(const DIERef &die_ref,
                           DWARFUnit **main_unit_return = nullptr);
 
-  DWARFDIE GetDIE(lldb::user_id_t uid);
-
-  DWARFDIE GetDIEUnlocked(lldb::user_id_t uid,
-                          DWARFUnit **main_unit_return = nullptr);
+  DWARFDIE GetDIE(lldb::user_id_t uid, DWARFUnit **main_unit_return = nullptr);
 
   lldb::user_id_t GetUID(DWARFUnit *main_unit, const DWARFBaseDIE &die);
 
@@ -330,12 +327,6 @@ public:
 
   SymbolFileDWARFDwz *GetDwzSymbolFile() const { return m_dwz_symfile; }
   virtual bool GetIsDwz() const { return false; }
-
-  struct DecodedUID {
-    SymbolFileDWARF &dwarf;
-    DIERef ref;
-  };
-  llvm::Optional<DecodedUID> DecodeUIDUnlocked(lldb::user_id_t uid);
 
   llvm::Optional<uint32_t> GetDWARFUnitIndex(uint32_t cu_idx);
 
@@ -497,6 +488,10 @@ protected:
 
   void BuildCuTranslationTable();
 
+  struct DecodedUID {
+    SymbolFileDWARF &dwarf;
+    DIERef ref;
+  };
   llvm::Optional<DecodedUID> DecodeUID(lldb::user_id_t uid);
 
   void FindDwpSymbolFile();
