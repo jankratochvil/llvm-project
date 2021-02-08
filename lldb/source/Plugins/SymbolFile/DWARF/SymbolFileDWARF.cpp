@@ -3172,11 +3172,11 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
 VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                                              const DWARFDIE &die,
                                              const lldb::addr_t func_low_pc) {
-  //  if (die.GetDWARF() != this)
-  //    return die.GetDWARF()->ParseVariableDIE(sc, die, func_low_pc);
-
   if (!die)
     return nullptr;
+
+  if (die.GetDWARF() != this)
+    return die.GetDWARF()->ParseVariableDIE(sc, die, func_low_pc);
 
   DWARFUnit *main_unit = sc.GetDWARFCompileUnit();
 
