@@ -84,7 +84,7 @@ bool DWARFIndex::DIERefCallbackImpl::operator()(DIERef ref) const {
 
 bool DWARFIndex::DIEUIDCallbackImpl::operator()(user_id_t uid) const {
   DWARFUnit *main_unit;
-  if (DWARFDIE die = m_dwarf.GetDIEUnlocked(uid, &main_unit))
+  if (DWARFDIE die = m_dwarf.GetDIE(uid, &main_unit))
     return m_callback(main_unit, die);
   m_index.ReportInvalidDIEUID(uid, m_name);
   return true;
