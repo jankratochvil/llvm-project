@@ -1364,10 +1364,8 @@ SymbolFileDWARF::GetDIE(lldb::user_id_t uid, DWARFUnit **main_unit_return) {
 
   llvm::Optional<DecodedUID> decoded = DecodeUID(uid);
 
-  if (decoded) {
-    DWARFDIE die = decoded->dwarf.GetDIE(decoded->ref, main_unit_return);
-    return die;
-  }
+  if (decoded)
+    return decoded->dwarf.GetDIE(decoded->ref, main_unit_return);
 
   return DWARFDIE();
 }
