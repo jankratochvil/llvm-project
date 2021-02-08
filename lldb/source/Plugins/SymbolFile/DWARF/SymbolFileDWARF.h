@@ -263,8 +263,7 @@ public:
   virtual DWARFDIE GetDIE(const DIERef &die_ref,
                           DWARFUnit **main_unit_return = nullptr);
 
-  DWARFDIE GetDIE(lldb::user_id_t uid,
-                          DWARFUnit **main_unit_return = nullptr);
+  DWARFDIE GetDIE(lldb::user_id_t uid, DWARFUnit **main_unit_return = nullptr);
 
   lldb::user_id_t GetUID(DWARFUnit *main_unit, const DWARFBaseDIE &die);
 

@@ -1274,7 +1274,8 @@ void SymbolFileDWARF::ParseDeclsForContext(CompilerDeclContext decl_ctx) {
         decl_ctx);
 }
 
-user_id_t SymbolFileDWARF::GetUID(DWARFUnit *main_unit, const DWARFBaseDIE &die) {
+user_id_t SymbolFileDWARF::GetUID(DWARFUnit *main_unit,
+                                  const DWARFBaseDIE &die) {
   if (!die.IsValid())
     return LLDB_INVALID_UID;
   // if (die.GetCU()->GetUnitDIEOnly().Tag() != DW_TAG_partial_unit)
@@ -1316,9 +1317,9 @@ user_id_t SymbolFileDWARF::GetUID(DWARFUnit *main_unit, DIERef ref) {
 
 llvm::Optional<SymbolFileDWARF::DecodedUID>
 SymbolFileDWARF::DecodeUID(lldb::user_id_t uid) {
-   // This method can be called without going through the symbol vendor so we
-   // need to lock the module.
-   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  // This method can be called without going through the symbol vendor so we
+  // need to lock the module.
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   // Anytime we get a "lldb::user_id_t" from an lldb_private::SymbolFile API we
   // must make sure we use the correct DWARF file when resolving things. On
   // MacOSX, when using SymbolFileDWARFDebugMap, we will use multiple
@@ -1348,8 +1349,7 @@ SymbolFileDWARF::DecodeUID(lldb::user_id_t uid) {
 }
 
 DWARFDIE
-SymbolFileDWARF::GetDIE(lldb::user_id_t uid,
-                                DWARFUnit **main_unit_return) {
+SymbolFileDWARF::GetDIE(lldb::user_id_t uid, DWARFUnit **main_unit_return) {
   // This method can be called without going through the symbol vendor so we
   // need to lock the module.
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
