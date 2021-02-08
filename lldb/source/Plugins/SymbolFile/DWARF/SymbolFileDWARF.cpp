@@ -1307,7 +1307,7 @@ user_id_t SymbolFileDWARF::GetUID(DWARFUnit *main_unit, DIERef ref) {
 
 #ifndef NDEBUG
   DWARFUnit *main_unit_check;
-  DWARFDIE dwarfdie_check2 = GetDIEUnlocked(retval, &main_unit_check);
+  DWARFDIE dwarfdie_check2 = GetDIE(retval, &main_unit_check);
   lldbassert(dwarfdie_check2 == dwarfdie_check);
 #endif
 
@@ -1315,7 +1315,10 @@ user_id_t SymbolFileDWARF::GetUID(DWARFUnit *main_unit, DIERef ref) {
 }
 
 llvm::Optional<SymbolFileDWARF::DecodedUID>
-SymbolFileDWARF::DecodeUIDUnlocked(lldb::user_id_t uid) {
+SymbolFileDWARF::DecodeUID(lldb::user_id_t uid) {
+   // This method can be called without going through the symbol vendor so we
+   // need to lock the module.
+   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   // Anytime we get a "lldb::user_id_t" from an lldb_private::SymbolFile API we
   // must make sure we use the correct DWARF file when resolving things. On
   // MacOSX, when using SymbolFileDWARFDebugMap, we will use multiple
@@ -1344,19 +1347,14 @@ SymbolFileDWARF::DecodeUIDUnlocked(lldb::user_id_t uid) {
   return DecodedUID{*this, {dwo_num, section, die_offset}};
 }
 
-llvm::Optional<SymbolFileDWARF::DecodedUID>
-SymbolFileDWARF::DecodeUID(lldb::user_id_t uid) {
+DWARFDIE
+SymbolFileDWARF::GetDIE(lldb::user_id_t uid,
+                                DWARFUnit **main_unit_return) {
   // This method can be called without going through the symbol vendor so we
   // need to lock the module.
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
 
-  return DecodeUIDUnlocked(uid);
-}
-
-DWARFDIE
-SymbolFileDWARF::GetDIEUnlocked(lldb::user_id_t uid,
-                                DWARFUnit **main_unit_return) {
-  llvm::Optional<DecodedUID> decoded = DecodeUIDUnlocked(uid);
+  llvm::Optional<DecodedUID> decoded = DecodeUID(uid);
 
   if (decoded) {
     DWARFDIE die = decoded->dwarf.GetDIE(decoded->ref, main_unit_return);
@@ -1364,15 +1362,6 @@ SymbolFileDWARF::GetDIEUnlocked(lldb::user_id_t uid,
   }
 
   return DWARFDIE();
-}
-
-DWARFDIE
-SymbolFileDWARF::GetDIE(lldb::user_id_t uid) {
-  // This method can be called without going through the symbol vendor so we
-  // need to lock the module.
-  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-
-  return GetDIEUnlocked(uid);
 }
 
 CompilerDecl SymbolFileDWARF::GetDeclForUID(lldb::user_id_t type_uid) {
@@ -1383,7 +1372,7 @@ CompilerDecl SymbolFileDWARF::GetDeclForUID(lldb::user_id_t type_uid) {
   // SymbolFileDWARF::GetDIE(). See comments inside the
   // SymbolFileDWARF::GetDIE() for details.
   DWARFUnit *main_unit;
-  if (DWARFDIE die = GetDIEUnlocked(type_uid, &main_unit))
+  if (DWARFDIE die = GetDIE(type_uid, &main_unit))
     return GetDecl(main_unit, die);
   return CompilerDecl();
 }
@@ -1397,7 +1386,7 @@ SymbolFileDWARF::GetDeclContextForUID(lldb::user_id_t type_uid) {
   // SymbolFileDWARF::GetDIE(). See comments inside the
   // SymbolFileDWARF::GetDIE() for details.
   DWARFUnit *main_unit;
-  if (DWARFDIE die = GetDIEUnlocked(type_uid, &main_unit))
+  if (DWARFDIE die = GetDIE(type_uid, &main_unit))
     return GetDeclContext(main_unit, die);
   return CompilerDeclContext();
 }
@@ -1409,7 +1398,7 @@ SymbolFileDWARF::GetDeclContextContainingUID(lldb::user_id_t type_uid) {
   // SymbolFileDWARF::GetDIE(). See comments inside the
   // SymbolFileDWARF::GetDIE() for details.
   DWARFUnit *main_unit;
-  if (DWARFDIE die = GetDIEUnlocked(type_uid, &main_unit))
+  if (DWARFDIE die = GetDIE(type_uid, &main_unit))
     return GetContainingDeclContext(main_unit, die);
   return CompilerDeclContext();
 }
@@ -1420,7 +1409,7 @@ Type *SymbolFileDWARF::ResolveTypeUID(lldb::user_id_t type_uid) {
   // SymbolFileDWARF::GetDIE(). See comments inside the
   // SymbolFileDWARF::GetDIE() for details.
   DWARFUnit *main_unit;
-  if (DWARFDIE type_die = GetDIEUnlocked(type_uid, &main_unit))
+  if (DWARFDIE type_die = GetDIE(type_uid, &main_unit))
     return type_die.ResolveType(main_unit);
   else
     return nullptr;
@@ -1526,7 +1515,7 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
   }
 
   DWARFUnit *main_unit;
-  DWARFDIE dwarf_die = GetDIEUnlocked(die_it->getSecond(), &main_unit);
+  DWARFDIE dwarf_die = GetDIE(die_it->getSecond(), &main_unit);
   if (dwarf_die) {
     // Once we start resolving this type, remove it from the forward
     // declaration map in case anyone child members or other types require this
