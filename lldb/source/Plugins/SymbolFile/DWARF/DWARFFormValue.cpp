@@ -11,10 +11,8 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Stream.h"
 
-#include "DWARFCompileUnit.h"
 #include "DWARFDebugInfo.h"
 #include "DWARFFormValue.h"
 #include "DWARFUnit.h"
