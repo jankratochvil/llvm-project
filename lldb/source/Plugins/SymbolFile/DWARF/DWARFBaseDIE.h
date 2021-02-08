@@ -17,7 +17,6 @@
 class DIERef;
 class DWARFASTParser;
 class DWARFAttributes;
-class DWARFCompileUnit;
 class DWARFUnit;
 class DWARFDebugInfoEntry;
 class DWARFDeclContext;
