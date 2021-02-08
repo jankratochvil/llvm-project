@@ -17,12 +17,10 @@
 class DIERef;
 class DWARFASTParser;
 class DWARFAttributes;
-class DWARFCompileUnit;
 class DWARFUnit;
 class DWARFDebugInfoEntry;
 class DWARFDeclContext;
 class SymbolFileDWARF;
-class DWARFCompileUnit;
 
 class DWARFBaseDIE {
 public:
