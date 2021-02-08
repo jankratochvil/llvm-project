@@ -1609,8 +1609,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
       // it and cache the fact that we found a complete type for this die
       dwarf->GetDIEToType()[die.MainUnitToDIEPair(main_unit)] = type_sp.get();
       DWARFUnit *type_main_unit;
-      DWARFDIE type_die =
-          dwarf->GetDIEUnlocked(type_sp->GetID(), &type_main_unit);
+      DWARFDIE type_die = dwarf->GetDIE(type_sp->GetID(), &type_main_unit);
       clang::DeclContext *defn_decl_ctx =
           GetCachedClangDeclContextForDIE(type_main_unit, type_die);
       if (defn_decl_ctx)
