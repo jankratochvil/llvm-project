@@ -30,6 +30,9 @@ public:
 
   lldb_private::CompileUnit *GetCompUnit();
 
+  static DWARFCompileUnit *GetMainUnit(const lldb_private::SymbolContext &sc, SymbolFileDWARF **dwarf_return);
+  static DWARFCompileUnit *GetMainUnit(lldb_private::CompileUnit &comp_unit, SymbolFileDWARF **dwarf_return);
+
 private:
   DWARFCompileUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
                    const DWARFUnitHeader &header,
@@ -39,6 +42,8 @@ private:
 
   DWARFCompileUnit(const DWARFCompileUnit &) = delete;
   const DWARFCompileUnit &operator=(const DWARFCompileUnit &) = delete;
+
+  static DWARFCompileUnit *GetMainUnit(lldb_private::Module &module, lldb_private::CompileUnit &comp_unit, SymbolFileDWARF **dwarf_return);
 
   friend class DWARFUnit;
 };

@@ -12,6 +12,7 @@
 #include <set>
 
 #include "lldb/Host/PosixApi.h"
+#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
@@ -225,4 +226,19 @@ DWARFDebugInfo::GetDIE(const DIERef &die_ref, DWARFUnit **main_unit_return) {
     return cu->GetDIE(die_ref.die_offset());
   }
   return DWARFDIE(); // Not found
+}
+
+DWARFCompileUnit *DWARFDebugInfo::GetDWARFCompileUnit(CompileUnit &comp_unit) {
+  // The compile unit ID is the index of the DWARF unit.
+  DWARFUnit *dwarf_cu = GetUnitAtIndex(comp_unit.GetID());
+  if (!dwarf_cu)
+    return nullptr;
+
+  if (dwarf_cu->GetUserData() == nullptr)
+    dwarf_cu->SetUserData(&comp_unit);
+  else
+    lldbassert(dwarf_cu->GetUserData() == &comp_unit);
+
+  // It must be DWARFCompileUnit when it created a CompileUnit.
+  return llvm::cast<DWARFCompileUnit>(dwarf_cu);
 }
