@@ -368,10 +368,3 @@ const FileSpecList &CompileUnit::GetSupportFiles() {
 }
 
 void *CompileUnit::GetUserData() const { return m_user_data; }
-
-DWARFCompileUnit *CompileUnit::GetDWARFCompileUnit() {
-  SymbolFile *symfile = GetModule()->GetSymbolFile();
-  if (!symfile)
-    return nullptr;
-  return symfile->GetDWARFCompileUnit(this);
-}
