@@ -62,6 +62,8 @@ public:
     return m_dwarf.GetUID(main_unit, ref);
   }
 
+  DWARFCompileUnit *GetDWARFCompileUnit(lldb_private::CompileUnit &comp_unit);
+
 protected:
   typedef std::vector<DWARFUnitSP> UnitColl;
 

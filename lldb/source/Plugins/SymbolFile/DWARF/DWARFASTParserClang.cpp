@@ -150,7 +150,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
     return TypeSP();
 
   SymbolFileDWARF *dwarf;
-  DWARFUnit *main_unit = sc.GetDWARFCompileUnit(&dwarf);
+  DWARFUnit *main_unit = DWARFCompileUnit::GetMainUnit(sc, &dwarf);
 
   // If this type comes from a Clang module, recursively look in the
   // DWARF section of the .pcm file in the module cache. Clang
@@ -452,7 +452,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                                         DWARF_LOG_LOOKUPS));
 
   SymbolFileDWARF *dwarf;
-  DWARFUnit *main_unit = sc.GetDWARFCompileUnit(&dwarf);
+  DWARFUnit *main_unit = DWARFCompileUnit::GetMainUnit(sc, &dwarf);
   if (log) {
     DWARFDIE context_die;
     clang::DeclContext *context =
@@ -558,7 +558,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
   Log *log(LogChannelDWARF::GetLogIfAny(DWARF_LOG_TYPE_COMPLETION |
                                         DWARF_LOG_LOOKUPS));
   SymbolFileDWARF *dwarf;
-  DWARFUnit *main_unit = sc.GetDWARFCompileUnit(&dwarf);
+  DWARFUnit *main_unit = DWARFCompileUnit::GetMainUnit(sc, &dwarf);
   const dw_tag_t tag = die.Tag();
   LanguageType cu_language =
       SymbolFileDWARF::GetLanguage(*die.GetMainDWARFUnit(main_unit));
@@ -788,7 +788,7 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
   TypeSP type_sp;
 
   SymbolFileDWARF *dwarf;
-  DWARFUnit *main_unit = sc.GetDWARFCompileUnit(&dwarf);
+  DWARFUnit *main_unit = DWARFCompileUnit::GetMainUnit(sc, &dwarf);
   if (attrs.is_forward_declaration) {
     type_sp = ParseTypeFromClangModule(sc, die, log);
     if (type_sp)
@@ -899,7 +899,7 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const SymbolContext &sc,
                                         DWARF_LOG_LOOKUPS));
 
   SymbolFileDWARF *dwarf;
-  DWARFUnit *main_unit = sc.GetDWARFCompileUnit(&dwarf);
+  DWARFUnit *main_unit = DWARFCompileUnit::GetMainUnit(sc, &dwarf);
   const dw_tag_t tag = die.Tag();
 
   bool is_variadic = false;
@@ -1324,7 +1324,7 @@ TypeSP DWARFASTParserClang::ParseArrayType(const SymbolContext &sc,
                DW_TAG_value_to_name(tag), type_name_cstr);
 
   SymbolFileDWARF *dwarf;
-  DWARFUnit *main_unit = sc.GetDWARFCompileUnit(&dwarf);
+  DWARFUnit *main_unit = DWARFCompileUnit::GetMainUnit(sc, &dwarf);
   DWARFDIE type_die = attrs.type.Reference();
   Type *element_type = dwarf->ResolveTypeUID(main_unit, type_die, true);
 
@@ -1375,7 +1375,7 @@ TypeSP DWARFASTParserClang::ParsePointerToMemberType(
     const SymbolContext &sc, const DWARFDIE &die,
     const ParsedDWARFTypeAttributes &attrs) {
   SymbolFileDWARF *dwarf;
-  DWARFUnit *main_unit = sc.GetDWARFCompileUnit(&dwarf);
+  DWARFUnit *main_unit = DWARFCompileUnit::GetMainUnit(sc, &dwarf);
   Type *pointee_type =
       dwarf->ResolveTypeUID(main_unit, attrs.type.Reference(), true);
   Type *class_type =
@@ -1402,7 +1402,7 @@ TypeSP DWARFASTParserClang::UpdateSymbolContextScopeForType(
     return type_sp;
 
   SymbolFileDWARF *dwarf;
-  DWARFUnit *main_unit = sc.GetDWARFCompileUnit(&dwarf);
+  DWARFUnit *main_unit = DWARFCompileUnit::GetMainUnit(sc, &dwarf);
   TypeList &type_list = dwarf->GetTypeList();
   DWARFDIE sc_parent_die = SymbolFileDWARF::GetParentSymbolContextDIE(die);
   dw_tag_t sc_parent_tag = sc_parent_die.Tag();
@@ -1442,7 +1442,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   CompilerType clang_type;
   const dw_tag_t tag = die.Tag();
   SymbolFileDWARF *dwarf;
-  DWARFUnit *main_unit = sc.GetDWARFCompileUnit(&dwarf);
+  DWARFUnit *main_unit = DWARFCompileUnit::GetMainUnit(sc, &dwarf);
   LanguageType cu_language =
       SymbolFileDWARF::GetLanguage(*die.GetMainDWARFUnit(main_unit));
   Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_TYPE_COMPLETION |
@@ -2320,8 +2320,8 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
     }
 
     if (func_range.GetBaseAddress().IsValid()) {
-      DWARFUnit *main_unit = comp_unit.GetDWARFCompileUnit();
-      SymbolFileDWARF *dwarf = &main_unit->GetSymbolFileDWARF();
+      SymbolFileDWARF *dwarf;
+      DWARFUnit *main_unit = DWARFCompileUnit::GetMainUnit(comp_unit, &dwarf);
       Mangled func_name;
       if (mangled)
         func_name.SetValue(ConstString(mangled), true);
