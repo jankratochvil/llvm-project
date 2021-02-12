@@ -23,7 +23,5 @@ void DWARFTypeUnit::Dump(Stream *s) const {
 }
 
 DWARFUnit *DWARFTypeUnit::GetMainDWARFUnit(DWARFUnit *main_unit) {
-  main_unit = this;
-  main_unit = &main_unit->GetNonSkeletonUnit();
-  return main_unit;
+  return &GetNonSkeletonUnit();
 }
