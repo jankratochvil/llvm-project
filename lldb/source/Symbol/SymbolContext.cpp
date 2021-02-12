@@ -8,7 +8,6 @@
 
 #include "lldb/Symbol/SymbolContext.h"
 
-#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/Host.h"
