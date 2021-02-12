@@ -131,8 +131,10 @@ CompileUnit *DWARFCompileUnit::GetCompUnit() {
 }
 
 DWARFCompileUnit *
-DWARFCompileUnit::GetMainUnit(Module &module, CompileUnit *comp_unit, SymbolFileDWARF **dwarf_return) {
-  SymbolFileDWARF *dwarf = llvm::dyn_cast<SymbolFileDWARF>(module.GetSymbolFile());
+DWARFCompileUnit::GetMainUnit(Module &module, CompileUnit *comp_unit,
+                              SymbolFileDWARF **dwarf_return) {
+  SymbolFileDWARF *dwarf =
+      llvm::dyn_cast<SymbolFileDWARF>(module.GetSymbolFile());
   lldbassert(dwarf);
   if (dwarf_return)
     *dwarf_return = dwarf;
@@ -144,14 +146,16 @@ DWARFCompileUnit::GetMainUnit(Module &module, CompileUnit *comp_unit, SymbolFile
 }
 
 DWARFCompileUnit *
-DWARFCompileUnit::GetMainUnit(CompileUnit &comp_unit, SymbolFileDWARF **dwarf_return) {
+DWARFCompileUnit::GetMainUnit(CompileUnit &comp_unit,
+                              SymbolFileDWARF **dwarf_return) {
   ModuleSP module_sp = comp_unit.CalculateSymbolContextModule();
   lldbassert(module_sp);
   return GetMainUnit(*module_sp, &comp_unit, dwarf_return);
 }
 
 DWARFCompileUnit *
-DWARFCompileUnit::GetMainUnit(const SymbolContext &sc, SymbolFileDWARF **dwarf_return) {
+DWARFCompileUnit::GetMainUnit(const SymbolContext &sc,
+                              SymbolFileDWARF **dwarf_return) {
   lldbassert(sc.module_sp);
   return GetMainUnit(*sc.module_sp, sc.comp_unit, dwarf_return);
 }
