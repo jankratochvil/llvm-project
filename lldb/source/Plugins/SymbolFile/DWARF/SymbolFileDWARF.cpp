@@ -648,7 +648,8 @@ DWARFCompileUnit *SymbolFileDWARF::GetDWARFCompileUnit(CompileUnit *comp_unit) {
 
   ModuleSP module_sp = comp_unit->CalculateSymbolContextModule();
   lldbassert(module_sp);
-  SymbolFileDWARF *dwarf = llvm::dyn_cast<SymbolFileDWARF>(module_sp->GetSymbolFile());
+  SymbolFileDWARF *dwarf =
+      llvm::dyn_cast<SymbolFileDWARF>(module_sp->GetSymbolFile());
   if (!dwarf)
     return nullptr;
 
@@ -1155,7 +1156,7 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(
 
         block = parent_block;
       } else {
-	DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
+        DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
         BlockSP block_sp(new Block(die.GetID(dwarf_cu)));
         parent_block->AddChild(block_sp);
         block = block_sp.get();
@@ -3098,7 +3099,7 @@ size_t SymbolFileDWARF::ParseTypes(const SymbolContext &sc,
 
     if (parse_children && die.HasChildren()) {
       if (die.Tag() == DW_TAG_subprogram) {
-	DWARFUnit *main_unit = GetDWARFCompileUnit(sc.comp_unit);
+        DWARFUnit *main_unit = GetDWARFCompileUnit(sc.comp_unit);
         SymbolContext child_sc(sc);
         child_sc.function =
             sc.comp_unit->FindFunctionByUID(die.GetID(main_unit)).get();
