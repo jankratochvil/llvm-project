@@ -649,9 +649,7 @@ DWARFCompileUnit *SymbolFileDWARF::GetDWARFCompileUnit(CompileUnit *comp_unit) {
   ModuleSP module_sp = comp_unit->CalculateSymbolContextModule();
   lldbassert(module_sp);
   SymbolFileDWARF *dwarf =
-      llvm::dyn_cast<SymbolFileDWARF>(module_sp->GetSymbolFile());
-  if (!dwarf)
-    return nullptr;
+      llvm::cast<SymbolFileDWARF>(module_sp->GetSymbolFile());
 
   return dwarf->DebugInfo().GetDWARFCompileUnit(*comp_unit);
 }
