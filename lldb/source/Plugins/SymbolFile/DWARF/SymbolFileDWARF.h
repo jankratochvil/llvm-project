@@ -360,8 +360,7 @@ protected:
 
   lldb::CompUnitSP ParseCompileUnit(DWARFCompileUnit &dwarf_cu);
 
-  DWARFCompileUnit *
-  GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit);
+  DWARFCompileUnit *GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit);
 
   DWARFUnit *GetNextUnparsedDWARFCompileUnit(DWARFUnit *prev_cu);
 
