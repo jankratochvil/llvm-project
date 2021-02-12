@@ -43,7 +43,7 @@ private:
   DWARFCompileUnit(const DWARFCompileUnit &) = delete;
   const DWARFCompileUnit &operator=(const DWARFCompileUnit &) = delete;
 
-  static DWARFCompileUnit *GetMainUnit(lldb_private::Module &module, lldb_private::CompileUnit &comp_unit, SymbolFileDWARF **dwarf_return);
+  static DWARFCompileUnit *GetMainUnit(lldb_private::Module &module, lldb_private::CompileUnit *comp_unit, SymbolFileDWARF **dwarf_return);
 
   friend class DWARFUnit;
 };
