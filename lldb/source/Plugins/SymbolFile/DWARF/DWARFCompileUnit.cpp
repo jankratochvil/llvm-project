@@ -140,8 +140,7 @@ DWARFCompileUnit *
 DWARFCompileUnit::GetMainUnit(Module &module, CompileUnit *comp_unit,
                               SymbolFileDWARF **dwarf_return) {
   SymbolFileDWARF *dwarf =
-      llvm::dyn_cast<SymbolFileDWARF>(module.GetSymbolFile());
-  lldbassert(dwarf);
+      llvm::cast<SymbolFileDWARF>(module.GetSymbolFile());
   if (dwarf_return)
     *dwarf_return = dwarf;
   if (!comp_unit) {
