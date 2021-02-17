@@ -1,6 +1,6 @@
 // Test the FIR operations
-
-// RUN: tco -emit-fir %s | tco -emit-fir | FileCheck %s
+// Parse operations and check that we can reparse what we print.
+// RUN: fir-opt %s | fir-opt | FileCheck %s
 
 // CHECK-LABEL: func private @it1() -> !fir.int<4>
 // CHECK: func private @box1() -> !fir.boxchar<2>
@@ -31,6 +31,9 @@ func private @method_impl(!fir.box<!fir.type<derived3{f:f32}>>)
 // CHECK-LABEL: func private @get_func() -> (() -> ())
 func private @nop()
 func private @get_func() -> (() -> ())
+
+// CHECK-LABEL: func private @attr1() -> none attributes {a = #fir.opaque<>, b = #fir.opaque<>}
+func private @attr1() -> none attributes {a = #fir.opaque<>, b = #fir.opaque<>}
 
 // CHECK-LABEL:       func @instructions() {
 func @instructions() {
