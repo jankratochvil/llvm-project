@@ -267,6 +267,20 @@ func @cast_transfers(%A: memref<4x8xf32>) -> (vector<4x8xf32>) {
 
 // -----
 
+// CHECK-LABEL: cast_transfers
+func @cast_transfers(%A: tensor<4x8xf32>) -> (vector<4x8xf32>) {
+  %c0 = constant 0 : index
+  %f0 = constant 0.0 : f32
+  %0 = tensor.cast %A : tensor<4x8xf32> to tensor<?x?xf32>
+
+  // CHECK: vector.transfer_read %{{.*}} {masked = [false, false]} : tensor<4x8xf32>, vector<4x8xf32>
+  %1 = vector.transfer_read %0[%c0, %c0], %f0 : tensor<?x?xf32>, vector<4x8xf32>
+
+  return %1 : vector<4x8xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @insert_extract_transpose_2d(
 //  CHECK-SAME: %[[V:[a-zA-Z0-9]*]]: vector<2x3xf32>,
 //  CHECK-SAME: %[[F0:[a-zA-Z0-9]*]]: f32,
@@ -704,7 +718,7 @@ func @dead_load(%base: memref<?xf32>, %indices: vector<16xi32>,
   %c0 = constant 0 : index
   %0 = vector.maskedload %base[%c0], %mask, %passthru :
     memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
-  %1 = vector.gather %base[%indices], %mask, %passthru :
+  %1 = vector.gather %base[%c0][%indices], %mask, %passthru :
     memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
   %2 = vector.expandload %base[%c0], %mask, %passthru :
     memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
