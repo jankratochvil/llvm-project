@@ -9,6 +9,9 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_MODULE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_MODULE_H
 
+#include "support/Function.h"
+#include "support/Threading.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/JSON.h"
@@ -25,8 +28,6 @@ class TUScheduler;
 
 /// A Module contributes a vertical feature to clangd.
 ///
-/// FIXME: Extend this to support outgoing LSP calls.
-///
 /// The lifetime of a module is roughly:
 ///  - modules are created before the LSP server, in ClangdMain.cpp
 ///  - these modules are then passed to ClangdLSPServer in a ModuleSet
@@ -36,13 +37,26 @@ class TUScheduler;
 ///    Server facilities (scheduler etc) are available.
 ///  - ClangdServer will not be destroyed until all the requests are done.
 ///    FIXME: Block server shutdown until all the modules are idle.
+///  - When shutting down, ClangdServer will wait for all requests to
+///    finish, call stop(), and then blockUntilIdle().
 ///  - modules will be destroyed after ClangdLSPServer is destroyed.
+///
+/// Modules are not threadsafe in general. A module's entrypoints are:
+///   - method handlers registered in initializeLSP()
+///   - public methods called directly via ClangdServer.getModule<T>()->...
+///   - specific overridable "hook" methods inherited from Module
+/// Unless otherwise specified, these are only called on the main thread.
 ///
 /// Conventionally, standard modules live in the `clangd` namespace, and other
 /// exposed details live in a sub-namespace.
 class Module {
 public:
-  virtual ~Module() = default;
+  virtual ~Module() {
+    /// Perform shutdown sequence on destruction in case the ClangdServer was
+    /// never initialized. Usually redundant, but shutdown is idempotent.
+    stop();
+    blockUntilIdle(Deadline::infinity());
+  }
 
   /// Called by the server to connect this module to LSP.
   /// The module should register the methods/notifications/commands it handles,
@@ -63,6 +77,20 @@ public:
   /// Called by the server to prepare this module for use.
   void initialize(const Facilities &F);
 
+  /// Requests that the module cancel background work and go idle soon.
+  /// Does not block, the caller will call blockUntilIdle() instead.
+  /// After a module is stop()ed, it should not receive any more requests.
+  /// Called by the server when shutting down.
+  /// May be called multiple times, should be idempotent.
+  virtual void stop() {}
+
+  /// Waits until the module is idle (no background work) or a deadline expires.
+  /// In general all modules should eventually go idle, though it may take a
+  /// long time (e.g. background indexing).
+  /// Modules should go idle quickly if stop() has been called.
+  /// Called by the server when shutting down, and also by tests.
+  virtual bool blockUntilIdle(Deadline) { return true; }
+
 protected:
   /// Accessors for modules to access shared server facilities they depend on.
   Facilities &facilities();
@@ -72,6 +100,13 @@ protected:
   const SymbolIndex *index() { return facilities().Index; }
   /// The filesystem is used to read source files on disk.
   const ThreadsafeFS &fs() { return facilities().FS; }
+
+  /// Types of function objects that modules use for outgoing calls.
+  /// (Bound throuh LSPBinder, made available here for convenience).
+  template <typename P>
+  using OutgoingNotification = llvm::unique_function<void(const P &)>;
+  template <typename P, typename R>
+  using OutgoingMethod = llvm::unique_function<void(const P &, Callback<R>)>;
 
 private:
   llvm::Optional<Facilities> Fac;
