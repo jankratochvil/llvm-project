@@ -2258,7 +2258,8 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
             case DW_AT_description:
             default:
             case DW_AT_decl_file:
-              decl.SetFile(die.GetCU()->GetFile(form_value.Unsigned()));
+              decl.SetFile(attributes.CompileUnitAtIndex(i)->GetFile(
+                  form_value.Unsigned()));
               break;
             case DW_AT_decl_line:
               decl.SetLine(form_value.Unsigned());

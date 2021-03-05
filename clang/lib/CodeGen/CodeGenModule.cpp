@@ -552,6 +552,10 @@ void CodeGenModule::Release() {
     // Function ID tables for Control Flow Guard (cfguard=1).
     getModule().addModuleFlag(llvm::Module::Warning, "cfguard", 1);
   }
+  if (CodeGenOpts.EHContGuard) {
+    // Function ID tables for EH Continuation Guard.
+    getModule().addModuleFlag(llvm::Module::Warning, "ehcontguard", 1);
+  }
   if (CodeGenOpts.OptimizationLevel > 0 && CodeGenOpts.StrictVTablePointers) {
     // We don't support LTO with 2 with different StrictVTablePointers
     // FIXME: we could support it by stripping all the information introduced
@@ -3571,9 +3575,19 @@ llvm::Constant *CodeGenModule::GetAddrOfFunction(GlobalDecl GD,
   }
 
   StringRef MangledName = getMangledName(GD);
-  return GetOrCreateLLVMFunction(MangledName, Ty, GD, ForVTable, DontDefer,
-                                 /*IsThunk=*/false, llvm::AttributeList(),
-                                 IsForDefinition);
+  auto *F = GetOrCreateLLVMFunction(MangledName, Ty, GD, ForVTable, DontDefer,
+                                    /*IsThunk=*/false, llvm::AttributeList(),
+                                    IsForDefinition);
+  // Returns kernel handle for HIP kernel stub function.
+  if (LangOpts.CUDA && !LangOpts.CUDAIsDevice &&
+      cast<FunctionDecl>(GD.getDecl())->hasAttr<CUDAGlobalAttr>()) {
+    auto *Handle = getCUDARuntime().getKernelHandle(
+        cast<llvm::Function>(F->stripPointerCasts()), GD);
+    if (IsForDefinition)
+      return F;
+    return llvm::ConstantExpr::getBitCast(Handle, Ty->getPointerTo());
+  }
+  return F;
 }
 
 static const FunctionDecl *
@@ -5315,8 +5329,21 @@ ConstantAddress CodeGenModule::GetAddrOfGlobalTemporary(
 
   CharUnits Align = getContext().getTypeAlignInChars(MaterializedType);
 
-  if (llvm::Constant *Slot = MaterializedGlobalTemporaryMap[E])
-    return ConstantAddress(Slot, Align);
+  auto InsertResult = MaterializedGlobalTemporaryMap.insert({E, nullptr});
+  if (!InsertResult.second) {
+    // We've seen this before: either we already created it or we're in the
+    // process of doing so.
+    if (!InsertResult.first->second) {
+      // We recursively re-entered this function, probably during emission of
+      // the initializer. Create a placeholder. We'll clean this up in the
+      // outer call, at the end of this function.
+      llvm::Type *Type = getTypes().ConvertTypeForMem(MaterializedType);
+      InsertResult.first->second = new llvm::GlobalVariable(
+          getModule(), Type, false, llvm::GlobalVariable::InternalLinkage,
+          nullptr);
+    }
+    return ConstantAddress(InsertResult.first->second, Align);
+  }
 
   // FIXME: If an externally-visible declaration extends multiple temporaries,
   // we need to give each temporary the same name in every translation unit (and
@@ -5395,7 +5422,17 @@ ConstantAddress CodeGenModule::GetAddrOfGlobalTemporary(
         *this, GV, AddrSpace, LangAS::Default,
         Type->getPointerTo(
             getContext().getTargetAddressSpace(LangAS::Default)));
-  MaterializedGlobalTemporaryMap[E] = CV;
+
+  // Update the map with the new temporary. If we created a placeholder above,
+  // replace it with the new global now.
+  llvm::Constant *&Entry = MaterializedGlobalTemporaryMap[E];
+  if (Entry) {
+    Entry->replaceAllUsesWith(
+        llvm::ConstantExpr::getBitCast(CV, Entry->getType()));
+    llvm::cast<llvm::GlobalVariable>(Entry)->eraseFromParent();
+  }
+  Entry = CV;
+
   return ConstantAddress(CV, Align);
 }
 
