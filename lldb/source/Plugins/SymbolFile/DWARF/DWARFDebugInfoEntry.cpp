@@ -436,7 +436,7 @@ size_t DWARFDebugInfoEntry::GetAttributes(DWARFUnit *cu,
         }
         LLVM_FALLTHROUGH;
       default:
-        attributes.Append(cu, offset, attr, form);
+        attributes.Append(form_value, offset, attr);
         break;
       }
 

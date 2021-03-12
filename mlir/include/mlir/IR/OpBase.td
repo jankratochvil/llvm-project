@@ -240,7 +240,7 @@ class Dialect {
   string description = ?;
 
   // A list of dialects this dialect will load on construction as dependencies.
-  // These are dialects that this dialect may involved in canonicalization
+  // These are dialects that this dialect may involve in canonicalization
   // pattern or interfaces.
   list<string> dependentDialects = [];
 
@@ -2684,13 +2684,13 @@ class AttrParameter<string type, string desc> : AttrOrTypeParameter<type, desc>;
 class TypeParameter<string type, string desc> : AttrOrTypeParameter<type, desc>;
 
 // For StringRefs, which require allocation.
-class StringRefParameter<string desc> :
+class StringRefParameter<string desc = ""> :
     AttrOrTypeParameter<"::llvm::StringRef", desc> {
   let allocator = [{$_dst = $_allocator.copyInto($_self);}];
 }
 
 // For standard ArrayRefs, which require allocation.
-class ArrayRefParameter<string arrayOf, string desc> :
+class ArrayRefParameter<string arrayOf, string desc = ""> :
     AttrOrTypeParameter<"::llvm::ArrayRef<" # arrayOf # ">", desc> {
   let allocator = [{$_dst = $_allocator.copyInto($_self);}];
 }
