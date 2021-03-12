@@ -44,17 +44,20 @@ def LLVM_FMFAttr : DialectAttr<
   let returnType = "::mlir::LLVM::FastmathFlags";
   let convertFromStorage = "$_self.getFlags()";
   let constBuilderCall =
-          "::mlir::LLVM::FMFAttr::get($0, $_builder.getContext())";
+          "::mlir::LLVM::FMFAttr::get($_builder.getContext(), $0)";
 }
 
 def LOptDisableUnroll : I32EnumAttrCase<"disable_unroll", 1>;
 def LOptDisableLICM : I32EnumAttrCase<"disable_licm", 2>;
 def LOptInterleaveCount : I32EnumAttrCase<"interleave_count", 3>;
+def LOptDisablePipeline : I32EnumAttrCase<"disable_pipeline", 4>;
+def LOptPipelineInitiationInterval : I32EnumAttrCase<"pipeline_initiation_interval", 5>;
 
 def LoopOptionCase : I32EnumAttr<
     "LoopOptionCase",
     "LLVM loop option",
-    [LOptDisableUnroll, LOptDisableLICM, LOptInterleaveCount
+    [LOptDisableUnroll, LOptDisableLICM, LOptInterleaveCount,
+     LOptDisablePipeline, LOptPipelineInitiationInterval
     ]> {
   let cppNamespace = "::mlir::LLVM";
 }
@@ -249,7 +252,7 @@ def LLVM_FCmpOp : LLVM_Op<"fcmp", [
     [{
       build($_builder, $_state, IntegerType::get(lhs.getType().getContext(), 1),
             $_builder.getI64IntegerAttr(static_cast<int64_t>(predicate)), lhs, rhs,
-            ::mlir::LLVM::FMFAttr::get(fmf, $_builder.getContext()));
+            ::mlir::LLVM::FMFAttr::get($_builder.getContext(), fmf));
     }]>];
   let parser = [{ return parseCmpOp<FCmpPredicate>(parser, result); }];
   let printer = [{ printFCmpOp(p, *this); }];
@@ -335,7 +338,8 @@ def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpWithAlignmentAndAttributes {
                    UnitAttr:$nontemporal);
   let results = (outs LLVM_Type:$res);
   string llvmBuilder = [{
-    auto *inst = builder.CreateLoad($addr, $volatile_);
+    auto *inst = builder.CreateLoad(
+      $addr->getType()->getPointerElementType(), $addr, $volatile_);
   }] # setAlignmentCode # setNonTemporalMetadataCode # setAccessGroupsMetadataCode # [{
     $res = inst;
   }];
