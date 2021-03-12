@@ -1530,7 +1530,7 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
     if (log)
       GetObjectFile()->GetModule()->LogMessageVerboseBacktrace(
           log, "0x%8.8" PRIx64 ": %s '%s' resolving forward declaration...",
-          dwarf_die.GetID(nullptr), dwarf_die.GetTagAsCString(),
+          dwarf_die.GetID(main_unit), dwarf_die.GetTagAsCString(),
           type->GetName().AsCString());
     assert(compiler_type);
     if (DWARFASTParser *dwarf_ast =
@@ -3606,8 +3606,9 @@ size_t SymbolFileDWARF::ParseVariables(const SymbolContext &sc,
               GetObjectFile()->GetModule()->ReportError(
                   "parent 0x%8.8" PRIx64 " %s with no valid compile unit in "
                   "symbol context for 0x%8.8" PRIx64 " %s.\n",
-                  sc_parent_die.GetID(nullptr), sc_parent_die.GetTagAsCString(),
-                  orig_die.GetID(nullptr), orig_die.GetTagAsCString());
+                  sc_parent_die.GetID(main_unit),
+                  sc_parent_die.GetTagAsCString(), orig_die.GetID(main_unit),
+                  orig_die.GetTagAsCString());
             }
             break;
 
@@ -3649,7 +3650,7 @@ size_t SymbolFileDWARF::ParseVariables(const SymbolContext &sc,
             GetObjectFile()->GetModule()->ReportError(
                 "didn't find appropriate parent DIE for variable list for "
                 "0x%8.8" PRIx64 " %s.\n",
-                orig_die.GetID(nullptr), orig_die.GetTagAsCString());
+                orig_die.GetID(main_unit), orig_die.GetTagAsCString());
             break;
           }
         }
