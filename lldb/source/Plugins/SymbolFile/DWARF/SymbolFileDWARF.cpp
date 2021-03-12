@@ -3597,8 +3597,9 @@ size_t SymbolFileDWARF::ParseVariables(const SymbolContext &sc,
               GetObjectFile()->GetModule()->ReportError(
                   "parent 0x%8.8" PRIx64 " %s with no valid compile unit in "
                   "symbol context for 0x%8.8" PRIx64 " %s.\n",
-                  sc_parent_die.GetID(main_unit), sc_parent_die.GetTagAsCString(),
-                  orig_die.GetID(main_unit), orig_die.GetTagAsCString());
+                  sc_parent_die.GetID(main_unit),
+                  sc_parent_die.GetTagAsCString(), orig_die.GetID(main_unit),
+                  orig_die.GetTagAsCString());
             }
             break;
 
