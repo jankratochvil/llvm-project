@@ -9,10 +9,11 @@
 # RUN:   -o exit | FileCheck %s
 
 # CHECK-LABEL: (lldb) p N::A::m
-# CHECK      : (int (*)()) $0 = 0x{{[0-9a-f]*}}`N::A::m())
+# CHECK-NEXT: (int (*)()) $0 = 0x{{.*}}`N::A::m())
 # CHECK-LABEL: (lldb) p N::m
 # Failing case was:
-# CHECK      : (int (*)()) $1 = 0x{{[0-9a-f]*}}`N::A::m())
+# error: <user expression 1>:1:4: no member named 'm' in namespace 'N'
+# CHECK-NEXT: (int (*)()) $1 = 0x{{.*}}`N::A::m())
 
 	.text
 	.globl	main                            # -- Begin function main
