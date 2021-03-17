@@ -42,6 +42,11 @@ std::vector<SyntheticSection *> macho::syntheticSections;
 
 SyntheticSection::SyntheticSection(const char *segname, const char *name)
     : OutputSection(SyntheticKind, name), segname(segname) {
+  isec = make<InputSection>();
+  isec->segname = segname;
+  isec->name = name;
+  isec->parent = this;
+  isec->outSecOff = 0;
   syntheticSections.push_back(this);
 }
 
@@ -118,12 +123,6 @@ void MachHeaderSection::writeTo(uint8_t *buf) const {
 PageZeroSection::PageZeroSection()
     : SyntheticSection(segment_names::pageZero, section_names::pageZero) {}
 
-uint64_t Location::getVA() const {
-  if (const auto *isec = section.dyn_cast<const InputSection *>())
-    return isec->getVA() + offset;
-  return section.get<const OutputSection *>()->addr + offset;
-}
-
 RebaseSection::RebaseSection()
     : LinkEditSection(segment_names::linkEdit, section_names::rebase) {}
 
@@ -186,16 +185,11 @@ void RebaseSection::finalizeContents() {
   os << static_cast<uint8_t>(REBASE_OPCODE_SET_TYPE_IMM | REBASE_TYPE_POINTER);
 
   llvm::sort(locations, [](const Location &a, const Location &b) {
-    return a.getVA() < b.getVA();
+    return a.isec->getVA() < b.isec->getVA();
   });
-  for (const Location &loc : locations) {
-    if (const auto *isec = loc.section.dyn_cast<const InputSection *>()) {
-      encodeRebase(isec->parent, isec->outSecOff + loc.offset, lastRebase, os);
-    } else {
-      const auto *osec = loc.section.get<const OutputSection *>();
-      encodeRebase(osec, loc.offset, lastRebase, os);
-    }
-  }
+  for (const Location &loc : locations)
+    encodeRebase(loc.isec->parent, loc.isec->outSecOff + loc.offset, lastRebase,
+                 os);
   if (lastRebase.consecutiveCount != 0)
     encodeDoRebase(lastRebase, os);
 
@@ -218,7 +212,7 @@ void NonLazyPointerSectionBase::addEntry(Symbol *sym) {
     assert(!sym->isInGot());
     sym->gotIndex = entries.size() - 1;
 
-    addNonLazyBindingEntries(sym, this, sym->gotIndex * WordSize);
+    addNonLazyBindingEntries(sym, isec, sym->gotIndex * WordSize);
   }
 }
 
@@ -336,14 +330,9 @@ void BindingSection::finalizeContents() {
       encodeDylibOrdinal(ordinal, os);
       lastBinding.ordinal = ordinal;
     }
-    if (auto *isec = b.target.section.dyn_cast<const InputSection *>()) {
-      encodeBinding(b.dysym, isec->parent, isec->outSecOff + b.target.offset,
-                    b.addend, /*isWeakBinding=*/false, lastBinding, os);
-    } else {
-      auto *osec = b.target.section.get<const OutputSection *>();
-      encodeBinding(b.dysym, osec, b.target.offset, b.addend,
-                    /*isWeakBinding=*/false, lastBinding, os);
-    }
+    encodeBinding(b.dysym, b.target.isec->parent,
+                  b.target.isec->outSecOff + b.target.offset, b.addend,
+                  /*isWeakBinding=*/false, lastBinding, os);
   }
   if (!bindings.empty())
     os << static_cast<uint8_t>(BIND_OPCODE_DONE);
@@ -369,16 +358,10 @@ void WeakBindingSection::finalizeContents() {
              [](const WeakBindingEntry &a, const WeakBindingEntry &b) {
                return a.target.getVA() < b.target.getVA();
              });
-  for (const WeakBindingEntry &b : bindings) {
-    if (const auto *isec = b.target.section.dyn_cast<const InputSection *>()) {
-      encodeBinding(b.symbol, isec->parent, isec->outSecOff + b.target.offset,
-                    b.addend, /*isWeakBinding=*/true, lastBinding, os);
-    } else {
-      const auto *osec = b.target.section.get<const OutputSection *>();
-      encodeBinding(b.symbol, osec, b.target.offset, b.addend,
-                    /*isWeakBinding=*/true, lastBinding, os);
-    }
-  }
+  for (const WeakBindingEntry &b : bindings)
+    encodeBinding(b.symbol, b.target.isec->parent,
+                  b.target.isec->outSecOff + b.target.offset, b.addend,
+                  /*isWeakBinding=*/true, lastBinding, os);
   if (!bindings.empty() || !definitions.empty())
     os << static_cast<uint8_t>(BIND_OPCODE_DONE);
 }
@@ -396,23 +379,21 @@ bool macho::needsBinding(const Symbol *sym) {
 }
 
 void macho::addNonLazyBindingEntries(const Symbol *sym,
-                                     SectionPointerUnion section,
-                                     uint64_t offset, int64_t addend) {
+                                     const InputSection *isec, uint64_t offset,
+                                     int64_t addend) {
   if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
-    in.binding->addEntry(dysym, section, offset, addend);
+    in.binding->addEntry(dysym, isec, offset, addend);
     if (dysym->isWeakDef())
-      in.weakBinding->addEntry(sym, section, offset, addend);
+      in.weakBinding->addEntry(sym, isec, offset, addend);
   } else if (auto *defined = dyn_cast<Defined>(sym)) {
-    in.rebase->addEntry(section, offset);
+    in.rebase->addEntry(isec, offset);
     if (defined->isExternalWeakDef())
-      in.weakBinding->addEntry(sym, section, offset, addend);
-  } else if (!isa<DSOHandle>(sym)) {
+      in.weakBinding->addEntry(sym, isec, offset, addend);
+  } else {
     // Undefined symbols are filtered out in scanRelocations(); we should never
     // get here
     llvm_unreachable("cannot bind to an undefined symbol");
   }
-  // TODO: understand the DSOHandle case better.
-  // Is it bindable?  Add a new test?
 }
 
 StubsSection::StubsSection()
@@ -538,7 +519,7 @@ void LazyBindingSection::writeTo(uint8_t *buf) const {
 void LazyBindingSection::addEntry(DylibSymbol *dysym) {
   if (entries.insert(dysym)) {
     dysym->stubsHelperIndex = entries.size() - 1;
-    in.rebase->addEntry(in.lazyPointers, dysym->stubsIndex * WordSize);
+    in.rebase->addEntry(in.lazyPointers->isec, dysym->stubsIndex * WordSize);
   }
 }
 
@@ -572,9 +553,9 @@ void macho::prepareBranchTarget(Symbol *sym) {
   if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
     if (in.stubs->addEntry(dysym)) {
       if (sym->isWeakDef()) {
-        in.binding->addEntry(dysym, in.lazyPointers,
+        in.binding->addEntry(dysym, in.lazyPointers->isec,
                              sym->stubsIndex * WordSize);
-        in.weakBinding->addEntry(sym, in.lazyPointers,
+        in.weakBinding->addEntry(sym, in.lazyPointers->isec,
                                  sym->stubsIndex * WordSize);
       } else {
         in.lazyBinding->addEntry(dysym);
@@ -583,8 +564,8 @@ void macho::prepareBranchTarget(Symbol *sym) {
   } else if (auto *defined = dyn_cast<Defined>(sym)) {
     if (defined->isExternalWeakDef()) {
       if (in.stubs->addEntry(sym)) {
-        in.rebase->addEntry(in.lazyPointers, sym->stubsIndex * WordSize);
-        in.weakBinding->addEntry(sym, in.lazyPointers,
+        in.rebase->addEntry(in.lazyPointers->isec, sym->stubsIndex * WordSize);
+        in.weakBinding->addEntry(sym, in.lazyPointers->isec,
                                  sym->stubsIndex * WordSize);
       }
     }
@@ -594,18 +575,37 @@ void macho::prepareBranchTarget(Symbol *sym) {
 ExportSection::ExportSection()
     : LinkEditSection(segment_names::linkEdit, section_names::export_) {}
 
+static void validateExportSymbol(const Defined *defined) {
+  StringRef symbolName = defined->getName();
+  if (defined->privateExtern && config->exportedSymbols.match(symbolName))
+    error("cannot export hidden symbol " + symbolName + "\n>>> defined in " +
+          toString(defined->getFile()));
+}
+
+static bool shouldExportSymbol(const Defined *defined) {
+  if (defined->privateExtern)
+    return false;
+  // TODO: Is this a performance bottleneck? If a build has mostly
+  // global symbols in the input but uses -exported_symbols to filter
+  // out most of them, then it would be better to set the value of
+  // privateExtern at parse time instead of calling
+  // exportedSymbols.match() more than once.
+  //
+  // Measurements show that symbol ordering (which again looks up
+  // every symbol in a hashmap) is the biggest bottleneck when linking
+  // chromium_framework, so this will likely be worth optimizing.
+  return config->exportedSymbols.empty()
+             ? !config->unexportedSymbols.match(defined->getName())
+             : config->exportedSymbols.match(defined->getName());
+}
+
 void ExportSection::finalizeContents() {
   trieBuilder.setImageBase(in.header->addr);
   for (const Symbol *sym : symtab->getSymbols()) {
     if (const auto *defined = dyn_cast<Defined>(sym)) {
-      if (config->exportedSymbols.empty()) {
-        if (defined->privateExtern ||
-            config->unexportedSymbols.match(defined->getName()))
-          continue;
-      } else {
-        if (!config->exportedSymbols.match(defined->getName()))
-          continue;
-      }
+      validateExportSymbol(defined);
+      if (!shouldExportSymbol(defined))
+        continue;
       trieBuilder.addSymbol(*defined);
       hasWeakSymbol = hasWeakSymbol || sym->isWeakDef();
     }
@@ -616,8 +616,7 @@ void ExportSection::finalizeContents() {
 void ExportSection::writeTo(uint8_t *buf) const { trieBuilder.writeTo(buf); }
 
 FunctionStartsSection::FunctionStartsSection()
-    : LinkEditSection(segment_names::linkEdit, section_names::functionStarts_) {
-}
+    : LinkEditSection(segment_names::linkEdit, section_names::functionStarts) {}
 
 void FunctionStartsSection::finalizeContents() {
   raw_svector_ostream os{contents};
@@ -786,9 +785,10 @@ void SymtabSection::finalizeContents() {
 
   for (Symbol *sym : symtab->getSymbols()) {
     if (auto *defined = dyn_cast<Defined>(sym)) {
+      if (defined->linkerInternal)
+        continue;
       assert(defined->isExternal());
-      (void)defined;
-      addSymbol(externalSymbols, sym);
+      addSymbol(externalSymbols, defined);
     } else if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
       if (dysym->isReferenced())
         addSymbol(undefinedSymbols, sym);
@@ -827,7 +827,7 @@ void SymtabSection::writeTo(uint8_t *buf) const {
     // TODO populate n_desc with more flags
     if (auto *defined = dyn_cast<Defined>(entry.sym)) {
       uint8_t scope = 0;
-      if (defined->privateExtern) {
+      if (!shouldExportSymbol(defined)) {
         // Private external -- dylib scoped symbol.
         // Promote to non-external at link time.
         assert(defined->isExternal() && "invalid input file");
