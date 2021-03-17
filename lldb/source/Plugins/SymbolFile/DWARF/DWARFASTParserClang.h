@@ -240,6 +240,7 @@ private:
   lldb::TypeSP ParsePointerToMemberType(const lldb_private::SymbolContext &sc,
                                         const DWARFDIE &die,
                                         const ParsedDWARFTypeAttributes &attrs);
+  bool NamespaceDIEIsInline(DWARFUnit *main_unit, const DWARFDIE &nsdie) const;
 };
 
 /// Parsed form of all attributes that are relevant for type reconstruction.
