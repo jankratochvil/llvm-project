@@ -36,6 +36,7 @@ enum NodeType : unsigned {
   /// The lhs and rhs are XLenVT integers. The true and false values can be
   /// integer or floating point.
   SELECT_CC,
+  BR_CC,
   BuildPairF64,
   SplitF64,
   TAIL,
@@ -406,6 +407,17 @@ public:
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       bool *Fast = nullptr) const override;
 
+  bool splitValueIntoRegisterParts(SelectionDAG &DAG, const SDLoc &DL,
+                                   SDValue Val, SDValue *Parts,
+                                   unsigned NumParts, MVT PartVT,
+                                   Optional<CallingConv::ID> CC) const override;
+
+  SDValue
+  joinRegisterPartsIntoValue(SelectionDAG &DAG, const SDLoc &DL,
+                             const SDValue *Parts, unsigned NumParts,
+                             MVT PartVT, EVT ValueVT,
+                             Optional<CallingConv::ID> CC) const override;
+
   static RISCVVLMUL getLMUL(MVT VT);
   static unsigned getRegClassIDForLMUL(RISCVVLMUL LMul);
   static unsigned getSubregIndexByMVT(MVT VT, unsigned Index);
@@ -441,6 +453,7 @@ private:
   SDValue lowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
@@ -464,6 +477,10 @@ private:
                                                SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorLoadToRVV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorStoreToRVV(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFixedLengthVectorMaskedLoadToRVV(SDValue Op,
+                                                SelectionDAG &DAG) const;
+  SDValue lowerFixedLengthVectorMaskedStoreToRVV(SDValue Op,
+                                                 SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorSetccToRVV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorLogicOpToRVV(SDValue Op, SelectionDAG &DAG,
                                              unsigned MaskOpc,
