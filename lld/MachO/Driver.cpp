@@ -921,7 +921,8 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
 
   config->adhocCodesign = args.hasFlag(
       OPT_adhoc_codesign, OPT_no_adhoc_codesign,
-      config->target.Arch == AK_arm64 || config->target.Arch == AK_arm64e);
+      (config->target.Arch == AK_arm64 || config->target.Arch == AK_arm64e) &&
+          config->target.Platform == PlatformKind::macOS);
 
   if (args.hasArg(OPT_v)) {
     message(getLLDVersion());
@@ -1029,9 +1030,26 @@ bool macho::link(ArrayRef<const char *> argsArr, bool canExitEarly,
         return false;
       }
     }
+    // Literal exported-symbol names must be defined, but glob
+    // patterns need not match.
+    for (const CachedHashStringRef &cachedName :
+         config->exportedSymbols.literals) {
+      if (const Symbol *sym = symtab->find(cachedName))
+        if (isa<Defined>(sym))
+          continue;
+      error("undefined symbol " + cachedName.val() +
+            "\n>>> referenced from option -exported_symbo(s_list)");
+    }
 
     createSyntheticSections();
-    symtab->addDSOHandle(in.header);
+
+    // The Itanium C++ ABI requires dylibs to pass a pointer to __cxa_atexit
+    // which does e.g. cleanup of static global variables. The ABI document says
+    // that the pointer can point to any address in one of the dylib's segments,
+    // but in practice ld64 seems to set it to point to the header, so that's
+    // what's implemented here.
+    symtab->addSynthetic("___dso_handle", in.header->isec, 0,
+                         /*privateExtern=*/true, /*linkerInternal=*/true);
 
     for (const Arg *arg : args.filtered(OPT_sectcreate)) {
       StringRef segName = arg->getValue(0);
