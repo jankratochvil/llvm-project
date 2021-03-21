@@ -639,7 +639,8 @@ DWARFCompileUnit *SymbolFileDWARF::GetDWARFCompileUnit(CompileUnit *comp_unit) {
 
   // Compile unit ID is index of the DWARF unit.
   // GetBaseSymbolFile() is for the case we are called from SymbolFileDWARFDwo.
-  DWARFUnit *dwarf_cu = GetBaseSymbolFile().DebugInfo().GetUnitAtIndex(comp_unit->GetID());
+  DWARFUnit *dwarf_cu =
+      GetBaseSymbolFile().DebugInfo().GetUnitAtIndex(comp_unit->GetID());
   if (dwarf_cu && dwarf_cu->GetUserData() == nullptr)
     dwarf_cu->SetUserData(comp_unit);
 
