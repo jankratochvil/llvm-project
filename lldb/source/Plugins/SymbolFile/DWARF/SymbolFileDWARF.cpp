@@ -646,12 +646,13 @@ DWARFCompileUnit *SymbolFileDWARF::GetDWARFCompileUnit(CompileUnit *comp_unit) {
   if (!comp_unit)
     return nullptr;
 
-  ModuleSP module_sp = comp_unit->CalculateSymbolContextModule();
-  lldbassert(module_sp);
-  SymbolFileDWARF *dwarf =
-      llvm::cast<SymbolFileDWARF>(module_sp->GetSymbolFile());
+  // The compile unit ID is the index of the DWARF unit.
+  DWARFUnit *dwarf_cu = DebugInfo().GetUnitAtIndex(comp_unit->GetID());
+  if (dwarf_cu && dwarf_cu->GetUserData() == nullptr)
+    dwarf_cu->SetUserData(comp_unit);
 
-  return dwarf->DebugInfo().GetDWARFCompileUnit(*comp_unit);
+  // It must be DWARFCompileUnit when it created a CompileUnit.
+  return llvm::cast_or_null<DWARFCompileUnit>(dwarf_cu);
 }
 
 DWARFDebugRanges *SymbolFileDWARF::GetDebugRanges() {
