@@ -325,6 +325,8 @@ public:
 
   llvm::Optional<uint32_t> GetDWARFUnitIndex(uint32_t cu_idx);
 
+  virtual SymbolFileDWARF &GetBaseSymbolFile() { return *this; }
+
 protected:
   typedef llvm::DenseMap<std::pair<DWARFUnit *, const DWARFDebugInfoEntry *>,
                          lldb_private::Type *>
