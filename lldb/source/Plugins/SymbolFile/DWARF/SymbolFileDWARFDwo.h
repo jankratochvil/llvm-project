@@ -45,6 +45,8 @@ public:
 
   llvm::Optional<uint32_t> GetDwoNum() override { return GetID() >> 32; }
 
+  SymbolFileDWARF &GetBaseSymbolFile() override { return m_base_symbol_file; }
+
 protected:
   DIEToTypePtr &GetDIEToType() override;
 
@@ -62,8 +64,6 @@ protected:
   lldb::TypeSP FindCompleteObjCDefinitionTypeForDIE(
       const DWARFDIE &die, lldb_private::ConstString type_name,
       bool must_be_implementation) override;
-
-  SymbolFileDWARF &GetBaseSymbolFile() { return m_base_symbol_file; }
 
   /// If this file contains exactly one compile unit, this function will return
   /// it. Otherwise it returns nullptr.
