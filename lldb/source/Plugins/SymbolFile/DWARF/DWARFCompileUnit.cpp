@@ -133,13 +133,17 @@ CompileUnit *DWARFCompileUnit::GetCompUnit() {
 DWARFCompileUnit *
 DWARFCompileUnit::GetMainUnit(Module &module, CompileUnit *comp_unit,
                               SymbolFileDWARF **dwarf_return) {
-  // SymbolFileDWARFDebugMap will be nullptr but it does not need MainUnit/DWZ.
-  SymbolFileDWARF *dwarf =
-      llvm::dyn_cast<SymbolFileDWARF>(module.GetSymbolFile());
+  SymbolFile *symfile = module.GetSymbolFile();
+  SymbolFileDWARF *dwarf;
+  if (auto *debug_map_symfile = llvm::dyn_cast<SymbolFileDWARFDebugMap>(symfile)) {
+    lldbassert(comp_unit);
+    dwarf = debug_map_symfile->GetSymbolFile(*comp_unit);
+  } else {
+    dwarf = llvm::dyn_cast<SymbolFileDWARF>(symfile);
+    lldbassert(dwarf);
+  }
   if (dwarf_return)
     *dwarf_return = dwarf;
-  if (!dwarf)
-    return nullptr;
   if (!comp_unit) {
     lldbassert(dwarf_return);
     return nullptr;
