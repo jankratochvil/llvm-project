@@ -601,8 +601,14 @@ def _HASH_HASH_HASH : Flag<["-"], "###">, Flags<[NoXarchOption, CoreOption, Flan
 def _DASH_DASH : Option<["--"], "", KIND_REMAINING_ARGS>,
     Flags<[NoXarchOption, CoreOption]>;
 def A : JoinedOrSeparate<["-"], "A">, Flags<[RenderJoined]>, Group<gfortran_Group>;
-def B : JoinedOrSeparate<["-"], "B">, MetaVarName<"<dir>">,
-    HelpText<"Add <dir> to search path for binaries and object files used implicitly">;
+def B : JoinedOrSeparate<["-"], "B">, MetaVarName<"<prefix>">,
+    HelpText<"Search $prefix/$triple-$file and $prefix$file for executables, libraries, "
+    "includes, and data files used by the compiler. $prefix may or may not be a directory">;
+def gcc_toolchain : Joined<["--"], "gcc-toolchain=">, Flags<[NoXarchOption]>,
+  HelpText<"Search for GCC installation in the specified directory on targets which commonly use GCC. "
+  "The directory usually contains 'lib{,32,64}/gcc{,-cross}/$triple' and 'include'. If specified, "
+  "sysroot is skipped for GCC detection. Note: executables (e.g. ld) used by the compiler are not "
+  "overridden by the selected GCC installation">;
 def CC : Flag<["-"], "CC">, Flags<[CC1Option]>, Group<Preprocessor_Group>,
     HelpText<"Include comments from within macros in preprocessed output">,
     MarshallingInfoFlag<PreprocessorOutputOpts<"ShowMacroComments">>;
@@ -980,11 +986,6 @@ def dependency_dot : Separate<["-"], "dependency-dot">, Flags<[CC1Option]>,
 def module_dependency_dir : Separate<["-"], "module-dependency-dir">,
   Flags<[CC1Option]>, HelpText<"Directory to dump module dependencies to">,
   MarshallingInfoString<DependencyOutputOpts<"ModuleDependencyOutputDir">>;
-def module_dir : Separate<["-"], "module-dir">, Flags<[FlangOption,FC1Option]>, MetaVarName<"<dir>">,
-  HelpText<"Put MODULE files in <dir>">,
-  DocBrief<[{This option specifies where to put .mod files for compiled modules.
-It is also added to the list of directories to be searched by an USE statement.
-The default is the current directory.}]>;
 def dsym_dir : JoinedOrSeparate<["-"], "dsym-dir">,
   Flags<[NoXarchOption, RenderAsInput]>,
   HelpText<"Directory to output dSYM's (if any) to">, MetaVarName<"<dir>">;
@@ -1125,6 +1126,7 @@ def fcoverage_compilation_dir_EQ : Joined<["-"], "fcoverage-compilation-dir=">,
     HelpText<"The compilation directory to embed in the coverage mapping.">,
     MarshallingInfoString<CodeGenOpts<"CoverageCompilationDir">>;
 def ffile_compilation_dir_EQ : Joined<["-"], "ffile-compilation-dir=">, Group<f_Group>,
+    Flags<[CoreOption]>,
     HelpText<"The compilation directory to embed in the debug info and coverage mapping.">;
 defm debug_info_for_profiling : BoolFOption<"debug-info-for-profiling",
   CodeGenOpts<"DebugInfoForProfiling">, DefaultFalse,
@@ -3124,8 +3126,6 @@ def mharden_sls_EQ : Joined<["-"], "mharden-sls=">,
   HelpText<"Select straight-line speculation hardening scope">;
 
 def msimd128 : Flag<["-"], "msimd128">, Group<m_wasm_Features_Group>;
-def munimplemented_simd128 : Flag<["-"], "munimplemented-simd128">, Group<m_wasm_Features_Group>;
-def mno_unimplemented_simd128 : Flag<["-"], "mno-unimplemented-simd128">, Group<m_wasm_Features_Group>;
 def mno_simd128 : Flag<["-"], "mno-simd128">, Group<m_wasm_Features_Group>;
 def mnontrapping_fptoint : Flag<["-"], "mnontrapping-fptoint">, Group<m_wasm_Features_Group>;
 def mno_nontrapping_fptoint : Flag<["-"], "mno-nontrapping-fptoint">, Group<m_wasm_Features_Group>;
@@ -3318,10 +3318,6 @@ def mstack_protector_guard_offset_EQ : Joined<["-"], "mstack-protector-guard-off
 def mstack_protector_guard_reg_EQ : Joined<["-"], "mstack-protector-guard-reg=">, Group<m_Group>, Flags<[CC1Option]>,
   HelpText<"Use the given reg for addressing the stack-protector guard">,
   MarshallingInfoString<CodeGenOpts<"StackProtectorGuardReg">, [{"none"}]>;
-def mpie_copy_relocations : Flag<["-"], "mpie-copy-relocations">,
-  Alias<fdirect_access_external_data>, Group<m_Group>;
-def mno_pie_copy_relocations : Flag<["-"], "mno-pie-copy-relocations">,
-  Alias<fno_direct_access_external_data>, Group<m_Group>;
 def mfentry : Flag<["-"], "mfentry">, HelpText<"Insert calls to fentry at function entry (x86/SystemZ only)">,
   Flags<[CC1Option]>, Group<m_Group>,
   MarshallingInfoFlag<CodeGenOpts<"CallFEntry">>;
@@ -3567,6 +3563,8 @@ def print_targets : Flag<["-", "--"], "print-targets">,
   HelpText<"Print the registered targets">;
 def print_rocm_search_dirs : Flag<["-", "--"], "print-rocm-search-dirs">,
   HelpText<"Print the paths used for finding ROCm installation">;
+def print_runtime_dir : Flag<["-", "--"], "print-runtime-dir">,
+  HelpText<"Print the directory pathname containing clangs runtime libraries">;
 def private__bundle : Flag<["-"], "private_bundle">;
 def pthreads : Flag<["-"], "pthreads">;
 defm pthread : BoolOption<"", "pthread",
@@ -3672,8 +3670,6 @@ def print_supported_cpus : Flag<["-", "--"], "print-supported-cpus">,
   MarshallingInfoFlag<FrontendOpts<"PrintSupportedCPUs">>;
 def mcpu_EQ_QUESTION : Flag<["-"], "mcpu=?">, Alias<print_supported_cpus>;
 def mtune_EQ_QUESTION : Flag<["-"], "mtune=?">, Alias<print_supported_cpus>;
-def gcc_toolchain : Joined<["--"], "gcc-toolchain=">, Flags<[NoXarchOption]>,
-  HelpText<"Use the gcc toolchain at the given directory">;
 def time : Flag<["-"], "time">,
   HelpText<"Time individual commands">;
 def traditional_cpp : Flag<["-", "--"], "traditional-cpp">, Flags<[CC1Option]>,
@@ -4219,7 +4215,6 @@ defm devirtualize_speculatively : BooleanFFlag<"devirtualize-speculatively">,
 
 // Generic gfortran options.
 def A_DASH : Joined<["-"], "A-">, Group<gfortran_Group>;
-def J : JoinedOrSeparate<["-"], "J">, Flags<[RenderJoined,FlangOption,FC1Option]>, Group<gfortran_Group>, Alias<module_dir>;
 def cpp : Flag<["-"], "cpp">, Group<gfortran_Group>;
 def nocpp : Flag<["-"], "nocpp">, Group<gfortran_Group>;
 def static_libgfortran : Flag<["-"], "static-libgfortran">, Group<gfortran_Group>;
@@ -4302,6 +4297,12 @@ def Xflang : Separate<["-"], "Xflang">,
 //===----------------------------------------------------------------------===//
 let Flags = [FC1Option, FlangOption, FlangOnlyOption] in {
 
+def module_dir : Separate<["-"], "module-dir">, MetaVarName<"<dir>">,
+  HelpText<"Put MODULE files in <dir>">,
+  DocBrief<[{This option specifies where to put .mod files for compiled modules.
+It is also added to the list of directories to be searched by an USE statement.
+The default is the current directory.}]>;
+
 def ffixed_form : Flag<["-"], "ffixed-form">, Group<f_Group>,
   HelpText<"Process source files in fixed form">;
 def ffree_form : Flag<["-"], "ffree-form">, Group<f_Group>,
@@ -4339,6 +4340,11 @@ def falternative_parameter_statement : Flag<["-"], "falternative-parameter-state
   HelpText<"Enable the old style PARAMETER statement">;
 }
 
+def J : JoinedOrSeparate<["-"], "J">,
+  Flags<[RenderJoined, FlangOption, FC1Option, FlangOnlyOption]>,
+  Group<gfortran_Group>,
+  Alias<module_dir>;
+
 //===----------------------------------------------------------------------===//
 // FC1 Options
 //===----------------------------------------------------------------------===//
@@ -4364,6 +4370,8 @@ def fdebug_pre_fir_tree : Flag<["-"], "fdebug-pre-fir-tree">, Group<Action_Group
   HelpText<"Dump the pre-FIR tree">;
 def fdebug_module_writer : Flag<["-"],"fdebug-module-writer">, 
   HelpText<"Enable debug messages while writing module files">;
+def fget_symbols_sources : Flag<["-"], "fget-symbols-sources">, Group<Action_Group>,
+  HelpText<"Dump symbols and their source code locations">;
 
 }
 

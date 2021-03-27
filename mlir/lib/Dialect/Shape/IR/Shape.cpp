@@ -414,11 +414,26 @@ struct RemoveDuplicateOperandsPattern : public OpRewritePattern<OpTy> {
     return failure();
   }
 };
+
+struct BroadcastForwardSingleOperandPattern
+    : public OpRewritePattern<BroadcastOp> {
+  using OpRewritePattern<BroadcastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(BroadcastOp op,
+                                PatternRewriter &rewriter) const override {
+    if (op.getNumOperands() == 1) {
+      rewriter.replaceOp(op, op.shapes().front());
+      return success();
+    }
+    return failure();
+  }
+};
 } // namespace
 
 void BroadcastOp::getCanonicalizationPatterns(
     OwningRewritePatternList &patterns, MLIRContext *context) {
-  patterns.insert<RemoveDuplicateOperandsPattern<BroadcastOp>>(context);
+  patterns.insert<BroadcastForwardSingleOperandPattern,
+                  RemoveDuplicateOperandsPattern<BroadcastOp>>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -555,9 +570,9 @@ OpFoldResult CstrBroadcastableOp::fold(ArrayRef<Attribute> operands) {
   // on the input shapes.
   if ([&] {
         SmallVector<SmallVector<int64_t, 6>, 6> extents;
-        for (const auto &shape : shapes()) {
+        for (auto shapeValue : shapes()) {
           extents.emplace_back();
-          if (failed(getShapeVec(shape, extents.back())))
+          if (failed(getShapeVec(shapeValue, extents.back())))
             return false;
         }
         return OpTrait::util::staticallyKnownBroadcastable(extents);

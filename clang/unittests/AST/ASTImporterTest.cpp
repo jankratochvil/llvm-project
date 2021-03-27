@@ -246,6 +246,24 @@ TEST_P(ImportPath, CycleAfterCycle) {
   EXPECT_FALSE(path.hasCycleAtBack());
 }
 
+const internal::VariadicDynCastAllOfMatcher<Stmt, SourceLocExpr> sourceLocExpr;
+
+AST_MATCHER_P(SourceLocExpr, hasBuiltinStr, StringRef, Str) {
+  return Node.getBuiltinStr() == Str;
+}
+
+TEST_P(ImportExpr, ImportSourceLocExpr) {
+  MatchVerifier<Decl> Verifier;
+  testImport("void declToImport() { (void)__builtin_FILE(); }", Lang_CXX03, "",
+             Lang_CXX03, Verifier,
+             functionDecl(hasDescendant(
+                 sourceLocExpr(hasBuiltinStr("__builtin_FILE")))));
+  testImport("void declToImport() { (void)__builtin_COLUMN(); }", Lang_CXX03,
+             "", Lang_CXX03, Verifier,
+             functionDecl(hasDescendant(
+                 sourceLocExpr(hasBuiltinStr("__builtin_COLUMN")))));
+}
+
 TEST_P(ImportExpr, ImportStringLiteral) {
   MatchVerifier<Decl> Verifier;
   testImport("void declToImport() { (void)\"foo\"; }", Lang_CXX03, "",
@@ -733,6 +751,12 @@ TEST_P(ImportDecl, ImportRecordDeclInFunc) {
              Lang_C99, "", Lang_C99, Verifier,
              functionDecl(hasBody(compoundStmt(
                  has(declStmt(hasSingleDecl(varDecl(hasName("d")))))))));
+}
+
+TEST_P(ImportDecl, ImportedVarDeclPreservesThreadLocalStorage) {
+  MatchVerifier<Decl> Verifier;
+  testImport("thread_local int declToImport;", Lang_CXX11, "", Lang_CXX11,
+             Verifier, varDecl(hasThreadStorageDuration()));
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase, ImportRecordTypeInFunc) {
@@ -5613,6 +5637,35 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImplicitlyDeclareSelf) {
   // Both methods should have their implicit parameters.
   EXPECT_TRUE(FromMethod->getSelfDecl() != nullptr);
   EXPECT_TRUE(ToMethod->getSelfDecl() != nullptr);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ObjPropertyNameConflict) {
+  // Tests that properties that share the same name are correctly imported.
+  // This is only possible with one instance and one class property.
+  Decl *FromTU = getTuDecl(R"(
+                           @interface DupProp{}
+                           @property (class) int prop;
+                           @property int prop;
+                           @end
+                           )",
+                           Lang_OBJCXX, "input.mm");
+  auto *FromClass = FirstDeclMatcher<ObjCInterfaceDecl>().match(
+      FromTU, namedDecl(hasName("DupProp")));
+  auto ToClass = Import(FromClass, Lang_OBJCXX);
+  ASSERT_TRUE(ToClass);
+  // We should have one class and one instance property.
+  ASSERT_EQ(
+      1, std::distance(ToClass->classprop_begin(), ToClass->classprop_end()));
+  ASSERT_EQ(1,
+            std::distance(ToClass->instprop_begin(), ToClass->instprop_end()));
+  for (clang::ObjCPropertyDecl *prop : ToClass->properties()) {
+    // All properties should have a getter and a setter.
+    ASSERT_TRUE(prop->getGetterMethodDecl());
+    ASSERT_TRUE(prop->getSetterMethodDecl());
+    // The getters/setters should be able to find the right associated property.
+    ASSERT_EQ(prop->getGetterMethodDecl()->findPropertyDecl(), prop);
+    ASSERT_EQ(prop->getSetterMethodDecl()->findPropertyDecl(), prop);
+  }
 }
 
 struct ImportAutoFunctions : ASTImporterOptionSpecificTestBase {};
