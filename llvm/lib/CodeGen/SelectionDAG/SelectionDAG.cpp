@@ -2470,6 +2470,7 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
     }
     break;
   }
+  case ISD::ABS:
   case ISD::TRUNCATE:
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
@@ -2976,6 +2977,38 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known = KnownBits::computeForMul(Known, Known2);
+    break;
+  }
+  case ISD::MULHU: {
+    Known = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known = KnownBits::mulhu(Known, Known2);
+    break;
+  }
+  case ISD::MULHS: {
+    Known = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    Known = KnownBits::mulhs(Known, Known2);
+    break;
+  }
+  case ISD::UMUL_LOHI: {
+    assert((Op.getResNo() == 0 || Op.getResNo() == 1) && "Unknown result");
+    Known = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    if (Op.getResNo() == 0)
+      Known = KnownBits::computeForMul(Known, Known2);
+    else
+      Known = KnownBits::mulhu(Known, Known2);
+    break;
+  }
+  case ISD::SMUL_LOHI: {
+    assert((Op.getResNo() == 0 || Op.getResNo() == 1) && "Unknown result");
+    Known = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+    Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    if (Op.getResNo() == 0)
+      Known = KnownBits::computeForMul(Known, Known2);
+    else
+      Known = KnownBits::mulhs(Known, Known2);
     break;
   }
   case ISD::UDIV: {
