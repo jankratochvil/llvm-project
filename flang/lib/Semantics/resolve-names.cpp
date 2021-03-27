@@ -745,7 +745,7 @@ private:
   } funcInfo_;
 
   // Create a subprogram symbol in the current scope and push a new scope.
-  void CheckExtantExternal(const parser::Name &, Symbol::Flag);
+  void CheckExtantProc(const parser::Name &, Symbol::Flag);
   Symbol &PushSubprogramScope(const parser::Name &, Symbol::Flag);
   Symbol *GetSpecificFromGeneric(const parser::Name &);
   SubprogramDetails &PostSubprogramStmt(const parser::Name &);
@@ -1528,19 +1528,26 @@ bool AttrsVisitor::SetPassNameOn(Symbol &symbol) {
 }
 
 bool AttrsVisitor::SetBindNameOn(Symbol &symbol) {
-  if (!bindName_) {
+  if (!attrs_ || !attrs_->test(Attr::BIND_C)) {
     return false;
   }
-  std::visit(
-      common::visitors{
-          [&](EntityDetails &x) { x.set_bindName(std::move(bindName_)); },
-          [&](ObjectEntityDetails &x) { x.set_bindName(std::move(bindName_)); },
-          [&](ProcEntityDetails &x) { x.set_bindName(std::move(bindName_)); },
-          [&](SubprogramDetails &x) { x.set_bindName(std::move(bindName_)); },
-          [&](CommonBlockDetails &x) { x.set_bindName(std::move(bindName_)); },
-          [](auto &) { common::die("unexpected bind name"); },
-      },
-      symbol.details());
+  std::optional<std::string> label{evaluate::GetScalarConstantValue<
+      evaluate::Type<TypeCategory::Character, 1>>(bindName_)};
+  // 18.9.2(2): discard leading and trailing blanks, ignore if all blank
+  if (label) {
+    auto first{label->find_first_not_of(" ")};
+    auto last{label->find_last_not_of(" ")};
+    if (first == std::string::npos) {
+      Say(currStmtSource().value(), "Blank binding label ignored"_en_US);
+      label.reset();
+    } else {
+      label = label->substr(first, last - first + 1);
+    }
+  }
+  if (!label) {
+    label = parser::ToLowerCaseLetters(symbol.name().ToString());
+  }
+  symbol.SetBindName(std::move(*label));
   return true;
 }
 
@@ -3084,7 +3091,6 @@ void SubprogramVisitor::Post(const parser::EntryStmt &stmt) {
 
   Symbol::Flag subpFlag{
       inFunction ? Symbol::Flag::Function : Symbol::Flag::Subroutine};
-  CheckExtantExternal(name, subpFlag);
   Scope &outer{inclusiveScope.parent()}; // global or module scope
   if (Symbol * extant{FindSymbol(outer, name)}) {
     if (extant->has<ProcEntityDetails>()) {
@@ -3176,7 +3182,7 @@ bool SubprogramVisitor::BeginSubprogram(
 
 void SubprogramVisitor::EndSubprogram() { PopScope(); }
 
-void SubprogramVisitor::CheckExtantExternal(
+void SubprogramVisitor::CheckExtantProc(
     const parser::Name &name, Symbol::Flag subpFlag) {
   if (auto *prev{FindSymbol(name)}) {
     if (prev->attrs().test(Attr::EXTERNAL) && prev->has<ProcEntityDetails>()) {
@@ -3189,6 +3195,11 @@ void SubprogramVisitor::CheckExtantExternal(
             *prev, "Previous call of '%s'"_en_US);
       }
       EraseSymbol(name);
+    } else if (const auto *details{prev->detailsIf<EntityDetails>()}) {
+      if (!details->isDummy()) {
+        Say2(name, "Procedure '%s' was previously declared"_err_en_US, *prev,
+            "Previous declaration of '%s'"_en_US);
+      }
     }
   }
 }
@@ -3197,7 +3208,7 @@ Symbol &SubprogramVisitor::PushSubprogramScope(
     const parser::Name &name, Symbol::Flag subpFlag) {
   auto *symbol{GetSpecificFromGeneric(name)};
   if (!symbol) {
-    CheckExtantExternal(name, subpFlag);
+    CheckExtantProc(name, subpFlag);
     symbol = &MakeSymbol(name, SubprogramDetails{});
   }
   symbol->set(subpFlag);
