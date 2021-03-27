@@ -21,7 +21,10 @@ namespace tosa {
 std::unique_ptr<Pass> createTosaToStandard();
 
 void populateTosaToStandardConversionPatterns(
-    MLIRContext *context, OwningRewritePatternList *patterns);
+    OwningRewritePatternList *patterns);
+
+void populateTosaRescaleToStandardConversionPatterns(
+    OwningRewritePatternList *patterns);
 
 /// Populates passes to convert from TOSA to Standard.
 void addTosaToStandardPasses(OpPassManager &pm);
