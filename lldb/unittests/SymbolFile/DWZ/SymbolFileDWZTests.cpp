@@ -20,6 +20,7 @@
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Reproducer.h"
 
 #if defined(_MSC_VER)
 #include "lldb/Host/windows/windows.h"
@@ -29,6 +30,7 @@
 #include <algorithm>
 
 using namespace lldb_private;
+using namespace lldb_private::repro;
 
 class SymbolFileDWZTests : public testing::Test {
 public:
@@ -40,6 +42,7 @@ public:
     ::CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 #endif
 
+    llvm::cantFail(Reproducer::Initialize(ReproducerMode::Off, llvm::None));
     FileSystem::Initialize();
     HostInfo::Initialize();
     SymbolFileDWARF::Initialize();
@@ -57,6 +60,7 @@ public:
     SymbolFileDWARF::Terminate();
     HostInfo::Terminate();
     FileSystem::Terminate();
+    Reproducer::Terminate();
 
 #if defined(_MSC_VER)
     ::CoUninitialize();

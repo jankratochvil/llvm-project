@@ -2,7 +2,7 @@
 # Multifile drops DW_TAG_namespace::DW_AT_export_symbols
 # https://sourceware.org/bugzilla/show_bug.cgi?id=27572
 
-# REQUIRES: x86
+# REQUIRES: target-x86_64, system-linux, native
 
 # RUN: %clang_host -o %t %s
 # RUN: %lldb %t -o 'b main' -o r -o 'p N::A::m' -o 'p N::m' \
