@@ -56,7 +56,7 @@ public:
         (1 << 2) // Show all parent DIEs when dumping single DIEs
   };
 
-  llvm::Expected<DWARFDebugAranges &> GetCompileUnitAranges();
+  const DWARFDebugAranges &GetCompileUnitAranges();
 
   lldb::user_id_t GetUID(DWARFUnit *main_unit, DIERef ref) const {
     return m_dwarf.GetUID(main_unit, ref);
