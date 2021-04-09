@@ -947,21 +947,6 @@ mapped_file_region::~mapped_file_region() {
   }
 }
 
-size_t mapped_file_region::size() const {
-  assert(Mapping && "Mapping failed but used anyway!");
-  return Size;
-}
-
-char *mapped_file_region::data() const {
-  assert(Mapping && "Mapping failed but used anyway!");
-  return reinterpret_cast<char*>(Mapping);
-}
-
-const char *mapped_file_region::const_data() const {
-  assert(Mapping && "Mapping failed but used anyway!");
-  return reinterpret_cast<const char*>(Mapping);
-}
-
 int mapped_file_region::alignment() {
   SYSTEM_INFO SysInfo;
   ::GetSystemInfo(&SysInfo);
@@ -1083,8 +1068,10 @@ static std::error_code nativeFileToFd(Expected<HANDLE> H, int &ResultFD,
   if (Flags & OF_Append)
     CrtOpenFlags |= _O_APPEND;
 
-  if (Flags & OF_Text)
+  if (Flags & OF_CRLF) {
+    assert(Flags & OF_Text && "Flags set OF_CRLF without OF_Text");
     CrtOpenFlags |= _O_TEXT;
+  }
 
   ResultFD = -1;
   if (!H)
