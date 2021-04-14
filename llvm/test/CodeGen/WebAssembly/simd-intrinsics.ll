@@ -87,7 +87,7 @@ define <16 x i8> @popcnt_v16i8(<16 x i8> %x) {
 
 ; CHECK-LABEL: any_v16i8:
 ; CHECK-NEXT: .functype any_v16i8 (v128) -> (i32){{$}}
-; CHECK-NEXT: i8x16.any_true $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: v128.any_true $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 declare i32 @llvm.wasm.anytrue.v16i8(<16 x i8>)
 define i32 @any_v16i8(<16 x i8> %x) {
@@ -319,7 +319,7 @@ define <8 x i16> @extadd_pairwise_u_v8i16(<16 x i8> %x) {
 
 ; CHECK-LABEL: any_v8i16:
 ; CHECK-NEXT: .functype any_v8i16 (v128) -> (i32){{$}}
-; CHECK-NEXT: i16x8.any_true $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: v128.any_true $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 declare i32 @llvm.wasm.anytrue.v8i16(<8 x i16>)
 define i32 @any_v8i16(<8 x i16> %x) {
@@ -468,7 +468,7 @@ define <4 x i32> @extadd_pairwise_u_v4i32(<8 x i16> %x) {
 
 ; CHECK-LABEL: any_v4i32:
 ; CHECK-NEXT: .functype any_v4i32 (v128) -> (i32){{$}}
-; CHECK-NEXT: i32x4.any_true $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: v128.any_true $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 declare i32 @llvm.wasm.anytrue.v4i32(<4 x i32>)
 define i32 @any_v4i32(<4 x i32> %x) {
@@ -643,7 +643,7 @@ define <2 x i64> @extmul_high_u_v2i64(<4 x i32> %x, <4 x i32> %y) {
 
 ; CHECK-LABEL: any_v2i64:
 ; CHECK-NEXT: .functype any_v2i64 (v128) -> (i32){{$}}
-; CHECK-NEXT: i64x2.any_true $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-NEXT: v128.any_true $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 declare i32 @llvm.wasm.anytrue.v2i64(<2 x i64>)
 define i32 @any_v2i64(<2 x i64> %x) {
@@ -722,9 +722,9 @@ define <4 x float> @pmax_v4f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-NEXT: .functype ceil_v4f32 (v128) -> (v128){{$}}
 ; CHECK-NEXT: f32x4.ceil $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <4 x float> @llvm.wasm.ceil.v4f32(<4 x float>)
+declare <4 x float> @llvm.ceil.v4f32(<4 x float>)
 define <4 x float> @ceil_v4f32(<4 x float> %a) {
-  %v = call <4 x float> @llvm.wasm.ceil.v4f32(<4 x float> %a)
+  %v = call <4 x float> @llvm.ceil.v4f32(<4 x float> %a)
   ret <4 x float> %v
 }
 
@@ -732,9 +732,9 @@ define <4 x float> @ceil_v4f32(<4 x float> %a) {
 ; CHECK-NEXT: .functype floor_v4f32 (v128) -> (v128){{$}}
 ; CHECK-NEXT: f32x4.floor $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <4 x float> @llvm.wasm.floor.v4f32(<4 x float>)
+declare <4 x float> @llvm.floor.v4f32(<4 x float>)
 define <4 x float> @floor_v4f32(<4 x float> %a) {
-  %v = call <4 x float> @llvm.wasm.floor.v4f32(<4 x float> %a)
+  %v = call <4 x float> @llvm.floor.v4f32(<4 x float> %a)
   ret <4 x float> %v
 }
 
@@ -742,9 +742,9 @@ define <4 x float> @floor_v4f32(<4 x float> %a) {
 ; CHECK-NEXT: .functype trunc_v4f32 (v128) -> (v128){{$}}
 ; CHECK-NEXT: f32x4.trunc $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <4 x float> @llvm.wasm.trunc.v4f32(<4 x float>)
+declare <4 x float> @llvm.trunc.v4f32(<4 x float>)
 define <4 x float> @trunc_v4f32(<4 x float> %a) {
-  %v = call <4 x float> @llvm.wasm.trunc.v4f32(<4 x float> %a)
+  %v = call <4 x float> @llvm.trunc.v4f32(<4 x float> %a)
   ret <4 x float> %v
 }
 
@@ -752,9 +752,9 @@ define <4 x float> @trunc_v4f32(<4 x float> %a) {
 ; CHECK-NEXT: .functype nearest_v4f32 (v128) -> (v128){{$}}
 ; CHECK-NEXT: f32x4.nearest $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <4 x float> @llvm.wasm.nearest.v4f32(<4 x float>)
+declare <4 x float> @llvm.nearbyint.v4f32(<4 x float>)
 define <4 x float> @nearest_v4f32(<4 x float> %a) {
-  %v = call <4 x float> @llvm.wasm.nearest.v4f32(<4 x float> %a)
+  %v = call <4 x float> @llvm.nearbyint.v4f32(<4 x float> %a)
   ret <4 x float> %v
 }
 
@@ -807,9 +807,9 @@ define <2 x double> @pmax_v2f64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-NEXT: .functype ceil_v2f64 (v128) -> (v128){{$}}
 ; CHECK-NEXT: f64x2.ceil $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <2 x double> @llvm.wasm.ceil.v2f64(<2 x double>)
+declare <2 x double> @llvm.ceil.v2f64(<2 x double>)
 define <2 x double> @ceil_v2f64(<2 x double> %a) {
-  %v = call <2 x double> @llvm.wasm.ceil.v2f64(<2 x double> %a)
+  %v = call <2 x double> @llvm.ceil.v2f64(<2 x double> %a)
   ret <2 x double> %v
 }
 
@@ -817,9 +817,9 @@ define <2 x double> @ceil_v2f64(<2 x double> %a) {
 ; CHECK-NEXT: .functype floor_v2f64 (v128) -> (v128){{$}}
 ; CHECK-NEXT: f64x2.floor $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <2 x double> @llvm.wasm.floor.v2f64(<2 x double>)
+declare <2 x double> @llvm.floor.v2f64(<2 x double>)
 define <2 x double> @floor_v2f64(<2 x double> %a) {
-  %v = call <2 x double> @llvm.wasm.floor.v2f64(<2 x double> %a)
+  %v = call <2 x double> @llvm.floor.v2f64(<2 x double> %a)
   ret <2 x double> %v
 }
 
@@ -827,9 +827,9 @@ define <2 x double> @floor_v2f64(<2 x double> %a) {
 ; CHECK-NEXT: .functype trunc_v2f64 (v128) -> (v128){{$}}
 ; CHECK-NEXT: f64x2.trunc $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <2 x double> @llvm.wasm.trunc.v2f64(<2 x double>)
+declare <2 x double> @llvm.trunc.v2f64(<2 x double>)
 define <2 x double> @trunc_v2f64(<2 x double> %a) {
-  %v = call <2 x double> @llvm.wasm.trunc.v2f64(<2 x double> %a)
+  %v = call <2 x double> @llvm.trunc.v2f64(<2 x double> %a)
   ret <2 x double> %v
 }
 
@@ -837,9 +837,9 @@ define <2 x double> @trunc_v2f64(<2 x double> %a) {
 ; CHECK-NEXT: .functype nearest_v2f64 (v128) -> (v128){{$}}
 ; CHECK-NEXT: f64x2.nearest $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <2 x double> @llvm.wasm.nearest.v2f64(<2 x double>)
+declare <2 x double> @llvm.nearbyint.v2f64(<2 x double>)
 define <2 x double> @nearest_v2f64(<2 x double> %a) {
-  %v = call <2 x double> @llvm.wasm.nearest.v2f64(<2 x double> %a)
+  %v = call <2 x double> @llvm.nearbyint.v2f64(<2 x double> %a)
   ret <2 x double> %v
 }
 
