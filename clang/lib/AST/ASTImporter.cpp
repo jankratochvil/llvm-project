@@ -3678,6 +3678,7 @@ ExpectedDecl ASTNodeImporter::VisitFieldDecl(FieldDecl *D) {
   if (ToInitializer)
     ToField->setInClassInitializer(ToInitializer);
   ToField->setImplicit(D->isImplicit());
+  ToField->setAttrs(D->getAttrs());
   if (ToCapturedVLAType)
     ToField->setCapturedVLAType(cast<VariableArrayType>(ToCapturedVLAType));
   LexicalDC->addDeclInternal(ToField);

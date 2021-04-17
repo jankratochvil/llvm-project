@@ -284,11 +284,19 @@ void CGRecordLowering::lower(bool NVBaseType) {
     computeVolatileBitfields();
     return;
   }
-  accumulateFields();
-  // RD implies C++.
+#if 0
   if (RD) {
     accumulateVPtrs();
     accumulateBases();
+  }
+#endif
+  accumulateFields();
+  // RD implies C++.
+  if (RD) {
+#if 1
+    accumulateVPtrs();
+    accumulateBases();
+#endif
     if (Members.empty()) {
       appendPaddingBytes(Size);
       computeVolatileBitfields();
