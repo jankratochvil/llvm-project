@@ -3678,8 +3678,13 @@ ExpectedDecl ASTNodeImporter::VisitFieldDecl(FieldDecl *D) {
   if (ToInitializer)
     ToField->setInClassInitializer(ToInitializer);
   ToField->setImplicit(D->isImplicit());
-//  if (D->hasAttrs())
-//    ToField->setAttrs(D->getAttrs());
+  // CXXRecordDecl::addedMember may need to check it.
+  if (auto FromAttr = D->getAttr<NoUniqueAddressAttr>()) {
+    if (auto ToAttrOrErr = Importer.Import(FromAttr))
+      ToField->addAttr(*ToAttrOrErr);
+    else
+      return ToAttrOrErr.takeError();
+  }
   if (ToCapturedVLAType)
     ToField->setCapturedVLAType(cast<VariableArrayType>(ToCapturedVLAType));
   LexicalDC->addDeclInternal(ToField);
@@ -8361,17 +8366,6 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
     return ToD;
   }
 
-  // ImportImpl->VisitFieldDecl->CXXRecordDecl::addedMember may need to check
-  // NoUniqueAddressAttr.
-  if (FromD->hasAttrs())
-    for (const Attr *FromAttr : FromD->getAttrs()) {
-      auto ToAttrOrErr = Import(FromAttr);
-      if (ToAttrOrErr)
-        ToD->addAttr(*ToAttrOrErr);
-      else
-        return ToAttrOrErr.takeError();
-    }
-
   // Import the declaration.
   ExpectedDecl ToDOrErr = ImportImpl(FromD);
   if (!ToDOrErr) {
@@ -8457,6 +8451,17 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
 
   // Make sure that ImportImpl registered the imported decl.
   assert(ImportedDecls.count(FromD) != 0 && "Missing call to MapImported?");
+
+  // There may have been NoUniqueAddressAttr.
+  ToD->dropAttrs();
+  if (FromD->hasAttrs())
+    for (const Attr *FromAttr : FromD->getAttrs()) {
+      auto ToAttrOrErr = Import(FromAttr);
+      if (ToAttrOrErr)
+        ToD->addAttr(*ToAttrOrErr);
+      else
+        return ToAttrOrErr.takeError();
+    }
 
   // Notify subclasses.
   Imported(FromD, ToD);
