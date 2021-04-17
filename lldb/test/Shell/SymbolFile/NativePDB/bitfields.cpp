@@ -44,18 +44,18 @@ int main(int argc, char **argv) {
 // CHECK: TranslationUnitDecl {{.*}}
 // CHECK: |-CXXRecordDecl {{.*}} struct Struct definition
 // CHECK: | |-FieldDecl {{.*}} A 'int'
-// CHECK: | | |-IntegerLiteral {{.*}} 'int' 5
+// CHECK: | | {{.}}-IntegerLiteral {{.*}} 'int' 5
 // CHECK: | |-FieldDecl {{.*}} B 'int'
-// CHECK: | | |-IntegerLiteral {{.*}} 'int' 7
+// CHECK: | | {{.}}-IntegerLiteral {{.*}} 'int' 7
 // CHECK: | |-FieldDecl {{.*}} C 'unsigned int'
-// CHECK: | | |-IntegerLiteral {{.*}} 'int' 3
+// CHECK: | | {{.}}-IntegerLiteral {{.*}} 'int' 3
 // CHECK: | |-FieldDecl {{.*}} D 'unsigned int'
-// CHECK: | | |-IntegerLiteral {{.*}} 'int' 15
+// CHECK: | | {{.}}-IntegerLiteral {{.*}} 'int' 15
 // CHECK: | |-FieldDecl {{.*}} E 'char'
-// CHECK: | | |-IntegerLiteral {{.*}} 'int' 1
+// CHECK: | | {{.}}-IntegerLiteral {{.*}} 'int' 1
 // CHECK: | |-FieldDecl {{.*}} F 'char'
-// CHECK: | | |-IntegerLiteral {{.*}} 'int' 2
+// CHECK: | | {{.}}-IntegerLiteral {{.*}} 'int' 2
 // CHECK: | |-FieldDecl {{.*}} G 'char'
-// CHECK: | | |-IntegerLiteral {{.*}} 'int' 3
+// CHECK: | | {{.}}-IntegerLiteral {{.*}} 'int' 3
 // CHECK: | `-FieldDecl {{.*}} H 'char'
-// CHECK: |   |-IntegerLiteral {{.*}} 'int' 3
+// CHECK: |   {{.}}-IntegerLiteral {{.*}} 'int' 3
