@@ -6323,6 +6323,26 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportEnumMemberSpecialization) {
             ToD->getTemplateSpecializationKind());
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, ImportNoUniqueAddress) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      struct A {};
+      struct B {
+        [[no_unique_address]] A a;
+      };
+      struct C : B {
+        char c;
+      } c;
+      )",
+      Lang_CXX20);
+  auto *FromD = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("C")));
+  ASSERT_TRUE(FromD);
+
+  auto *ToD = Import(FromD, Lang_CXX20);
+  EXPECT_TRUE(ToD);
+}
+
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ASTImporterLookupTableTest,
                         DefaultTestValuesForRunOptions, );
 
