@@ -3679,11 +3679,13 @@ ExpectedDecl ASTNodeImporter::VisitFieldDecl(FieldDecl *D) {
       ToField->addAttr(*ToAttrOrErr);
     else
       return ToAttrOrErr.takeError();
-    RecordType *FromRT = const_cast<RecordType *>(D->getType()->getAs<RecordType>());
+    RecordType *FromRT =
+        const_cast<RecordType *>(D->getType()->getAs<RecordType>());
     // Is this field a struct? FieldDecl::isZeroSize will need its definition.
     if (FromRT) {
       RecordDecl *FromRD = FromRT->getDecl();
-      RecordType *ToRT = const_cast<RecordType *>(ToField->getType()->getAs<RecordType>());
+      RecordType *ToRT =
+          const_cast<RecordType *>(ToField->getType()->getAs<RecordType>());
       assert(ToRT && "RecordType import has different type");
       RecordDecl *ToRD = ToRT->getDecl();
       if (FromRD->isCompleteDefinition() && !ToRD->isCompleteDefinition()) {
