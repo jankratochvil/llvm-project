@@ -7196,7 +7196,7 @@ clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
     if (bit_width)
       field->setBitWidth(bit_width);
     SetMemberOwningModule(field, record_decl);
-    field->addAttr(NoUniqueAddressAttr::CreateImplicit(ast->getASTContext(), clang::SourceLocation()/*field->getLocation()*/));
+    field->addAttr(NoUniqueAddressAttr::CreateImplicit(ast->getASTContext()));
 
     if (name.empty()) {
       // Determine whether this field corresponds to an anonymous struct or
