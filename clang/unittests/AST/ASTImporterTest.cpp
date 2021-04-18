@@ -6335,12 +6335,18 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportNoUniqueAddress) {
       } c;
       )",
       Lang_CXX20);
-  auto *FromD = FirstDeclMatcher<CXXRecordDecl>().match(
-      FromTU, cxxRecordDecl(hasName("C")));
-  ASSERT_TRUE(FromD);
 
-  auto *ToD = Import(FromD, Lang_CXX20);
-  EXPECT_TRUE(ToD);
+  auto *BFromD = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("B")));
+  ASSERT_TRUE(BFromD);
+  auto *BToD = Import(BFromD, Lang_CXX20);
+  EXPECT_TRUE(BToD);
+
+  auto *CFromD = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("C")));
+  ASSERT_TRUE(CFromD);
+  auto *CToD = Import(CFromD, Lang_CXX20);
+  EXPECT_TRUE(CToD);
 }
 
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ASTImporterLookupTableTest,
