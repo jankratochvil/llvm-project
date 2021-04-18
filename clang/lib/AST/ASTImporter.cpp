@@ -3673,18 +3673,31 @@ ExpectedDecl ASTNodeImporter::VisitFieldDecl(FieldDecl *D) {
                               D->getInClassInitStyle()))
     return ToField;
 
-  ToField->setAccess(D->getAccess());
-  ToField->setLexicalDeclContext(LexicalDC);
-  if (ToInitializer)
-    ToField->setInClassInitializer(ToInitializer);
-  ToField->setImplicit(D->isImplicit());
-  // CXXRecordDecl::addedMember may need to check it.
+  // FieldDecl::isZeroSize may need to check these.
   if (auto FromAttr = D->getAttr<NoUniqueAddressAttr>()) {
     if (auto ToAttrOrErr = Importer.Import(FromAttr))
       ToField->addAttr(*ToAttrOrErr);
     else
       return ToAttrOrErr.takeError();
+    RecordType *FromRT = const_cast<RecordType *>(D->getType()->getAs<RecordType>());
+    // Is this field a struct? FieldDecl::isZeroSize will need its definition.
+    if (FromRT) {
+      RecordDecl *FromRD = FromRT->getDecl();
+      RecordType *ToRT = const_cast<RecordType *>(ToField->getType()->getAs<RecordType>());
+      assert(ToRT && "RecordType import has different type");
+      RecordDecl *ToRD = ToRT->getDecl();
+      if (FromRD->isCompleteDefinition() && !ToRD->isCompleteDefinition()) {
+        if (Error Err = ImportDefinition(FromRD, ToRD, IDK_Basic))
+          return std::move(Err);
+      }
+    }
   }
+
+  ToField->setAccess(D->getAccess());
+  ToField->setLexicalDeclContext(LexicalDC);
+  if (ToInitializer)
+    ToField->setInClassInitializer(ToInitializer);
+  ToField->setImplicit(D->isImplicit());
   if (ToCapturedVLAType)
     ToField->setCapturedVLAType(cast<VariableArrayType>(ToCapturedVLAType));
   LexicalDC->addDeclInternal(ToField);
@@ -8452,7 +8465,7 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
   // Make sure that ImportImpl registered the imported decl.
   assert(ImportedDecls.count(FromD) != 0 && "Missing call to MapImported?");
 
-  // There may have been NoUniqueAddressAttr.
+  // There may have been NoUniqueAddressAttr for FieldDecl::isZeroSize.
   ToD->dropAttrs();
   if (FromD->hasAttrs())
     for (const Attr *FromAttr : FromD->getAttrs()) {
