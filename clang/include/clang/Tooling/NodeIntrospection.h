@@ -67,6 +67,11 @@ struct RangeLessThan {
 
 } // namespace internal
 
+// Note that this container stores unique results in a deterministic, but
+// the location calls are in an unspecified order.  Clients which desire
+// a particular order for the location calls, such as alphabetical,
+// should sort results after retrieval, because the order is dependent
+// on how the LocationCalls are formatted.
 template <typename T, typename U>
 using UniqueMultiMap = std::set<std::pair<T, U>, internal::RangeLessThan>;
 
@@ -83,8 +88,8 @@ bool hasIntrospectionSupport();
 NodeLocationAccessors GetLocations(clang::Stmt const *Object);
 NodeLocationAccessors GetLocations(clang::Decl const *Object);
 NodeLocationAccessors GetLocations(clang::CXXCtorInitializer const *Object);
-NodeLocationAccessors GetLocations(clang::NestedNameSpecifierLoc const *);
-NodeLocationAccessors GetLocations(clang::TemplateArgumentLoc const *);
+NodeLocationAccessors GetLocations(clang::NestedNameSpecifierLoc const &);
+NodeLocationAccessors GetLocations(clang::TemplateArgumentLoc const &);
 NodeLocationAccessors GetLocations(clang::CXXBaseSpecifier const *);
 NodeLocationAccessors GetLocations(clang::TypeLoc const &);
 NodeLocationAccessors GetLocations(clang::DynTypedNode const &Node);

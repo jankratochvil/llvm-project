@@ -1246,6 +1246,7 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const SymbolContext &sc,
       }
 
       if (!function_decl) {
+        char *name_buf = nullptr;
         llvm::StringRef name = attrs.name.GetStringRef();
 
         // We currently generate function templates with template parameters in
@@ -1253,8 +1254,10 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const SymbolContext &sc,
         // we want to strip these from the name when creating the AST.
         if (attrs.mangled_name) {
           llvm::ItaniumPartialDemangler D;
-          if (!D.partialDemangle(attrs.mangled_name))
-            name = D.getFunctionBaseName(nullptr, nullptr);
+          if (!D.partialDemangle(attrs.mangled_name)) {
+            name_buf = D.getFunctionBaseName(nullptr, nullptr);
+            name = name_buf;
+          }
         }
 
         // We just have a function that isn't part of a class
@@ -1263,6 +1266,7 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const SymbolContext &sc,
                                       : containing_decl_ctx,
             GetOwningClangModule(main_unit, die), name, clang_type,
             attrs.storage, attrs.is_inline);
+        std::free(name_buf);
 
         if (has_template_params) {
           TypeSystemClang::TemplateParameterInfos template_param_infos;
