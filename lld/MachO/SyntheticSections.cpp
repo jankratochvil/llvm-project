@@ -85,7 +85,13 @@ template <class LP> MachHeaderSection *macho::makeMachHeaderSection() {
 }
 
 template <class LP> uint64_t MachHeaderSectionImpl<LP>::getSize() const {
-  return sizeof(typename LP::mach_header) + sizeOfCmds + config->headerPad;
+  uint64_t size =
+      sizeof(typename LP::mach_header) + sizeOfCmds + config->headerPad;
+  // If we are emitting an encryptable binary, our load commands must have a
+  // separate (non-encrypted) page to themselves.
+  if (config->emitEncryptionInfo)
+    size = alignTo(size, target->getPageSize());
+  return size;
 }
 
 static uint32_t cpuSubtype() {
@@ -93,7 +99,7 @@ static uint32_t cpuSubtype() {
 
   if (config->outputType == MH_EXECUTE && !config->staticLink &&
       target->cpuSubtype == CPU_SUBTYPE_X86_64_ALL &&
-      config->target.Platform == PlatformKind::macOS &&
+      config->platform() == PlatformKind::macOS &&
       config->platformInfo.minimum >= VersionTuple(10, 5))
     subtype |= CPU_SUBTYPE_LIB64;
 
@@ -1096,7 +1102,7 @@ void macho::createSyntheticSymbols() {
   auto addHeaderSymbol = [](const char *name) {
     symtab->addSynthetic(name, in.header->isec, 0,
                          /*privateExtern=*/true,
-                         /*includeInSymtab*/ false);
+                         /*includeInSymtab=*/false);
   };
 
   switch (config->outputType) {
@@ -1108,13 +1114,13 @@ void macho::createSyntheticSymbols() {
     // Otherwise, it's an absolute symbol.
     if (config->isPic)
       symtab->addSynthetic("__mh_execute_header", in.header->isec, 0,
-                           /*privateExtern*/ false,
-                           /*includeInSymbtab*/ true);
+                           /*privateExtern=*/false,
+                           /*includeInSymbtab=*/true);
     else
       symtab->addSynthetic("__mh_execute_header",
                            /*isec*/ nullptr, 0,
-                           /*privateExtern*/ false,
-                           /*includeInSymbtab*/ true);
+                           /*privateExtern=*/false,
+                           /*includeInSymbtab=*/true);
     break;
 
     // The following symbols are  N_SECT symbols, even though the header is not

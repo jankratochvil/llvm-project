@@ -3242,6 +3242,24 @@ The binary format of half, float, double, and fp128 correspond to the
 IEEE-754-2008 specifications for binary16, binary32, binary64, and binary128
 respectively.
 
+X86_amx Type
+""""""""""""
+
+:Overview:
+
+The x86_amx type represents a value held in an AMX tile register on an x86
+machine. The operations allowed on it are quite limited. Only few intrinsics
+are allowed: stride load and store, zero and dot product. No instruction is
+allowed for this type. There are no arguments, arrays, pointers, vectors
+or constants of this type.
+
+:Syntax:
+
+::
+
+      x86_amx
+
+
 X86_mmx Type
 """"""""""""
 
@@ -3636,7 +3654,7 @@ represented by ``0xH`` followed by 4 hexadecimal digits. The bfloat 16-bit
 format is represented by ``0xR`` followed by 4 hexadecimal digits. All
 hexadecimal formats are big-endian (sign bit at the left).
 
-There are no constants of type x86_mmx.
+There are no constants of type x86_mmx and x86_amx.
 
 .. _complexconstants:
 
@@ -9621,10 +9639,10 @@ as the ``MOVNT`` instruction on x86.
 The optional ``!invariant.load`` metadata must reference a single
 metadata name ``<empty_node>`` corresponding to a metadata node with no
 entries. If a load instruction tagged with the ``!invariant.load``
-metadata is executed, the optimizer may assume the memory location
-referenced by the load contains the same value at all points in the
-program where the memory location is known to be dereferenceable;
-otherwise, the behavior is undefined.
+metadata is executed, the memory location referenced by the load has
+to contain the same value at all points in the program where the
+memory location is dereferenceable; otherwise, the behavior is
+undefined.
 
 The optional ``!invariant.group`` metadata must reference a single metadata name
  ``<empty_node>`` corresponding to a metadata node with no entries.
@@ -16777,8 +16795,8 @@ The first two operands are vectors with the same type. The third argument
 the source/result vector. The ``imm`` is a signed integer constant in the range
 ``-VL <= imm < VL``. For values outside of this range the result is poison.
 
-
 '``llvm.experimental.stepvector``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This is an overloaded intrinsic. You can use ``llvm.experimental.stepvector``
 to generate a vector whose lane values comprise the linear sequence

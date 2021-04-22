@@ -7542,9 +7542,11 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     narrowShuffleMaskElts(MaskSize / SrcMask0.size(), SrcMask0, Mask0);
     narrowShuffleMaskElts(MaskSize / SrcMask1.size(), SrcMask1, Mask1);
     for (int i = 0; i != (int)MaskSize; ++i) {
-      if (Mask0[i] == SM_SentinelUndef && Mask1[i] == SM_SentinelUndef)
-        Mask.push_back(SM_SentinelUndef);
-      else if (Mask0[i] == SM_SentinelZero && Mask1[i] == SM_SentinelZero)
+      // NOTE: Don't handle SM_SentinelUndef, as we can end up in infinite
+      // loops converting between OR and BLEND shuffles due to
+      // canWidenShuffleElements merging away undef elements, meaning we
+      // fail to recognise the OR as the undef element isn't known zero.
+      if (Mask0[i] == SM_SentinelZero && Mask1[i] == SM_SentinelZero)
         Mask.push_back(SM_SentinelZero);
       else if (Mask1[i] == SM_SentinelZero)
         Mask.push_back(i);
@@ -35675,6 +35677,15 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
           return DAG.getBitcast(RootVT, Res);
         }
       }
+    }
+
+    // See if this is a blend with zero - in which case check if the zero'd
+    // elements are already zero.
+    if (isSequentialOrUndefOrZeroInRange(Mask, 0, NumMaskElts, 0)) {
+      assert(!KnownZero.isNullValue() && "Shuffle has no zero elements");
+      SDValue NewV1 = CanonicalizeShuffleInput(MaskVT, V1);
+      if (DAG.MaskedElementsAreZero(NewV1, KnownZero))
+        return DAG.getBitcast(RootVT, NewV1);
     }
 
     SDValue NewV1 = V1; // Save operand in case early exit happens.
