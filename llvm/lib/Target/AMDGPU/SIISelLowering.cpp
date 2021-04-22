@@ -2851,6 +2851,11 @@ bool SITargetLowering::isEligibleForTailCallOptimization(
   if (!mayTailCallThisCC(CalleeCC))
     return false;
 
+  // For a divergent call target, we need to do a waterfall loop over the
+  // possible callees which precludes us from using a simple jump.
+  if (Callee->isDivergent())
+    return false;
+
   MachineFunction &MF = DAG.getMachineFunction();
   const Function &CallerF = MF.getFunction();
   CallingConv::ID CallerCC = CallerF.getCallingConv();
@@ -2957,12 +2962,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   if (!CLI.CB)
     report_fatal_error("unsupported libcall legalization");
-
-  if (!AMDGPUTargetMachine::EnableFixedFunctionABI &&
-      !CLI.CB->getCalledFunction() && CallConv != CallingConv::AMDGPU_Gfx) {
-    return lowerUnhandledCall(CLI, InVals,
-                              "unsupported indirect call to function ");
-  }
 
   if (IsTailCall && MF.getTarget().Options.GuaranteedTailCallOpt) {
     return lowerUnhandledCall(CLI, InVals,

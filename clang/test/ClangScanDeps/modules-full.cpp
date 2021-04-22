@@ -11,13 +11,13 @@
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/modules_cdb_clangcl.json > %t_clangcl.cdb
 //
 // RUN: echo %t.dir > %t.result
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 4 -full-command-line \
-// RUN:   -mode preprocess-minimized-sources -format experimental-full >> %t.result
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 4 -format experimental-full \
+// RUN:   -mode preprocess-minimized-sources >> %t.result
 // RUN: cat %t.result | sed 's/\\/\//g' | FileCheck --check-prefixes=CHECK %s
 
 // RUN: echo %t.dir > %t_clangcl.result
-// RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 4 -full-command-line \
-// RUN:   -mode preprocess-minimized-sources -format experimental-full >> %t_clangcl.result
+// RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 4 -format experimental-full \
+// RUN:   -mode preprocess-minimized-sources >> %t_clangcl.result
 // RUN: cat %t_clangcl.result | sed 's/\\/\//g' | FileCheck --check-prefixes=CHECK %s
 
 // FIXME: Backslash issues.
@@ -37,11 +37,14 @@
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/Inputs/module.modulemap",
 // CHECK-NEXT:       "command-line": [
-// CHECK-NEXT:         "-fno-implicit-modules",
-// CHECK-NEXT:         "-fno-implicit-module-maps",
-// CHECK-NEXT:         "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[CONTEXT_HASH_H1]]/header2-{{[A-Z0-9]+}}.pcm",
-// CHECK-NEXT:         "-fmodule-map-file=[[PREFIX]]/Inputs/module.modulemap"
-// CHECK-NEXT:       ],
+// CHECK-NEXT:         "-cc1",
+// CHECK:              "-fmodule-map-file=[[PREFIX]]/Inputs/module.modulemap",
+// CHECK:              "-emit-module",
+// CHECK:              "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[CONTEXT_HASH_H1]]/header2-{{[A-Z0-9]+}}.pcm",
+// CHECK-NOT:          "-fimplicit-module-maps",
+// CHECK:              "-fmodule-name=header1",
+// CHECK:              "-fno-implicit-modules",
+// CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[CONTEXT_HASH_H1]]",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/header.h",
@@ -53,9 +56,12 @@
 // CHECK-NEXT:       "clang-module-deps": [],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/Inputs/module.modulemap",
 // CHECK-NEXT:       "command-line": [
-// CHECK-NEXT:         "-fno-implicit-modules",
-// CHECK-NEXT:         "-fno-implicit-module-maps"
-// CHECK-NEXT:       ],
+// CHECK-NEXT:         "-cc1",
+// CHECK:              "-emit-module",
+// CHECK-NOT:          "-fimplicit-module-maps",
+// CHECK:              "-fmodule-name=header1",
+// CHECK:              "-fno-implicit-modules",
+// CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[CONTEXT_HASH_H2:[A-Z0-9]+]]",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/header.h",
@@ -67,9 +73,12 @@
 // CHECK-NEXT:       "clang-module-deps": [],
 // CHECK-NEXT:       "clang-modulemap-file": "[[PREFIX]]/Inputs/module.modulemap",
 // CHECK-NEXT:       "command-line": [
-// CHECK-NEXT:         "-fno-implicit-modules",
-// CHECK-NEXT:         "-fno-implicit-module-maps"
-// CHECK-NEXT:       ],
+// CHECK-NEXT:         "-cc1",
+// CHECK:              "-emit-module",
+// CHECK-NOT:          "-fimplicit-module-maps",
+// CHECK:              "-fmodule-name=header2",
+// CHECK:              "-fno-implicit-modules",
+// CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[CONTEXT_HASH_H1]]",
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/header2.h",
@@ -148,8 +157,8 @@
 // CHECK-NEXT:         "-fno-implicit-modules",
 // CHECK-NEXT:         "-fno-implicit-module-maps",
 // CHECK-NEXT:         "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[CONTEXT_HASH_H1]]/header2-{{[A-Z0-9]+}}.pcm",
-// CHECK-NEXT:         "-fmodule-map-file=[[PREFIX]]/Inputs/module.modulemap",
 // CHECK-NEXT:         "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[CONTEXT_HASH_H1]]/header1-{{[A-Z0-9]+}}.pcm",
+// CHECK-NEXT:         "-fmodule-map-file=[[PREFIX]]/Inputs/module.modulemap",
 // CHECK-NEXT:         "-fmodule-map-file=[[PREFIX]]/Inputs/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "file-deps": [
