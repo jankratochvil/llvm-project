@@ -10,6 +10,7 @@
 
 #include "clang/Frontend/CompilerInstance.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 using namespace clang::tooling;
 using namespace llvm;
@@ -82,6 +83,8 @@ llvm::json::Object toJSON(ClassData const &Obj) {
     JsonObj["typeSourceInfos"] = Obj.TypeSourceInfos;
   if (!Obj.TypeLocs.empty())
     JsonObj["typeLocs"] = Obj.TypeLocs;
+  if (!Obj.NestedNameLocs.empty())
+    JsonObj["nestedNameLocs"] = Obj.NestedNameLocs;
   return JsonObj;
 }
 
@@ -105,13 +108,27 @@ void WriteJSON(StringRef JsonPath, llvm::json::Object &&ClassInheritance,
   JsonObj["classesInClade"] = std::move(ClassesInClade);
   JsonObj["classEntries"] = std::move(ClassEntries);
 
+  llvm::json::Value JsonVal(std::move(JsonObj));
+
+  bool WriteChange = false;
+  std::string OutString;
+  if (auto ExistingOrErr = MemoryBuffer::getFile(JsonPath, /*IsText=*/true)) {
+    raw_string_ostream Out(OutString);
+    Out << formatv("{0:2}", JsonVal);
+    if (ExistingOrErr.get()->getBuffer() == Out.str())
+      return;
+    WriteChange = true;
+  }
+
   std::error_code EC;
   llvm::raw_fd_ostream JsonOut(JsonPath, EC, llvm::sys::fs::F_Text);
   if (EC)
     return;
 
-  llvm::json::Value JsonVal(std::move(JsonObj));
-  JsonOut << formatv("{0:2}", JsonVal);
+  if (WriteChange)
+    JsonOut << OutString;
+  else
+    JsonOut << formatv("{0:2}", JsonVal);
 }
 
 void ASTSrcLocProcessor::generate() {
@@ -203,6 +220,8 @@ void ASTSrcLocProcessor::run(const MatchFinder::MatchResult &Result) {
   CD.TypeSourceInfos =
       CaptureMethods("class clang::TypeSourceInfo *", ASTClass, Result);
   CD.TypeLocs = CaptureMethods("class clang::TypeLoc", ASTClass, Result);
+  CD.NestedNameLocs =
+      CaptureMethods("class clang::NestedNameSpecifierLoc", ASTClass, Result);
 
   if (const auto *DerivedFrom =
           Result.Nodes.getNodeAs<clang::CXXRecordDecl>("derivedFrom")) {
