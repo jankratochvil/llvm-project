@@ -99,9 +99,12 @@ bool LibStdcppUniquePtrSyntheticFrontEnd::Update() {
   if (ptr_obj)
     m_ptr_obj = ptr_obj->Clone(ConstString("pointer")).get();
 
-  ValueObjectSP del_obj = tuple_frontend->GetChildAtIndex(1);
-  if (del_obj)
-    m_del_obj = del_obj->Clone(ConstString("deleter")).get();
+  // GCC 11 std::default_delete<...> has existing child with GetByteSize()==1.
+  if (tuple_sp->GetByteSize() > ptr_obj->GetByteSize()) {
+    ValueObjectSP del_obj = tuple_frontend->GetChildAtIndex(1);
+    if (del_obj)
+      m_del_obj = del_obj->Clone(ConstString("deleter")).get();
+  }
 
   if (m_ptr_obj) {
     Status error;
