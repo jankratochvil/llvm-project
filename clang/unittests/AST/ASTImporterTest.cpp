@@ -6346,7 +6346,20 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportNoUniqueAddress) {
   auto ToAST_ = std::move(ToAST);
   auto SharedStatePtr_ = std::move(SharedStatePtr);
   lazyInitToAST(Lang_CXX20, "", "input.cc");
-  FromTUs.emplace_back(SrcCode, "input.cc", getCommandLineArgsForLanguage(Lang_CXX20), Creator, ODRHandling);
+  FromTUs.emplace_back(
+      R"(
+
+
+
+
+
+
+
+
+
+
+      )"
+      , "input.cc", getCommandLineArgsForLanguage(Lang_CXX20), Creator, ODRHandling);
   auto *BTo2D = FromTUs.rbegin()->import(SharedStatePtr, ToAST.get(), BToD);
 
   EXPECT_TRUE(BTo2D);
