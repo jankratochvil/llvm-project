@@ -141,7 +141,6 @@ private:
   // moving of the stored objects because that would mean breaking the
   // references in the AST. By using a vector a move could happen when the
   // vector is expanding, with the list we won't have these issues.
-public:
   std::list<TU> FromTUs;
 
   // Initialize the shared state if not initialized already.
