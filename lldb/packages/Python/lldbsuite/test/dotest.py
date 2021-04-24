@@ -858,6 +858,15 @@ def checkDebugServerSupport():
             if configuration.verbose:
                 print(skip_msg%"lldb-server");
 
+
+def checkForkVForkSupport():
+    from lldbsuite.test import lldbplatformutil
+
+    platform = lldbplatformutil.getPlatform()
+    if platform not in ["linux"]:
+        configuration.skip_categories.append("fork")
+
+
 def canRunDWZTests():
     from lldbsuite.test import lldbplatformutil
 
@@ -981,6 +990,7 @@ def run_suite():
     checkDebugInfoSupport()
     checkDebugServerSupport()
     checkObjcSupport()
+    checkForkVForkSupport()
     checkDWZSupport()
 
     print("Skipping the following test categories: {}".format(configuration.skip_categories))
