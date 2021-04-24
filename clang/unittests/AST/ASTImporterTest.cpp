@@ -6324,7 +6324,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportEnumMemberSpecialization) {
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase, ImportNoUniqueAddress) {
-  Decl *FromTU = getTuDecl(
+  auto SrcCode =
       R"(
       struct A {};
       struct B {
@@ -6333,20 +6333,33 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportNoUniqueAddress) {
       struct C : B {
         char c;
       } c;
-      )",
-      Lang_CXX20);
+      )";
+  Decl *FromTU = getTuDecl(SrcCode, Lang_CXX20);
 
   auto *BFromD = FirstDeclMatcher<CXXRecordDecl>().match(
-      FromTU, cxxRecordDecl(hasName("B")));
+      FromTU, cxxRecordDecl(hasName("C"))); // "B" or "C"
   ASSERT_TRUE(BFromD);
   auto *BToD = Import(BFromD, Lang_CXX20);
   EXPECT_TRUE(BToD);
 
+//  auto *BTo2D = Import(BToD, Lang_CXX20);
+  auto ToAST_ = std::move(ToAST);
+  auto SharedStatePtr_ = std::move(SharedStatePtr);
+  lazyInitToAST(Lang_CXX20, "", "input.cc");
+  FromTUs.emplace_back(SrcCode, "input.cc", getCommandLineArgsForLanguage(Lang_CXX20), Creator, ODRHandling);
+  auto *BTo2D = FromTUs.rbegin()->import(SharedStatePtr, ToAST.get(), BToD);
+
+  EXPECT_TRUE(BTo2D);
+
+#if 0
   auto *CFromD = FirstDeclMatcher<CXXRecordDecl>().match(
       FromTU, cxxRecordDecl(hasName("C")));
   ASSERT_TRUE(CFromD);
   auto *CToD = Import(CFromD, Lang_CXX20);
   EXPECT_TRUE(CToD);
+  auto *CTo2D = Import(CToD, Lang_CXX20);
+  EXPECT_TRUE(CTo2D);
+#endif
 }
 
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ASTImporterLookupTableTest,
