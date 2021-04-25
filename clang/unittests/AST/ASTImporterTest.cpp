@@ -6324,7 +6324,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportEnumMemberSpecialization) {
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase, ImportNoUniqueAddress) {
-  auto SrcCode =
+  Decl *FromTU = getTuDecl(
       R"(
       struct A {};
       struct B {
@@ -6333,8 +6333,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportNoUniqueAddress) {
       struct C : B {
         char c;
       } c;
-      )";
-  Decl *FromTU = getTuDecl(SrcCode, Lang_CXX20);
+      ), Lang_CXX20);
 
   // It does not fail even without the patch!
   auto *BFromD = FirstDeclMatcher<CXXRecordDecl>().match(
