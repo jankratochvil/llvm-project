@@ -6333,7 +6333,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportNoUniqueAddress) {
       struct C : B {
         char c;
       } c;
-      ), Lang_CXX20);
+      )", Lang_CXX20);
 
   // It does not fail even without the patch!
   auto *BFromD = FirstDeclMatcher<CXXRecordDecl>().match(
@@ -6341,8 +6341,6 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportNoUniqueAddress) {
   ASSERT_TRUE(BFromD);
   auto *BToD = Import(BFromD, Lang_CXX20);
   EXPECT_TRUE(BToD);
-  auto *BTo2D = Import(BToD, Lang_CXX20);
-  EXPECT_TRUE(BTo2D);
 
   // It does not fail even without the patch!
   auto *CFromD = FirstDeclMatcher<CXXRecordDecl>().match(
@@ -6350,8 +6348,6 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportNoUniqueAddress) {
   ASSERT_TRUE(CFromD);
   auto *CToD = Import(CFromD, Lang_CXX20);
   EXPECT_TRUE(CToD);
-  auto *CTo2D = Import(CToD, Lang_CXX20);
-  EXPECT_TRUE(CTo2D);
 }
 
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ASTImporterLookupTableTest,
