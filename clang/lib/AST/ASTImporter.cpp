@@ -3674,7 +3674,7 @@ ExpectedDecl ASTNodeImporter::VisitFieldDecl(FieldDecl *D) {
     return ToField;
 
   // FieldDecl::isZeroSize may need to check these.
-  if (auto FromAttr = D->getAttr<NoUniqueAddressAttr>()) {
+  if (const Attr *FromAttr = D->getAttr<NoUniqueAddressAttr>()) {
     if (auto ToAttrOrErr = Importer.Import(FromAttr))
       ToField->addAttr(*ToAttrOrErr);
     else
