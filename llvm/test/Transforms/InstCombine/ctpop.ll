@@ -289,3 +289,95 @@ define i8 @ctpop_rotate_right(i8 %a, i8 %amt)  {
 
 declare i8 @llvm.fshl.i8(i8, i8, i8)
 declare i8 @llvm.fshr.i8(i8, i8, i8)
+
+define i8 @sub_ctpop(i8 %a)  {
+; CHECK-LABEL: @sub_ctpop(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[A:%.*]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.ctpop.i8(i8 [[TMP1]]), !range [[RNG0]]
+; CHECK-NEXT:    ret i8 [[TMP2]]
+;
+  %cnt = tail call i8 @llvm.ctpop.i8(i8 %a)
+  %res = sub i8 8, %cnt
+  ret i8 %res
+}
+
+define i8 @sub_ctpop_wrong_cst(i8 %a)  {
+; CHECK-LABEL: @sub_ctpop_wrong_cst(
+; CHECK-NEXT:    [[CNT:%.*]] = tail call i8 @llvm.ctpop.i8(i8 [[A:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[RES:%.*]] = sub nsw i8 5, [[CNT]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %cnt = tail call i8 @llvm.ctpop.i8(i8 %a)
+  %res = sub i8 5, %cnt
+  ret i8 %res
+}
+
+define i8 @sub_ctpop_unknown(i8 %a, i8 %b)  {
+; CHECK-LABEL: @sub_ctpop_unknown(
+; CHECK-NEXT:    [[CNT:%.*]] = tail call i8 @llvm.ctpop.i8(i8 [[A:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[RES:%.*]] = sub i8 [[B:%.*]], [[CNT]]
+; CHECK-NEXT:    ret i8 [[RES]]
+;
+  %cnt = tail call i8 @llvm.ctpop.i8(i8 %a)
+  %res = sub i8 %b, %cnt
+  ret i8 %res
+}
+
+define <2 x i32> @sub_ctpop_vec(<2 x i32> %a) {
+; CHECK-LABEL: @sub_ctpop_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[A:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[TMP1]])
+; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
+;
+  %cnt = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %a)
+  %res = sub <2 x i32> <i32 32, i32 32>, %cnt
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @sub_ctpop_vec_extra_use(<2 x i32> %a, <2 x i32>* %p) {
+; CHECK-LABEL: @sub_ctpop_vec_extra_use(
+; CHECK-NEXT:    [[CNT:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[A:%.*]])
+; CHECK-NEXT:    store <2 x i32> [[CNT]], <2 x i32>* [[P:%.*]], align 8
+; CHECK-NEXT:    [[RES:%.*]] = sub nuw nsw <2 x i32> <i32 32, i32 32>, [[CNT]]
+; CHECK-NEXT:    ret <2 x i32> [[RES]]
+;
+  %cnt = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %a)
+  store <2 x i32> %cnt, <2 x i32>* %p
+  %res = sub <2 x i32> <i32 32, i32 32>, %cnt
+  ret <2 x i32> %res
+}
+
+define i32 @zext_ctpop(i16 %x) {
+; CHECK-LABEL: @zext_ctpop(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.ctpop.i16(i16 [[X:%.*]]), !range [[RNG3:![0-9]+]]
+; CHECK-NEXT:    [[P:%.*]] = zext i16 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[P]]
+;
+  %z = zext i16 %x to i32
+  %p = call i32 @llvm.ctpop.i32(i32 %z)
+  ret i32 %p
+}
+
+define <2 x i32> @zext_ctpop_vec(<2 x i7> %x) {
+; CHECK-LABEL: @zext_ctpop_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i7> @llvm.ctpop.v2i7(<2 x i7> [[X:%.*]])
+; CHECK-NEXT:    [[P:%.*]] = zext <2 x i7> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[P]]
+;
+  %z = zext <2 x i7> %x to <2 x i32>
+  %p = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %z)
+  ret <2 x i32> %p
+}
+
+define i32 @zext_ctpop_extra_use(i16 %x, i32* %q) {
+; CHECK-LABEL: @zext_ctpop_extra_use(
+; CHECK-NEXT:    [[Z:%.*]] = zext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    store i32 [[Z]], i32* [[Q:%.*]], align 4
+; CHECK-NEXT:    [[P:%.*]] = call i32 @llvm.ctpop.i32(i32 [[Z]]), !range [[RNG4:![0-9]+]]
+; CHECK-NEXT:    ret i32 [[P]]
+;
+  %z = zext i16 %x to i32
+  store i32 %z, i32* %q
+  %p = call i32 @llvm.ctpop.i32(i32 %z)
+  ret i32 %p
+}

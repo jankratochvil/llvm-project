@@ -1716,6 +1716,7 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(ARMISD::VQMOVNu)
     MAKE_CASE(ARMISD::VCVTN)
     MAKE_CASE(ARMISD::VCVTL)
+    MAKE_CASE(ARMISD::VIDUP)
     MAKE_CASE(ARMISD::VMULLs)
     MAKE_CASE(ARMISD::VMULLu)
     MAKE_CASE(ARMISD::VQDMULH)
@@ -7430,6 +7431,39 @@ static SDValue LowerBUILD_VECTOR_i1(SDValue Op, SelectionDAG &DAG,
   return Base;
 }
 
+static SDValue LowerBUILD_VECTORToVIDUP(SDValue Op, SelectionDAG &DAG,
+                                        const ARMSubtarget *ST) {
+  if (!ST->hasMVEIntegerOps())
+    return SDValue();
+
+  // We are looking for a buildvector where each element is Op[0] + i*N
+  EVT VT = Op.getValueType();
+  SDValue Op0 = Op.getOperand(0);
+  unsigned NumElts = VT.getVectorNumElements();
+
+  // Get the increment value from operand 1
+  SDValue Op1 = Op.getOperand(1);
+  if (Op1.getOpcode() != ISD::ADD || Op1.getOperand(0) != Op0 ||
+      !isa<ConstantSDNode>(Op1.getOperand(1)))
+    return SDValue();
+  unsigned N = Op1.getConstantOperandVal(1);
+  if (N != 1 && N != 2 && N != 4 && N != 8)
+    return SDValue();
+
+  // Check that each other operand matches
+  for (unsigned I = 2; I < NumElts; I++) {
+    SDValue OpI = Op.getOperand(I);
+    if (OpI.getOpcode() != ISD::ADD || OpI.getOperand(0) != Op0 ||
+        !isa<ConstantSDNode>(OpI.getOperand(1)) ||
+        OpI.getConstantOperandVal(1) != I * N)
+      return SDValue();
+  }
+
+  SDLoc DL(Op);
+  return DAG.getNode(ARMISD::VIDUP, DL, DAG.getVTList(VT, MVT::i32), Op0,
+                     DAG.getConstant(N, DL, MVT::i32));
+}
+
 // If this is a case we can't handle, return null and let the default
 // expansion code take care of it.
 SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
@@ -7440,6 +7474,9 @@ SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
   if (ST->hasMVEIntegerOps() && VT.getScalarSizeInBits() == 1)
     return LowerBUILD_VECTOR_i1(Op, DAG, ST);
+
+  if (SDValue R = LowerBUILD_VECTORToVIDUP(Op, DAG, ST))
+    return R;
 
   APInt SplatBits, SplatUndef;
   unsigned SplatBitSize;
@@ -12729,7 +12766,7 @@ static SDValue PerformSubCSINCCombine(SDNode *N,
   if (N->getValueType(0) != MVT::i32 || !isNullConstant(N->getOperand(0)))
     return SDValue();
   SDValue CSINC = N->getOperand(1);
-  if (CSINC.getOpcode() != ARMISD::CSINC)
+  if (CSINC.getOpcode() != ARMISD::CSINC || !CSINC.hasOneUse())
     return SDValue();
 
   ConstantSDNode *X = dyn_cast<ConstantSDNode>(CSINC.getOperand(0));
@@ -13695,22 +13732,51 @@ static SDValue PerformVMOVRRDCombine(SDNode *N,
   }
 
   // VMOVRRD(extract(..(build_vector(a, b, c, d)))) -> a,b or c,d
+  // VMOVRRD(extract(insert_vector(insert_vector(.., a, l1), b, l2))) -> a,b
   if (InDouble.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
       isa<ConstantSDNode>(InDouble.getOperand(1))) {
     SDValue BV = InDouble.getOperand(0);
-    // Look up through any nop bitcasts
-    while (BV.getOpcode() == ISD::BITCAST &&
-           (BV.getValueType() == MVT::v2f64 || BV.getValueType() == MVT::v2i64))
+    // Look up through any nop bitcasts and vector_reg_casts. bitcasts may
+    // change lane order under big endian.
+    bool BVSwap = BV.getOpcode() == ISD::BITCAST;
+    while (
+        (BV.getOpcode() == ISD::BITCAST ||
+         BV.getOpcode() == ARMISD::VECTOR_REG_CAST) &&
+        (BV.getValueType() == MVT::v2f64 || BV.getValueType() == MVT::v2i64)) {
+      BVSwap = BV.getOpcode() == ISD::BITCAST;
       BV = BV.getOperand(0);
-    if (BV.getValueType() != MVT::v4i32 || BV.getOpcode() != ISD::BUILD_VECTOR)
+    }
+    if (BV.getValueType() != MVT::v4i32)
       return SDValue();
+
+    // Handle buildvectors, pulling out the correct lane depending on
+    // endianness.
     unsigned Offset = InDouble.getConstantOperandVal(1) == 1 ? 2 : 0;
-    if (Subtarget->isLittle())
-      return DCI.DAG.getMergeValues(
-          {BV.getOperand(Offset), BV.getOperand(Offset + 1)}, SDLoc(N));
-    else
-      return DCI.DAG.getMergeValues(
-          {BV.getOperand(Offset + 1), BV.getOperand(Offset)}, SDLoc(N));
+    if (BV.getOpcode() == ISD::BUILD_VECTOR) {
+      SDValue Op0 = BV.getOperand(Offset);
+      SDValue Op1 = BV.getOperand(Offset + 1);
+      if (!Subtarget->isLittle() && BVSwap)
+        std::swap(Op0, Op1);
+
+      return DCI.DAG.getMergeValues({Op0, Op1}, SDLoc(N));
+    }
+
+    // A chain of insert_vectors, grabbing the correct value of the chain of
+    // inserts.
+    SDValue Op0, Op1;
+    while (BV.getOpcode() == ISD::INSERT_VECTOR_ELT) {
+      if (isa<ConstantSDNode>(BV.getOperand(2))) {
+        if (BV.getConstantOperandVal(2) == Offset)
+          Op0 = BV.getOperand(1);
+        if (BV.getConstantOperandVal(2) == Offset + 1)
+          Op1 = BV.getOperand(1);
+      }
+      BV = BV.getOperand(0);
+    }
+    if (!Subtarget->isLittle() && BVSwap)
+      std::swap(Op0, Op1);
+    if (Op0 && Op1)
+      return DCI.DAG.getMergeValues({Op0, Op1}, SDLoc(N));
   }
 
   return SDValue();
