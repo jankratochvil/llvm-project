@@ -875,7 +875,8 @@ static bool isLoopCounter(PHINode* Phi, Loop *L,
 
   int LatchIdx = Phi->getBasicBlockIndex(L->getLoopLatch());
   Value *IncV = Phi->getIncomingValue(LatchIdx);
-  return (getLoopPhiForCounter(IncV, L) == Phi);
+  return (getLoopPhiForCounter(IncV, L) == Phi &&
+          isa<SCEVAddRecExpr>(SE->getSCEV(IncV)));
 }
 
 /// Search the loop header for a loop counter (anadd rec w/step of one)
@@ -1562,9 +1563,6 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   // elimination, but restricted to read-only loops and without neccesssarily
   // needing to kill the loop entirely.
   if (!LoopPredication)
-    return false;
-
-  if (!SE->hasLoopInvariantBackedgeTakenCount(L))
     return false;
 
   // Note: ExactBTC is the exact backedge taken count *iff* the loop exits
