@@ -671,10 +671,10 @@ public:
   /// Returns the underlying instruction, if the recipe is a VPValue or nullptr
   /// otherwise.
   Instruction *getUnderlyingInstr() {
-    return cast<Instruction>(getVPValue()->getUnderlyingValue());
+    return cast<Instruction>(getVPSingleValue()->getUnderlyingValue());
   }
   const Instruction *getUnderlyingInstr() const {
-    return cast<Instruction>(getVPValue()->getUnderlyingValue());
+    return cast<Instruction>(getVPSingleValue()->getUnderlyingValue());
   }
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
@@ -738,7 +738,7 @@ public:
       : VPRecipeBase(VPRecipeBase::VPInstructionSC, {}),
         VPValue(VPValue::VPVInstructionSC, nullptr, this), Opcode(Opcode) {
     for (auto *I : Operands)
-      addOperand(I->getVPValue());
+      addOperand(I->getVPSingleValue());
   }
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands)
@@ -2200,6 +2200,26 @@ public:
         Count++;
     }
     return Count;
+  }
+
+  /// Return an iterator range over \p Range which only includes \p BlockTy
+  /// blocks. The accesses are casted to \p BlockTy.
+  template <typename BlockTy, typename T>
+  static auto blocksOnly(const T &Range) {
+    // Create BaseTy with correct const-ness based on BlockTy.
+    using BaseTy =
+        typename std::conditional<std::is_const<BlockTy>::value,
+                                  const VPBlockBase, VPBlockBase>::type;
+
+    // We need to first create an iterator range over (const) BlocktTy & instead
+    // of (const) BlockTy * for filter_range to work properly.
+    auto Mapped =
+        map_range(Range, [](BaseTy *Block) -> BaseTy & { return *Block; });
+    auto Filter = make_filter_range(
+        Mapped, [](BaseTy &Block) { return isa<BlockTy>(&Block); });
+    return map_range(Filter, [](BaseTy &Block) -> BlockTy * {
+      return cast<BlockTy>(&Block);
+    });
   }
 };
 

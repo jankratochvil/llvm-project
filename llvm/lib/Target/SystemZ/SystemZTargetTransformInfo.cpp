@@ -541,7 +541,7 @@ InstructionCost SystemZTTIImpl::getArithmeticInstrCost(
     // There is no native support for FRem.
     if (Opcode == Instruction::FRem) {
       SmallVector<Type *> Tys(Args.size(), Ty);
-      unsigned Cost =
+      InstructionCost Cost =
           (VF * LIBCALL_COST) + getScalarizationOverhead(VTy, Args, Tys);
       // FIXME: VF 2 for float is currently just as expensive as for VF 4.
       if (VF == 2 && ScalarBits == 32)
@@ -559,6 +559,7 @@ InstructionCost SystemZTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                                VectorType *Tp,
                                                ArrayRef<int> Mask, int Index,
                                                VectorType *SubTp) {
+  Kind = improveShuffleKindFromMask(Kind, Mask);
   if (ST->hasVector()) {
     unsigned NumVectors = getNumVectorRegs(Tp);
 
