@@ -122,6 +122,10 @@ protected:
   /// to the current PC. Defaults to true.
   bool DotIsPC = true;
 
+  /// Whether the '*' token refers to the current PC. This is used for the
+  /// HLASM dialect.
+  bool StarIsPC = false;
+
   /// This string, if specified, is used to separate instructions from each
   /// other when on the same line.  Defaults to ';'
   const char *SeparatorString;
@@ -421,6 +425,10 @@ protected:
   /// Exception handling format for the target.  Defaults to None.
   ExceptionHandling ExceptionsType = ExceptionHandling::None;
 
+  /// True if target uses CFI unwind information for debugging purpose when
+  /// `ExceptionsType == ExceptionHandling::None`.
+  bool UsesCFIForDebug = false;
+
   /// Windows exception handling data (.pdata) encoding.  Defaults to Invalid.
   WinEH::EncodingType WinEHEncodingType = WinEH::EncodingType::Invalid;
 
@@ -598,6 +606,7 @@ public:
   unsigned getMinInstAlignment() const { return MinInstAlignment; }
   bool getDollarIsPC() const { return DollarIsPC; }
   bool getDotIsPC() const { return DotIsPC; }
+  bool getStarIsPC() const { return StarIsPC; }
   const char *getSeparatorString() const { return SeparatorString; }
 
   /// This indicates the column (zero-based) at which asm comments should be
@@ -722,6 +731,8 @@ public:
   void setExceptionsType(ExceptionHandling EH) {
     ExceptionsType = EH;
   }
+
+  bool doesUseCFIForDebug() const { return UsesCFIForDebug; }
 
   /// Returns true if the exception handling method for the platform uses call
   /// frame information to unwind.
