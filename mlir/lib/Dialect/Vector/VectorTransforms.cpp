@@ -2970,6 +2970,9 @@ struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
       return failure();
     SmallVector<int64_t> newShape = llvm::to_vector<4>(
         originalVecType.getShape().take_back(reducedShapeRank));
+    // Vector rank cannot be zero. Handled by TransferReadToVectorLoadLowering.
+    if (newShape.empty())
+      return failure();
     VectorType newReadType =
         VectorType::get(newShape, originalVecType.getElementType());
     ArrayAttr newInBounds =
@@ -3168,6 +3171,31 @@ struct CastAwayTransferWriteLeadingOneDim
     rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
         write, newVector, write.source(), write.indices(), newMap, inBounds);
 
+    return success();
+  }
+};
+
+struct CastAwayBrodcastLeadingOneDim
+    : public OpRewritePattern<vector::BroadcastOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::BroadcastOp broadcastOp,
+                                PatternRewriter &rewriter) const override {
+    VectorType newDstType = trimLeadingOneDims(broadcastOp.getVectorType());
+    if (newDstType == broadcastOp.getVectorType())
+      return failure();
+    Location loc = broadcastOp.getLoc();
+    VectorType srcVecType = broadcastOp.getSourceType().dyn_cast<VectorType>();
+    if (srcVecType)
+      srcVecType = trimLeadingOneDims(srcVecType);
+    Value source = broadcastOp.source();
+    if (srcVecType && srcVecType != broadcastOp.getSourceType()) {
+      source = rewriter.create<vector::ShapeCastOp>(loc, srcVecType, source);
+    }
+    Value newBroadcastOp =
+        rewriter.create<vector::BroadcastOp>(loc, newDstType, source);
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
+        broadcastOp, broadcastOp.getVectorType(), newBroadcastOp);
     return success();
   }
 };
@@ -3721,6 +3749,8 @@ struct TwoDimMultiReductionToReduction
         return "or";
       case vector::CombiningKind::XOR:
         return "xor";
+      default:
+        llvm_unreachable("unknwon combining kind");
       }
     };
 
@@ -3768,7 +3798,8 @@ void mlir::vector::populateCastAwayVectorLeadingOneDimPatterns(
   patterns.add<CastAwayExtractStridedSliceLeadingOneDim,
                CastAwayInsertStridedSliceLeadingOneDim,
                CastAwayTransferReadLeadingOneDim,
-               CastAwayTransferWriteLeadingOneDim, ShapeCastOpFolder>(
+               CastAwayTransferWriteLeadingOneDim,
+               CastAwayBrodcastLeadingOneDim, ShapeCastOpFolder>(
       patterns.getContext());
 }
 
