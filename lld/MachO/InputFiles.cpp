@@ -580,6 +580,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       return nList[lhs].n_value < nList[rhs].n_value;
     });
     uint64_t sectionAddr = sectionHeaders[i].addr;
+    uint32_t sectionAlign = 1u << sectionHeaders[i].align;
 
     // We populate subsecMap by repeatedly splitting the last (highest address)
     // subsection.
@@ -599,6 +600,8 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       // There are 3 cases where we do not need to create a new subsection:
       //   1. If the input file does not use subsections-via-symbols.
       //   2. Multiple symbols at the same address only induce one subsection.
+      //      (The symbolOffset == 0 check covers both this case as well as
+      //      the first loop iteration.)
       //   3. Alternative entry points do not induce new subsections.
       if (!subsectionsViaSymbols || symbolOffset == 0 ||
           sym.n_desc & N_ALT_ENTRY) {
@@ -609,6 +612,8 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
 
       auto *nextIsec = make<InputSection>(*isec);
       nextIsec->data = isec->data.slice(symbolOffset);
+      nextIsec->numRefs = 0;
+      nextIsec->canOmitFromOutput = false;
       isec->data = isec->data.slice(0, symbolOffset);
 
       // By construction, the symbol will be at offset zero in the new
@@ -618,7 +623,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       // TODO: ld64 appears to preserve the original alignment as well as each
       // subsection's offset from the last aligned address. We should consider
       // emulating that behavior.
-      nextIsec->align = MinAlign(isec->align, sym.n_value);
+      nextIsec->align = MinAlign(sectionAlign, sym.n_value);
       subsecMap.push_back({sym.n_value - sectionAddr, nextIsec});
       subsecEntry = subsecMap.back();
     }
