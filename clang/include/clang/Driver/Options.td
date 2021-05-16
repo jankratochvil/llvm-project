@@ -1547,6 +1547,14 @@ def fno_sanitize_memory_track_origins : Flag<["-"], "fno-sanitize-memory-track-o
                                         Group<f_clang_Group>,
                                         Flags<[CoreOption, NoXarchOption]>,
                                         HelpText<"Disable origins tracking in MemorySanitizer">;
+def fsanitize_hwaddress_experimental_aliasing
+  : Flag<["-"], "fsanitize-hwaddress-experimental-aliasing">,
+    Group<f_clang_Group>,
+    HelpText<"Enable aliasing mode in HWAddressSanitizer">;
+def fno_sanitize_hwaddress_experimental_aliasing
+  : Flag<["-"], "fno-sanitize-hwaddress-experimental-aliasing">,
+    Group<f_clang_Group>, Flags<[CoreOption, NoXarchOption]>,
+    HelpText<"Disable aliasing mode in HWAddressSanitizer">;
 defm sanitize_memory_use_after_dtor : BoolOption<"f", "sanitize-memory-use-after-dtor",
   CodeGenOpts<"SanitizeMemoryUseAfterDtor">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Enable">, NegFlag<SetFalse, [], "Disable">,
@@ -2701,6 +2709,12 @@ defm stack_size_section : BoolFOption<"stack-size-section",
   CodeGenOpts<"StackSizeSection">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Emit section containing metadata on function stack sizes">,
   NegFlag<SetFalse>>;
+def fstack_usage : Flag<["-"], "fstack-usage">, Group<f_Group>,
+  HelpText<"Emit .su file containing information on function stack sizes">;
+def stack_usage_file : Separate<["-"], "stack-usage-file">,
+  Flags<[CC1Option, NoDriverOption]>,
+  HelpText<"Filename (or -) to write stack usage output to">,
+  MarshallingInfoString<CodeGenOpts<"StackUsageOutput">>;
 
 defm unique_basic_block_section_names : BoolFOption<"unique-basic-block-section-names",
   CodeGenOpts<"UniqueBasicBlockSectionNames">, DefaultFalse,
@@ -3254,6 +3268,8 @@ def maltivec : Flag<["-"], "maltivec">, Group<m_ppc_Features_Group>;
 def mno_altivec : Flag<["-"], "mno-altivec">, Group<m_ppc_Features_Group>;
 def mpcrel: Flag<["-"], "mpcrel">, Group<m_ppc_Features_Group>;
 def mno_pcrel: Flag<["-"], "mno-pcrel">, Group<m_ppc_Features_Group>;
+def mprefixed: Flag<["-"], "mprefixed">, Group<m_ppc_Features_Group>;
+def mno_prefixed: Flag<["-"], "mno-prefixed">, Group<m_ppc_Features_Group>;
 def mspe : Flag<["-"], "mspe">, Group<m_ppc_Features_Group>;
 def mno_spe : Flag<["-"], "mno-spe">, Group<m_ppc_Features_Group>;
 def mefpu2 : Flag<["-"], "mefpu2">, Group<m_ppc_Features_Group>;
