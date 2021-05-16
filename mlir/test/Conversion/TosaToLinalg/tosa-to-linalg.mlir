@@ -73,6 +73,24 @@ func @test_broadcast(%arg0: tensor<1xf32>, %arg1: tensor<2xf32>) -> tensor<2xf32
 
 // -----
 
+// CHECK: #[[$MAP0:.*]] = affine_map<(d0) -> (d0)>
+// CHECK: #[[$MAP1:.*]] = affine_map<(d0) -> ()>
+
+// CHECK-LABEL: @test_broadcast_swapped_args
+func @test_broadcast_swapped_args(%arg0: tensor<2xf32>, %arg1: tensor<1xf32>) -> tensor<2xf32> {
+  // CHECK: [[INIT:%.+]] = linalg.init_tensor [2] : tensor<2xf32>
+  // CHECK: [[RESHAPE:%.+]] = linalg.tensor_reshape %arg1
+  // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP0]]], iterator_types = ["parallel"]} ins(%arg0, [[RESHAPE]] : tensor<2xf32>, tensor<f32>) outs([[INIT]] : tensor<2xf32>) {
+  // CHECK: ^bb0(%arg2: f32, %arg3: f32, %arg4: f32):
+  // CHECK:   [[ELEMENT:%.+]] = addf %arg2, %arg3 : f32
+  // CHECK:   linalg.yield [[ELEMENT]] : f32
+  // CHECK: } -> tensor<2xf32>
+  %0 = "tosa.add"(%arg0, %arg1) : (tensor<2xf32>, tensor<1xf32>) -> tensor<2xf32>
+  return %0 : tensor<2xf32>
+}
+
+// -----
+
 // CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1) -> (d0, d1)>
 // CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1) -> (d1)>
 // CHECK-DAG: #[[$MAP2:.*]] = affine_map<(d0, d1) -> (d0)>
@@ -195,6 +213,18 @@ func @test_simple_f32(%arg0: tensor<1xf32>) -> () {
   %20 = "tosa.sigmoid"(%0) : (tensor<1xf32>) -> tensor<1xf32>
 
   // CHECK: linalg.generic
+  // CHECK: constant 0.000000e+00
+  // CHECK: constant 5.000000e-01
+  // CHECK: constant -2.14748365E+9
+  // CHECK: constant 2.14748365E+9
+  // CHECK: addf
+  // CHECK: subf
+  // CHECK: cmpf olt
+  // CHECK: select
+  // CHECK: cmpf olt
+  // CHECK: select
+  // CHECK: cmpf olt
+  // CHECK: select
   // CHECK: fptosi
   %21 = "tosa.cast"(%0) : (tensor<1xf32>) -> tensor<1xi32>
 
@@ -265,33 +295,37 @@ func @test_simple_i32(%arg0: tensor<1xi32>) -> () {
   %3 = "tosa.mul"(%arg0, %arg0) {shift = 2 : i32} : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
+  // CHECK: divi
+  %4 = "tosa.div"(%arg0, %arg0) : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
+
+  // CHECK: linalg.generic
   // CHECK: [[ZERO:%.+]] = constant 0
   // CHECK: subi [[ZERO]], %arg1
-  %4 = "tosa.negate"(%arg0) : (tensor<1xi32>) -> tensor<1xi32>
+  %5 = "tosa.negate"(%arg0) : (tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
   // CHECK: and
-  %5 = "tosa.bitwise_and"(%arg0, %arg0) : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
+  %6 = "tosa.bitwise_and"(%arg0, %arg0) : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
   // CHECK: or
-  %6 = "tosa.bitwise_or"(%arg0, %arg0) : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
+  %7 = "tosa.bitwise_or"(%arg0, %arg0) : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
   // CHECK: xor
-  %7 = "tosa.bitwise_xor"(%arg0, %arg0) : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
+  %8 = "tosa.bitwise_xor"(%arg0, %arg0) : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
   // CHECK: shift_left
-  %8 = "tosa.logical_left_shift"(%arg0, %arg0) : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
+  %9 = "tosa.logical_left_shift"(%arg0, %arg0) : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
   // CHECK: shift_right_unsigned
-  %9 = "tosa.logical_right_shift"(%arg0, %arg0) : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
+  %10 = "tosa.logical_right_shift"(%arg0, %arg0) : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
   // CHECK: shift_right_signed
-  %10 = "tosa.arithmetic_right_shift"(%arg0, %arg0) {round = 0 : i1} : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
+  %11 = "tosa.arithmetic_right_shift"(%arg0, %arg0) {round = 0 : i1} : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
   // CHECK: constant 1
@@ -305,60 +339,73 @@ func @test_simple_i32(%arg0: tensor<1xi32>) -> () {
   // CHECK: and
   // CHECK: zexti
   // CHECK: addi
-  %11 = "tosa.arithmetic_right_shift"(%arg0, %arg0) {round = 1 : i1} : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
+  %12 = "tosa.arithmetic_right_shift"(%arg0, %arg0) {round = 1 : i1} : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
   // CHECK: cmpi
-  %12 = "tosa.greater"(%0, %1) : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi1>
+  %13 = "tosa.greater"(%0, %1) : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi1>
 
   // CHECK: linalg.generic
   // CHECK: cmpi
-  %13 = "tosa.greater_equal"(%0, %1) : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi1>
+  %14 = "tosa.greater_equal"(%0, %1) : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi1>
 
   // CHECK: linalg.generic
   // CHECK: select
-  %14 = "tosa.select"(%12, %0, %1) : (tensor<1xi1>, tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
-
-  // CHECK: linalg.generic
-  // CHECK: cmpi
-  // CHECK: select
-  %15 = "tosa.maximum"(%0, %1) : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
+  %15 = "tosa.select"(%13, %0, %1) : (tensor<1xi1>, tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
   // CHECK: cmpi
   // CHECK: select
-  %16 = "tosa.minimum"(%0, %1) : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
+  %16 = "tosa.maximum"(%0, %1) : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
   // CHECK: cmpi
   // CHECK: select
-  %17 = "tosa.clamp"(%0) {min_int = 1 : i64, max_int = 5 : i64, min_fp = 1.0 : f32, max_fp = 5.0 : f32} : (tensor<1xi32>) -> tensor<1xi32>
+  %17 = "tosa.minimum"(%0, %1) : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
   // CHECK: cmpi
   // CHECK: select
-  %18 = "tosa.reluN"(%0) {max_int = 5 : i64, max_fp = 5.0 : f32} : (tensor<1xi32>) -> tensor<1xi32>
+  %18 = "tosa.clamp"(%0) {min_int = 1 : i64, max_int = 5 : i64, min_fp = 1.0 : f32, max_fp = 5.0 : f32} : (tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
+  // CHECK: cmpi
+  // CHECK: select
+  %19 = "tosa.reluN"(%0) {max_int = 5 : i64, max_fp = 5.0 : f32} : (tensor<1xi32>) -> tensor<1xi32>
+
+  // CHECK: linalg.generic
+  // CHECK: constant -32768
+  // CHECK: constant 32767
+  // CHECK: cmpi slt
+  // CHECK: select
+  // CHECK: cmpi slt
+  // CHECK: select
   // CHECK: trunci
-  %19 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xi16>
+  %20 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xi16>
 
   // CHECK: linalg.generic
   // CHECK: yield
-  %20 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xi32>
+  %21 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
   // CHECK: sexti
-  %21 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xi64>
+  %22 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xi64>
 
   // CHECK: linalg.generic
   // CHECK: constant 0
   // CHECK: cmpi
-  %22 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xi1>
+  %23 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xi1>
 
   // CHECK: linalg.generic
   // CHECK: sitofp
-  %23 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xf32>
+  %24 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xf32>
+
+  // CHECK: linalg.generic
+  // CHECK: constant 0
+  // CHECK: cmpi sgt
+  // CHECK: subi
+  // CHECK: select
+  %25 = "tosa.abs"(%arg0) : (tensor<1xi32>) -> tensor<1xi32>
 
   return
 }
@@ -464,10 +511,8 @@ func @test_identity(%arg0: tensor<1xf32>, %arg1: tensor<1xi32>) -> (tensor<1xf32
   %0 = "tosa.identity"(%arg0) : (tensor<1xf32>) -> tensor<1xf32>
   %1 = "tosa.identity"(%arg1) : (tensor<1xi32>) -> tensor<1xi32>
 
-  %2:2 = "tosa.identityn"(%0, %1) : (tensor<1xf32>, tensor<1xi32>) -> (tensor<1xf32>, tensor<1xi32>)
-
   // CHECK: return %arg0, %arg1
-  return %2#0, %2#1 : tensor<1xf32>, tensor<1xi32>
+  return %0, %1 : tensor<1xf32>, tensor<1xi32>
 }
 
 // -----

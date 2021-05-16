@@ -4395,9 +4395,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     } else if (JA.getType() == types::TY_LLVM_BC ||
                JA.getType() == types::TY_LTO_BC) {
       // Emit textual llvm IR for AMDGPU offloading for -emit-llvm -S
-      if (Triple.isAMDGCN() && IsOpenMPDevice) {
-        if (Args.hasArg(options::OPT_S) && Args.hasArg(options::OPT_emit_llvm))
-          CmdArgs.push_back("-emit-llvm");
+      if (Triple.isAMDGCN() && IsOpenMPDevice && Args.hasArg(options::OPT_S) &&
+          Args.hasArg(options::OPT_emit_llvm)) {
+        CmdArgs.push_back("-emit-llvm");
       } else {
         CmdArgs.push_back("-emit-llvm-bc");
       }
@@ -4722,7 +4722,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                              options::OPT_fno_semantic_interposition);
     if (RelocationModel != llvm::Reloc::Static && !IsPIE) {
       // The supported targets need to call AsmPrinter::getSymbolPreferLocal.
-      bool SupportsLocalAlias = Triple.isX86();
+      bool SupportsLocalAlias =
+          Triple.isAArch64() || Triple.isRISCV() || Triple.isX86();
       if (!A)
         CmdArgs.push_back("-fhalf-no-semantic-interposition");
       else if (A->getOption().matches(options::OPT_fsemantic_interposition))
@@ -5490,6 +5491,18 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasFlag(options::OPT_fstack_size_section,
                    options::OPT_fno_stack_size_section, RawTriple.isPS4()))
     CmdArgs.push_back("-fstack-size-section");
+
+  if (Args.hasArg(options::OPT_fstack_usage)) {
+    CmdArgs.push_back("-stack-usage-file");
+
+    if (Arg *OutputOpt = Args.getLastArg(options::OPT_o)) {
+      SmallString<128> OutputFilename(OutputOpt->getValue());
+      llvm::sys::path::replace_extension(OutputFilename, "su");
+      CmdArgs.push_back(Args.MakeArgString(OutputFilename));
+    } else
+      CmdArgs.push_back(
+          Args.MakeArgString(Twine(getBaseInputStem(Args, Inputs)) + ".su"));
+  }
 
   CmdArgs.push_back("-ferror-limit");
   if (Arg *A = Args.getLastArg(options::OPT_ferror_limit_EQ))
