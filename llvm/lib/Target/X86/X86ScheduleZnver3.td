@@ -1525,8 +1525,56 @@ def Zn3WriteZeroIdiomEFLAGS : SchedWriteVariant<[
     SchedVar<MCSchedPredicate<CheckSameRegOperand<0, 1>>, [Zn3WriteZeroLatency]>,
     SchedVar<NoSchedPred,                                 [WriteALU]>
 ]>;
-def : InstRW<[Zn3WriteZeroIdiomEFLAGS], (instrs CMP32rr, CMP32rr_REV,
+def : InstRW<[Zn3WriteZeroIdiomEFLAGS], (instrs CMP8rr,  CMP8rr_REV,
+                                                CMP16rr, CMP16rr_REV,
+                                                CMP32rr, CMP32rr_REV,
                                                 CMP64rr, CMP64rr_REV)>;
+
+def Zn3WriteFZeroIdiom : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [Zn3WriteZeroLatency]>,
+    SchedVar<NoSchedPred,                          [WriteFLogic]>
+]>;
+// NOTE: XORPSrr, XORPDrr are not zero-cycle!
+def : InstRW<[Zn3WriteFZeroIdiom], (instrs VXORPSrr, VXORPDrr,
+                                           VANDNPSrr, VANDNPDrr)>;
+
+def Zn3WriteFZeroIdiomY : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [Zn3WriteZeroLatency]>,
+    SchedVar<NoSchedPred,                          [WriteFLogicY]>
+]>;
+def : InstRW<[Zn3WriteFZeroIdiomY], (instrs VXORPSYrr, VXORPDYrr,
+                                            VANDNPSYrr, VANDNPDYrr)>;
+
+def Zn3WriteVZeroIdiomLogicX : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [Zn3WriteZeroLatency]>,
+    SchedVar<NoSchedPred,                          [WriteVecLogicX]>
+]>;
+// NOTE: PXORrr,PANDNrr are not zero-cycle!
+def : InstRW<[Zn3WriteVZeroIdiomLogicX], (instrs VPXORrr, VPANDNrr)>;
+
+def Zn3WriteVZeroIdiomLogicY : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [Zn3WriteZeroLatency]>,
+    SchedVar<NoSchedPred,                          [WriteVecLogicY]>
+]>;
+def : InstRW<[Zn3WriteVZeroIdiomLogicY], (instrs VPXORYrr, VPANDNYrr)>;
+
+def Zn3WriteVZeroIdiomALUX : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [Zn3WriteZeroLatency]>,
+    SchedVar<NoSchedPred,                          [WriteVecALUX]>
+]>;
+// NOTE: PSUBBrr, PSUBWrr, PSUBDrr, PSUBQrr,
+//       PCMPGTBrr, PCMPGTWrr, PCMPGTDrr, PCMPGTQrr are not zero-cycle!
+def : InstRW<[Zn3WriteVZeroIdiomALUX],
+             (instrs VPSUBBrr, VPSUBWrr, VPSUBDrr, VPSUBQrr,
+                     VPCMPGTBrr, VPCMPGTWrr, VPCMPGTDrr, VPCMPGTQrr)>;
+
+def Zn3WriteVZeroIdiomALUY : SchedWriteVariant<[
+    SchedVar<MCSchedPredicate<ZeroIdiomPredicate>, [Zn3WriteZeroLatency]>,
+    SchedVar<NoSchedPred,                          [WriteVecALUY]>
+]>;
+def : InstRW<[Zn3WriteVZeroIdiomALUY],
+             (instrs VPSUBBYrr, VPSUBWYrr, VPSUBDYrr, VPSUBQYrr,
+                     VPCMPGTBYrr, VPCMPGTWYrr, VPCMPGTDYrr, VPCMPGTQYrr)>;
 
 def : IsZeroIdiomFunction<[
   // GPR Zero-idioms.
@@ -1534,16 +1582,81 @@ def : IsZeroIdiomFunction<[
                      XOR64rr, XOR64rr_REV,
                      SUB32rr, SUB32rr_REV,
                      SUB64rr, SUB64rr_REV ], ZeroIdiomPredicate>,
+
+  // SSE XMM Zero-idioms.
+  DepBreakingClass<[
+    // fp variants.
+    XORPSrr, XORPDrr,
+    ANDNPSrr, ANDNPDrr,
+
+    // int variants.
+    PXORrr,
+    PANDNrr,
+    PSUBBrr, PSUBWrr, PSUBDrr, PSUBQrr,
+    PSUBSBrr, PSUBSWrr,
+    PSUBUSBrr, PSUBUSWrr,
+    PCMPGTBrr, PCMPGTWrr, PCMPGTDrr, PCMPGTQrr
+  ], ZeroIdiomPredicate>,
+
+  // AVX XMM Zero-idioms.
+  DepBreakingClass<[
+    // fp variants.
+    VXORPSrr, VXORPDrr,
+    VANDNPSrr, VANDNPDrr,
+
+    // int variants.
+    VPXORrr,
+    VPANDNrr,
+    VPSUBBrr, VPSUBWrr, VPSUBDrr, VPSUBQrr,
+    VPSUBSBrr, VPSUBSWrr,
+    VPSUBUSBrr, VPSUBUSWrr,
+    VPCMPGTBrr, VPCMPGTWrr, VPCMPGTDrr, VPCMPGTQrr,
+  ], ZeroIdiomPredicate>,
+
+  // AVX YMM Zero-idioms.
+  DepBreakingClass<[
+    // fp variants.
+    VXORPSYrr, VXORPDYrr,
+    VANDNPSYrr, VANDNPDYrr,
+
+    // int variants.
+    VPXORYrr,
+    VPANDNYrr,
+    VPSUBBYrr, VPSUBWYrr, VPSUBDYrr, VPSUBQYrr,
+    VPSUBSBYrr, VPSUBSWYrr,
+    VPSUBUSBYrr, VPSUBUSWYrr,
+    VPCMPGTBYrr, VPCMPGTWYrr, VPCMPGTDYrr, VPCMPGTQYrr
+  ], ZeroIdiomPredicate>,
 ]>;
 
 def : IsDepBreakingFunction<[
   // GPR
   DepBreakingClass<[ SBB32rr, SBB32rr_REV,
                      SBB64rr, SBB64rr_REV ], ZeroIdiomPredicate>,
-  DepBreakingClass<[ CMP32rr, CMP32rr_REV,
+  DepBreakingClass<[ CMP8rr,  CMP8rr_REV,
+                     CMP16rr, CMP16rr_REV,
+                     CMP32rr, CMP32rr_REV,
                      CMP64rr, CMP64rr_REV ], CheckSameRegOperand<0, 1> >,
 
+  // MMX
+  DepBreakingClass<[
+    MMX_PCMPEQBirr, MMX_PCMPEQWirr, MMX_PCMPEQDirr
+  ], ZeroIdiomPredicate>,
 
+  // SSE
+  DepBreakingClass<[
+    PCMPEQBrr, PCMPEQWrr, PCMPEQDrr, PCMPEQQrr
+  ], ZeroIdiomPredicate>,
+
+  // AVX XMM
+  DepBreakingClass<[
+    VPCMPEQBrr, VPCMPEQWrr, VPCMPEQDrr, VPCMPEQQrr
+  ], ZeroIdiomPredicate>,
+
+  // AVX YMM
+  DepBreakingClass<[
+    VPCMPEQBYrr, VPCMPEQWYrr, VPCMPEQDYrr, VPCMPEQQYrr
+  ], ZeroIdiomPredicate>,
 ]>;
 
 } // SchedModel
