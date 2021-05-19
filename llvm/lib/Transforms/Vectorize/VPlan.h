@@ -341,6 +341,41 @@ struct VPTransformState {
   VPlan *Plan;
 };
 
+/// VPUsers instance used by VPBlockBase to manage CondBit and the block
+/// predicate. Currently VPBlockUsers are used in VPBlockBase for historical
+/// reasons, but in the future the only VPUsers should either be recipes or
+/// live-outs.VPBlockBase uses.
+struct VPBlockUser : public VPUser {
+  VPBlockUser() : VPUser({}, VPUserID::Block) {}
+
+  VPValue *getSingleOperandOrNull() {
+    if (getNumOperands() == 1)
+      return getOperand(0);
+
+    return nullptr;
+  }
+  const VPValue *getSingleOperandOrNull() const {
+    if (getNumOperands() == 1)
+      return getOperand(0);
+
+    return nullptr;
+  }
+
+  void resetSingleOpUser(VPValue *NewVal) {
+    assert(getNumOperands() <= 1 && "Didn't expect more than one operand!");
+    if (!NewVal) {
+      if (getNumOperands() == 1)
+        removeLastOperand();
+      return;
+    }
+
+    if (getNumOperands() == 1)
+      setOperand(0, NewVal);
+    else
+      addOperand(NewVal);
+  }
+};
+
 /// VPBlockBase is the building block of the Hierarchical Control-Flow Graph.
 /// A VPBlockBase can be either a VPBasicBlock or a VPRegionBlock.
 class VPBlockBase {
@@ -364,12 +399,12 @@ class VPBlockBase {
   /// Successor selector managed by a VPUser. For blocks with zero or one
   /// successors, there is no operand. Otherwise there is exactly one operand
   /// which is the branch condition.
-  VPUser CondBitUser;
+  VPBlockUser CondBitUser;
 
   /// If the block is predicated, its predicate is stored as an operand of this
   /// VPUser to maintain the def-use relations. Otherwise there is no operand
   /// here.
-  VPUser PredicateUser;
+  VPBlockUser PredicateUser;
 
   /// VPlan containing the block. Can only be set on the entry block of the
   /// plan.
@@ -621,17 +656,16 @@ class VPRecipeBase : public ilist_node_with_parent<VPRecipeBase, VPBasicBlock>,
   friend VPBasicBlock;
   friend class VPBlockUtils;
 
-
   /// Each VPRecipe belongs to a single VPBasicBlock.
   VPBasicBlock *Parent = nullptr;
 
 public:
   VPRecipeBase(const unsigned char SC, ArrayRef<VPValue *> Operands)
-      : VPDef(SC), VPUser(Operands) {}
+      : VPDef(SC), VPUser(Operands, VPUser::VPUserID::Recipe) {}
 
   template <typename IterT>
   VPRecipeBase(const unsigned char SC, iterator_range<IterT> Operands)
-      : VPDef(SC), VPUser(Operands) {}
+      : VPDef(SC), VPUser(Operands, VPUser::VPUserID::Recipe) {}
   virtual ~VPRecipeBase() = default;
 
   /// \return the VPBasicBlock which this VPRecipe belongs to.
@@ -681,6 +715,10 @@ public:
   static inline bool classof(const VPDef *D) {
     // All VPDefs are also VPRecipeBases.
     return true;
+  }
+
+  static inline bool classof(const VPUser *U) {
+    return U->getVPUserID() == VPUser::VPUserID::Recipe;
   }
 
   /// Returns true if the recipe may have side-effects.
@@ -993,9 +1031,10 @@ public:
 
 /// A recipe for handling all phi nodes except for integer and FP inductions.
 /// For reduction PHIs, RdxDesc must point to the corresponding recurrence
-/// descriptor and the start value is the first operand of the recipe.
-/// In the VPlan native path, all incoming VPValues & VPBasicBlock pairs are
-/// managed in the recipe directly.
+/// descriptor, the start value is the first operand of the recipe and the
+/// incoming value from the backedge is the second operand. In the VPlan native
+/// path, all incoming VPValues & VPBasicBlock pairs are managed in the recipe
+/// directly.
 class VPWidenPHIRecipe : public VPRecipeBase, public VPValue {
   /// Descriptor for a reduction PHI.
   RecurrenceDescriptor *RdxDesc = nullptr;
@@ -1038,6 +1077,13 @@ public:
   /// Returns the start value of the phi, if it is a reduction.
   VPValue *getStartValue() {
     return getNumOperands() == 0 ? nullptr : getOperand(0);
+  }
+
+  /// Returns the incoming value from the loop backedge, if it is a reduction.
+  VPValue *getBackedgeValue() {
+    assert(RdxDesc && "second incoming value is only guaranteed to be backedge "
+                      "value for reductions");
+    return getOperand(1);
   }
 
   /// Adds a pair (\p IncomingV, \p IncomingBlock) to the phi.
@@ -1522,6 +1568,11 @@ public:
   }
 
   void dropAllReferences(VPValue *NewValue) override;
+
+  /// Split current block at \p SplitAt by inserting a new block between the
+  /// current block and its successors and moving all recipes starting at
+  /// SplitAt to the new block. Returns the new block.
+  VPBasicBlock *splitAt(iterator SplitAt);
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print this VPBsicBlock to \p O, prefixing all lines with \p Indent. \p
