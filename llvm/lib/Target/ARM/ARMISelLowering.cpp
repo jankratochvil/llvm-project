@@ -1781,6 +1781,9 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(ARMISD::VLD2_UPD)
     MAKE_CASE(ARMISD::VLD3_UPD)
     MAKE_CASE(ARMISD::VLD4_UPD)
+    MAKE_CASE(ARMISD::VLD1x2_UPD)
+    MAKE_CASE(ARMISD::VLD1x3_UPD)
+    MAKE_CASE(ARMISD::VLD1x4_UPD)
     MAKE_CASE(ARMISD::VLD2LN_UPD)
     MAKE_CASE(ARMISD::VLD3LN_UPD)
     MAKE_CASE(ARMISD::VLD4LN_UPD)
@@ -11110,7 +11113,7 @@ static Register genTPEntry(MachineBasicBlock *TpEntry,
                            MachineBasicBlock *TpExit, Register OpSizeReg,
                            const TargetInstrInfo *TII, DebugLoc Dl,
                            MachineRegisterInfo &MRI) {
-  // Calculates loop iteration count = ceil(n/16)/16 = ((n + 15)&(-16)) / 16.
+  // Calculates loop iteration count = ceil(n/16) = (n + 15) >> 4.
   Register AddDestReg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
   BuildMI(TpEntry, Dl, TII->get(ARM::t2ADDri), AddDestReg)
       .addUse(OpSizeReg)
@@ -11118,16 +11121,9 @@ static Register genTPEntry(MachineBasicBlock *TpEntry,
       .add(predOps(ARMCC::AL))
       .addReg(0);
 
-  Register BicDestReg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
-  BuildMI(TpEntry, Dl, TII->get(ARM::t2BICri), BicDestReg)
-      .addUse(AddDestReg, RegState::Kill)
-      .addImm(16)
-      .add(predOps(ARMCC::AL))
-      .addReg(0);
-
-  Register LsrDestReg = MRI.createVirtualRegister(&ARM::GPRlrRegClass);
+  Register LsrDestReg = MRI.createVirtualRegister(&ARM::rGPRRegClass);
   BuildMI(TpEntry, Dl, TII->get(ARM::t2LSRri), LsrDestReg)
-      .addUse(BicDestReg, RegState::Kill)
+      .addUse(AddDestReg, RegState::Kill)
       .addImm(4)
       .add(predOps(ARMCC::AL))
       .addReg(0);
@@ -11139,6 +11135,10 @@ static Register genTPEntry(MachineBasicBlock *TpEntry,
   BuildMI(TpEntry, Dl, TII->get(ARM::t2WhileLoopStart))
       .addUse(TotalIterationsReg)
       .addMBB(TpExit);
+
+  BuildMI(TpEntry, Dl, TII->get(ARM::t2B))
+      .addMBB(TpLoopBody)
+      .add(predOps(ARMCC::AL));
 
   return TotalIterationsReg;
 }
@@ -14628,7 +14628,8 @@ static SDValue CombineBaseUpdate(SDNode *N,
     // Find the new opcode for the updating load/store.
     bool isLoadOp = true;
     bool isLaneOp = false;
-    // Workaround for vst1x and vld1x which do not have alignment operand.
+    // Workaround for vst1x and vld1x intrinsics which do not have alignment
+    // as an operand.
     bool hasAlignment = true;
     unsigned NewOpc = 0;
     unsigned NumVecs = 0;
@@ -14644,13 +14645,16 @@ static SDValue CombineBaseUpdate(SDNode *N,
         NumVecs = 3; break;
       case Intrinsic::arm_neon_vld4:     NewOpc = ARMISD::VLD4_UPD;
         NumVecs = 4; break;
-      case Intrinsic::arm_neon_vld1x2:
-      case Intrinsic::arm_neon_vld1x3:
-      case Intrinsic::arm_neon_vld1x4:
+      case Intrinsic::arm_neon_vld1x2:   NewOpc = ARMISD::VLD1x2_UPD;
+        NumVecs = 2; hasAlignment = false; break;
+      case Intrinsic::arm_neon_vld1x3:   NewOpc = ARMISD::VLD1x3_UPD;
+        NumVecs = 3; hasAlignment = false; break;
+      case Intrinsic::arm_neon_vld1x4:   NewOpc = ARMISD::VLD1x4_UPD;
+        NumVecs = 4; hasAlignment = false; break;
       case Intrinsic::arm_neon_vld2dup:
       case Intrinsic::arm_neon_vld3dup:
       case Intrinsic::arm_neon_vld4dup:
-        // TODO: Support updating VLD1x and VLDxDUP nodes. For now, we just skip
+        // TODO: Support updating VLDxDUP nodes. For now, we just skip
         // combining base updates for such intrinsics.
         continue;
       case Intrinsic::arm_neon_vld2lane: NewOpc = ARMISD::VLD2LN_UPD;
