@@ -1247,6 +1247,10 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
 }
 
 void SelectionDAGBuilder::salvageUnresolvedDbgValue(DanglingDebugInfo &DDI) {
+  // TODO: For the variadic implementation, instead of only checking the fail
+  // state of `handleDebugValue`, we need know specifically which values were
+  // invalid, so that we attempt to salvage only those values when processing
+  // a DIArgList.
   assert(!DDI.getDI()->hasArgList() &&
          "Not implemented for variadic dbg_values");
   Value *V = DDI.getDI()->getValue(0);
@@ -1270,16 +1274,21 @@ void SelectionDAGBuilder::salvageUnresolvedDbgValue(DanglingDebugInfo &DDI) {
   while (isa<Instruction>(V)) {
     Instruction &VAsInst = *cast<Instruction>(V);
     // Temporary "0", awaiting real implementation.
-    DIExpression *NewExpr = salvageDebugInfoImpl(VAsInst, Expr, StackValue, 0);
+    SmallVector<Value *, 4> AdditionalValues;
+    DIExpression *SalvagedExpr =
+        salvageDebugInfoImpl(VAsInst, Expr, StackValue, 0, AdditionalValues);
 
     // If we cannot salvage any further, and haven't yet found a suitable debug
     // expression, bail out.
-    if (!NewExpr)
+    // TODO: If AdditionalValues isn't empty, then the salvage can only be
+    // represented with a DBG_VALUE_LIST, so we give up. When we have support
+    // here for variadic dbg_values, remove that condition.
+    if (!SalvagedExpr || !AdditionalValues.empty())
       break;
 
     // New value and expr now represent this debuginfo.
     V = VAsInst.getOperand(0);
-    Expr = NewExpr;
+    Expr = SalvagedExpr;
 
     // Some kind of simplification occurred: check whether the operand of the
     // salvaged debug expression can be encoded in this DAG.
@@ -5826,10 +5835,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // FIXME: Support passing different dest/src alignments to the memcpy DAG
     // node.
     SDValue Root = isVol ? getRoot() : getMemoryRoot();
+    AAMDNodes AAInfo;
+    I.getAAMetadata(AAInfo);
     SDValue MC = DAG.getMemcpy(Root, sdl, Op1, Op2, Op3, Alignment, isVol,
                                /* AlwaysInline */ false, isTC,
                                MachinePointerInfo(I.getArgOperand(0)),
-                               MachinePointerInfo(I.getArgOperand(1)));
+                               MachinePointerInfo(I.getArgOperand(1)), AAInfo);
     updateDAGForMaybeTailCall(MC);
     return;
   }
@@ -5847,10 +5858,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     bool isTC = I.isTailCall() && isInTailCallPosition(I, DAG.getTarget());
     // FIXME: Support passing different dest/src alignments to the memcpy DAG
     // node.
+    AAMDNodes AAInfo;
+    I.getAAMetadata(AAInfo);
     SDValue MC = DAG.getMemcpy(getRoot(), sdl, Dst, Src, Size, Alignment, isVol,
                                /* AlwaysInline */ true, isTC,
                                MachinePointerInfo(I.getArgOperand(0)),
-                               MachinePointerInfo(I.getArgOperand(1)));
+                               MachinePointerInfo(I.getArgOperand(1)), AAInfo);
     updateDAGForMaybeTailCall(MC);
     return;
   }
@@ -5864,8 +5877,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     bool isVol = MSI.isVolatile();
     bool isTC = I.isTailCall() && isInTailCallPosition(I, DAG.getTarget());
     SDValue Root = isVol ? getRoot() : getMemoryRoot();
+    AAMDNodes AAInfo;
+    I.getAAMetadata(AAInfo);
     SDValue MS = DAG.getMemset(Root, sdl, Op1, Op2, Op3, Alignment, isVol, isTC,
-                               MachinePointerInfo(I.getArgOperand(0)));
+                               MachinePointerInfo(I.getArgOperand(0)), AAInfo);
     updateDAGForMaybeTailCall(MS);
     return;
   }
@@ -5883,9 +5898,11 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // FIXME: Support passing different dest/src alignments to the memmove DAG
     // node.
     SDValue Root = isVol ? getRoot() : getMemoryRoot();
+    AAMDNodes AAInfo;
+    I.getAAMetadata(AAInfo);
     SDValue MM = DAG.getMemmove(Root, sdl, Op1, Op2, Op3, Alignment, isVol,
                                 isTC, MachinePointerInfo(I.getArgOperand(0)),
-                                MachinePointerInfo(I.getArgOperand(1)));
+                                MachinePointerInfo(I.getArgOperand(1)), AAInfo);
     updateDAGForMaybeTailCall(MM);
     return;
   }
@@ -7694,10 +7711,12 @@ bool SelectionDAGBuilder::visitMemPCpyCall(const CallInst &I) {
   // because the return pointer needs to be adjusted by the size of
   // the copied memory.
   SDValue Root = isVol ? getRoot() : getMemoryRoot();
+  AAMDNodes AAInfo;
+  I.getAAMetadata(AAInfo);
   SDValue MC = DAG.getMemcpy(Root, sdl, Dst, Src, Size, Alignment, isVol, false,
                              /*isTailCall=*/false,
                              MachinePointerInfo(I.getArgOperand(0)),
-                             MachinePointerInfo(I.getArgOperand(1)));
+                             MachinePointerInfo(I.getArgOperand(1)), AAInfo);
   assert(MC.getNode() != nullptr &&
          "** memcpy should not be lowered as TailCall in mempcpy context **");
   DAG.setRoot(MC);
@@ -9877,13 +9896,17 @@ findArgumentCopyElisionCandidates(const DataLayout &DL,
       continue;
 
     // Check if the stored value is an argument, and that this store fully
-    // initializes the alloca. Don't elide copies from the same argument twice.
+    // initializes the alloca.
+    // If the argument type has padding bits we can't directly forward a pointer
+    // as the upper bits may contain garbage.
+    // Don't elide copies from the same argument twice.
     const Value *Val = SI->getValueOperand()->stripPointerCasts();
     const auto *Arg = dyn_cast<Argument>(Val);
     if (!Arg || Arg->hasPassPointeeByValueCopyAttr() ||
         Arg->getType()->isEmptyTy() ||
         DL.getTypeStoreSize(Arg->getType()) !=
             DL.getTypeAllocSize(AI->getAllocatedType()) ||
+        !DL.typeSizeEqualsStoreSize(Arg->getType()) ||
         ArgCopyElisionCandidates.count(Arg)) {
       *Info = StaticAllocaInfo::Clobbered;
       continue;
