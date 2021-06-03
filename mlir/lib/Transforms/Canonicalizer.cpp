@@ -35,6 +35,8 @@ struct Canonicalizer : public CanonicalizerBase<Canonicalizer> {
   /// execution.
   LogicalResult initialize(MLIRContext *context) override {
     RewritePatternSet owningPatterns(context);
+    for (auto *dialect : context->getLoadedDialects())
+      dialect->getCanonicalizationPatterns(owningPatterns);
     for (auto *op : context->getRegisteredOperations())
       op->getCanonicalizationPatterns(owningPatterns, context);
     patterns = std::move(owningPatterns);
@@ -57,6 +59,6 @@ std::unique_ptr<Pass> mlir::createCanonicalizerPass() {
 
 /// Creates an instance of the Canonicalizer pass with the specified config.
 std::unique_ptr<Pass>
-createCanonicalizerPass(const GreedyRewriteConfig &config) {
+mlir::createCanonicalizerPass(const GreedyRewriteConfig &config) {
   return std::make_unique<Canonicalizer>(config);
 }

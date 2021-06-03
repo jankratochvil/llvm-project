@@ -1548,10 +1548,13 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::TRUNCATE,    MVT::v16i8,  MVT::v16i16, 2 }, // widen to zmm
     { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i8,   2 }, // widen to zmm
     { ISD::TRUNCATE,    MVT::v2i1,   MVT::v2i16,  2 }, // widen to zmm
+    { ISD::TRUNCATE,    MVT::v2i8,   MVT::v2i16,  2 }, // vpmovwb
     { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i8,   2 }, // widen to zmm
     { ISD::TRUNCATE,    MVT::v4i1,   MVT::v4i16,  2 }, // widen to zmm
+    { ISD::TRUNCATE,    MVT::v4i8,   MVT::v4i16,  2 }, // vpmovwb
     { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i8,   2 }, // widen to zmm
     { ISD::TRUNCATE,    MVT::v8i1,   MVT::v8i16,  2 }, // widen to zmm
+    { ISD::TRUNCATE,    MVT::v8i8,   MVT::v8i16,  2 }, // vpmovwb
     { ISD::TRUNCATE,    MVT::v16i1,  MVT::v16i8,  2 }, // widen to zmm
     { ISD::TRUNCATE,    MVT::v16i1,  MVT::v16i16, 2 }, // widen to zmm
     { ISD::TRUNCATE,    MVT::v32i1,  MVT::v32i8,  2 }, // widen to zmm
@@ -1596,11 +1599,15 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i64,  2 }, // zmm vpsllq+vptestmq
     { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i64,  2 }, // zmm vpsllq+vptestmq
     { ISD::TRUNCATE,  MVT::v8i1,    MVT::v8i64,  2 }, // vpsllq+vptestmq
-    { ISD::TRUNCATE,  MVT::v16i8,   MVT::v16i32, 2 },
-    { ISD::TRUNCATE,  MVT::v16i16,  MVT::v16i32, 2 },
-    { ISD::TRUNCATE,  MVT::v8i8,    MVT::v8i64,  2 },
-    { ISD::TRUNCATE,  MVT::v8i16,   MVT::v8i64,  2 },
-    { ISD::TRUNCATE,  MVT::v8i32,   MVT::v8i64,  1 },
+    { ISD::TRUNCATE,  MVT::v2i8,    MVT::v2i32,  2 }, // vpmovdb
+    { ISD::TRUNCATE,  MVT::v4i8,    MVT::v4i32,  2 }, // vpmovdb
+    { ISD::TRUNCATE,  MVT::v16i8,   MVT::v16i32, 2 }, // vpmovdb
+    { ISD::TRUNCATE,  MVT::v16i16,  MVT::v16i32, 2 }, // vpmovdb
+    { ISD::TRUNCATE,  MVT::v2i8,    MVT::v2i64,  2 }, // vpmovqb
+    { ISD::TRUNCATE,  MVT::v2i16,   MVT::v2i64,  1 }, // vpshufb
+    { ISD::TRUNCATE,  MVT::v8i8,    MVT::v8i64,  2 }, // vpmovqb
+    { ISD::TRUNCATE,  MVT::v8i16,   MVT::v8i64,  2 }, // vpmovqw
+    { ISD::TRUNCATE,  MVT::v8i32,   MVT::v8i64,  1 }, // vpmovqd
     { ISD::TRUNCATE,  MVT::v4i32,   MVT::v4i64,  1 }, // zmm vpmovqd
     { ISD::TRUNCATE,  MVT::v16i8,   MVT::v16i64, 5 },// 2*vpmovqd+concat+vpmovdb
 
@@ -1869,20 +1876,20 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i1,  4 },
     { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,  7 },
     { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i1,  4 },
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i8,  4 },
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i8,  4 },
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i8,  4 },
-    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i8,  4 },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i8,  3 },
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i8,  3 },
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i8,  3 },
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i8,  3 },
     { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i1, 4 },
     { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i1, 4 },
-    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i8, 4 },
-    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i8, 4 },
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i16, 4 },
+    { ISD::SIGN_EXTEND, MVT::v16i16, MVT::v16i8, 3 },
+    { ISD::ZERO_EXTEND, MVT::v16i16, MVT::v16i8, 3 },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i16, 3 },
     { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i16, 3 },
-    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i16, 4 },
-    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i16, 4 },
-    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i32, 4 },
-    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i32, 4 },
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i16, 3 },
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i16, 3 },
+    { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i32, 3 },
+    { ISD::ZERO_EXTEND, MVT::v4i64,  MVT::v4i32, 3 },
 
     { ISD::TRUNCATE,    MVT::v4i1,  MVT::v4i64,  4 },
     { ISD::TRUNCATE,    MVT::v8i1,  MVT::v8i32,  5 },
@@ -4760,8 +4767,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX2(
   // TODO: Support also strided loads (interleaved-groups with gaps).
   if (Indices.size() && Indices.size() != Factor)
     return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                             Alignment, AddressSpace,
-                                             CostKind);
+                                             Alignment, AddressSpace, CostKind);
 
   // VecTy for interleave memop is <VF*Factor x Elt>.
   // So, for VF=4, Interleave Factor = 3, Element type = i32 we have
@@ -4773,8 +4779,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX2(
   // (see MachineValueType.h::getVectorVT()).
   if (!LegalVT.isVector())
     return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                             Alignment, AddressSpace,
-                                             CostKind);
+                                             Alignment, AddressSpace, CostKind);
 
   unsigned VF = VecTy->getNumElements() / Factor;
   Type *ScalarTy = VecTy->getElementType();
@@ -4791,8 +4796,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX2(
   EVT ETy = TLI->getValueType(DL, VT);
   if (!ETy.isSimple())
     return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                             Alignment, AddressSpace,
-                                             CostKind);
+                                             Alignment, AddressSpace, CostKind);
 
   // TODO: Complete for other data-types and strides.
   // Each combination of Stride, element bit width and VF results in a different
@@ -4802,39 +4806,39 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX2(
   // The cost of the loads/stores is accounted for separately.
   //
   static const CostTblEntry AVX2InterleavedLoadTbl[] = {
-    { 2, MVT::v4i64, 6 }, //(load 8i64 and) deinterleave into 2 x 4i64
+      {2, MVT::v4i64, 6}, // (load 8i64 and) deinterleave into 2 x 4i64
 
-    { 3, MVT::v2i8,  10 }, //(load 6i8 and)  deinterleave into 3 x 2i8
-    { 3, MVT::v4i8,  4 },  //(load 12i8 and) deinterleave into 3 x 4i8
-    { 3, MVT::v8i8,  9 },  //(load 24i8 and) deinterleave into 3 x 8i8
-    { 3, MVT::v16i8, 11},  //(load 48i8 and) deinterleave into 3 x 16i8
-    { 3, MVT::v32i8, 13},  //(load 96i8 and) deinterleave into 3 x 32i8
+      {3, MVT::v2i8, 10},  // (load 6i8 and) deinterleave into 3 x 2i8
+      {3, MVT::v4i8, 4},   // (load 12i8 and) deinterleave into 3 x 4i8
+      {3, MVT::v8i8, 9},   // (load 24i8 and) deinterleave into 3 x 8i8
+      {3, MVT::v16i8, 11}, // (load 48i8 and) deinterleave into 3 x 16i8
+      {3, MVT::v32i8, 13}, // (load 96i8 and) deinterleave into 3 x 32i8
 
-    { 3, MVT::v8i32, 17 }, //(load 24i32 and)deinterleave into 3 x 8i32
+      {3, MVT::v8i32, 17}, // (load 24i32 and) deinterleave into 3 x 8i32
 
-    { 4, MVT::v2i8,  12 }, //(load 8i8 and)   deinterleave into 4 x 2i8
-    { 4, MVT::v4i8,  4 },  //(load 16i8 and)  deinterleave into 4 x 4i8
-    { 4, MVT::v8i8,  20 }, //(load 32i8 and)  deinterleave into 4 x 8i8
-    { 4, MVT::v16i8, 39 }, //(load 64i8 and)  deinterleave into 4 x 16i8
-    { 4, MVT::v32i8, 80 }, //(load 128i8 and) deinterleave into 4 x 32i8
+      {4, MVT::v2i8, 12},  // (load 8i8 and) deinterleave into 4 x 2i8
+      {4, MVT::v4i8, 4},   // (load 16i8 and) deinterleave into 4 x 4i8
+      {4, MVT::v8i8, 20},  // (load 32i8 and) deinterleave into 4 x 8i8
+      {4, MVT::v16i8, 39}, // (load 64i8 and) deinterleave into 4 x 16i8
+      {4, MVT::v32i8, 80}, // (load 128i8 and) deinterleave into 4 x 32i8
 
-    { 8, MVT::v8i32, 40 }  //(load 64i32 and)deinterleave into 8 x 8i32
+      {8, MVT::v8i32, 40} // (load 64i32 and) deinterleave into 8 x 8i32
   };
 
   static const CostTblEntry AVX2InterleavedStoreTbl[] = {
-    { 2, MVT::v4i64, 6 }, //interleave into 2 x 4i64 into 8i64 (and store)
+      {2, MVT::v4i64, 6}, // interleave 2 x 4i64 into 8i64 (and store)
 
-    { 3, MVT::v2i8,  7 },  //interleave 3 x 2i8  into 6i8 (and store)
-    { 3, MVT::v4i8,  8 },  //interleave 3 x 4i8  into 12i8 (and store)
-    { 3, MVT::v8i8,  11 }, //interleave 3 x 8i8  into 24i8 (and store)
-    { 3, MVT::v16i8, 11 }, //interleave 3 x 16i8 into 48i8 (and store)
-    { 3, MVT::v32i8, 13 }, //interleave 3 x 32i8 into 96i8 (and store)
+      {3, MVT::v2i8, 7},   // interleave 3 x 2i8 into 6i8 (and store)
+      {3, MVT::v4i8, 8},   // interleave 3 x 4i8 into 12i8 (and store)
+      {3, MVT::v8i8, 11},  // interleave 3 x 8i8 into 24i8 (and store)
+      {3, MVT::v16i8, 11}, // interleave 3 x 16i8 into 48i8 (and store)
+      {3, MVT::v32i8, 13}, // interleave 3 x 32i8 into 96i8 (and store)
 
-    { 4, MVT::v2i8,  12 }, //interleave 4 x 2i8  into 8i8 (and store)
-    { 4, MVT::v4i8,  9 },  //interleave 4 x 4i8  into 16i8 (and store)
-    { 4, MVT::v8i8,  10 }, //interleave 4 x 8i8  into 32i8 (and store)
-    { 4, MVT::v16i8, 10 }, //interleave 4 x 16i8 into 64i8 (and store)
-    { 4, MVT::v32i8, 12 }  //interleave 4 x 32i8 into 128i8 (and store)
+      {4, MVT::v2i8, 12},  // interleave 4 x 2i8 into 8i8 (and store)
+      {4, MVT::v4i8, 9},   // interleave 4 x 4i8 into 16i8 (and store)
+      {4, MVT::v8i8, 10},  // interleave 4 x 8i8 into 32i8 (and store)
+      {4, MVT::v16i8, 10}, // interleave 4 x 16i8 into 64i8 (and store)
+      {4, MVT::v32i8, 12}  // interleave 4 x 32i8 into 128i8 (and store)
   };
 
   if (Opcode == Instruction::Load) {
