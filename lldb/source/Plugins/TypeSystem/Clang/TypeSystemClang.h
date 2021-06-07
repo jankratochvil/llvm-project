@@ -843,11 +843,10 @@ public:
                            CompilerType *child_type = nullptr);
 
   // Modifying RecordType
-  static clang::FieldDecl *AddFieldToRecordType(const CompilerType &type,
-                                                llvm::StringRef name,
-                                                const CompilerType &field_type,
-                                                lldb::AccessType access,
-                                                uint32_t bitfield_bit_size, bool IsZeroSize = false);
+  static clang::FieldDecl *
+  AddFieldToRecordType(const CompilerType &type, llvm::StringRef name,
+                       const CompilerType &field_type, lldb::AccessType access,
+                       uint32_t bitfield_bit_size, bool IsZeroSize = false);
 
   static void BuildIndirectFields(const CompilerType &type);
 

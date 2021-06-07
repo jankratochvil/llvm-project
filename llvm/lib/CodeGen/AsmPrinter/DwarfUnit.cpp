@@ -1600,7 +1600,8 @@ DIE &DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
       } else {
         addUInt(MemberDie, dwarf::DW_AT_data_bit_offset, None, Offset);
       }
-      assert(!(DT->getFlags() & DINode::FlagIsZeroSize) && "bitfields cannot have [[no_unique_address]]");
+      assert(!(DT->getFlags() & DINode::FlagIsZeroSize) &&
+             "bitfields cannot have [[no_unique_address]]");
     } else {
       // This is not a bitfield.
       OffsetInBytes = DT->getOffsetInBits() / 8;

@@ -1401,11 +1401,10 @@ llvm::DIType *CGDebugInfo::createBitFieldType(const FieldDecl *BitFieldDecl,
       Flags, DebugType);
 }
 
-llvm::DIType *
-CGDebugInfo::createFieldType(StringRef name, QualType type, SourceLocation loc,
-                             AccessSpecifier AS, uint64_t offsetInBits,
-                             uint32_t AlignInBits, llvm::DIFile *tunit,
-                             llvm::DIScope *scope, bool IsZeroSize, const RecordDecl *RD) {
+llvm::DIType *CGDebugInfo::createFieldType(
+    StringRef name, QualType type, SourceLocation loc, AccessSpecifier AS,
+    uint64_t offsetInBits, uint32_t AlignInBits, llvm::DIFile *tunit,
+    llvm::DIScope *scope, bool IsZeroSize, const RecordDecl *RD) {
   llvm::DIType *debugType = getOrCreateType(type, tunit);
 
   // Get the location for the field.
@@ -1442,7 +1441,8 @@ void CGDebugInfo::CollectRecordLambdaFields(
        I != E; ++I, ++Field, ++fieldno) {
     const LambdaCapture &C = *I;
     bool IsZeroSize = false;
-    assert(!Field->isZeroSize(CGM.getContext()) && "lambdas cannot use [[no_unique_address]]!");
+    assert(!Field->isZeroSize(CGM.getContext()) &&
+           "lambdas cannot use [[no_unique_address]]!");
     if (C.capturesVariable()) {
       SourceLocation Loc = C.getLocation();
       assert(!Field->isBitField() && "lambdas don't have bitfield members!");
@@ -1450,9 +1450,10 @@ void CGDebugInfo::CollectRecordLambdaFields(
       StringRef VName = V->getName();
       llvm::DIFile *VUnit = getOrCreateFile(Loc);
       auto Align = getDeclAlignIfRequired(V, CGM.getContext());
-      llvm::DIType *FieldType = createFieldType(
-          VName, Field->getType(), Loc, Field->getAccess(),
-          layout.getFieldOffset(fieldno), Align, VUnit, RecordTy, IsZeroSize, CXXDecl);
+      llvm::DIType *FieldType =
+          createFieldType(VName, Field->getType(), Loc, Field->getAccess(),
+                          layout.getFieldOffset(fieldno), Align, VUnit,
+                          RecordTy, IsZeroSize, CXXDecl);
       elements.push_back(FieldType);
     } else if (C.capturesThis()) {
       // TODO: Need to handle 'this' in some way by probably renaming the
@@ -4586,9 +4587,9 @@ void CGDebugInfo::collectDefaultFieldsForBlockLiteralDeclare(
     Fields.push_back(createFieldType("__flags", Context.IntTy, Loc, AS_public,
                                      BlockLayout.getElementOffsetInBits(1),
                                      Unit, Unit, IsZeroSize));
-    Fields.push_back(
-        createFieldType("__reserved", Context.IntTy, Loc, AS_public,
-                        BlockLayout.getElementOffsetInBits(2), Unit, Unit, IsZeroSize));
+    Fields.push_back(createFieldType(
+        "__reserved", Context.IntTy, Loc, AS_public,
+        BlockLayout.getElementOffsetInBits(2), Unit, Unit, IsZeroSize));
     auto *FnTy = Block.getBlockExpr()->getFunctionType();
     auto FnPtrType = CGM.getContext().getPointerType(FnTy->desugar());
     Fields.push_back(createFieldType("__FuncPtr", FnPtrType, Loc, AS_public,
@@ -4599,7 +4600,8 @@ void CGDebugInfo::collectDefaultFieldsForBlockLiteralDeclare(
         Context.getPointerType(Block.NeedsCopyDispose
                                    ? Context.getBlockDescriptorExtendedType()
                                    : Context.getBlockDescriptorType()),
-        Loc, AS_public, BlockLayout.getElementOffsetInBits(4), Unit, Unit, IsZeroSize));
+        Loc, AS_public, BlockLayout.getElementOffsetInBits(4), Unit, Unit,
+        IsZeroSize));
   }
 }
 
@@ -4699,8 +4701,9 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
     } else {
       auto Align = getDeclAlignIfRequired(variable, CGM.getContext());
       bool IsZeroSize = false;
-      fieldType = createFieldType(name, variable->getType(), loc, AS_public,
-                                  offsetInBits, Align, tunit, tunit, IsZeroSize);
+      fieldType =
+          createFieldType(name, variable->getType(), loc, AS_public,
+                          offsetInBits, Align, tunit, tunit, IsZeroSize);
     }
     fields.push_back(fieldType);
   }

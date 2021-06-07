@@ -1266,7 +1266,8 @@ void PDBASTParser::AddRecordMembers(
 
       bool IsZeroSize = false; // FIXME: Is there [[no_unique_address]] in PDB?
       auto decl = TypeSystemClang::AddFieldToRecordType(
-          record_type, member_name.c_str(), member_comp_type, access, bit_size, IsZeroSize);
+          record_type, member_name.c_str(), member_comp_type, access, bit_size,
+          IsZeroSize);
       if (!decl)
         continue;
 
