@@ -7671,7 +7671,8 @@ int LLParser::parseAtomicRMW(Instruction *&Inst, PerFunctionState &PFS) {
     return tokError("atomicrmw cannot be unordered");
   if (!Ptr->getType()->isPointerTy())
     return error(PtrLoc, "atomicrmw operand must be a pointer");
-  if (cast<PointerType>(Ptr->getType())->getElementType() != Val->getType())
+  if (!cast<PointerType>(Ptr->getType())
+           ->isOpaqueOrPointeeTypeMatches(Val->getType()))
     return error(ValLoc, "atomicrmw value and pointer type do not match");
 
   if (Operation == AtomicRMWInst::Xchg) {
@@ -9176,6 +9177,7 @@ bool LLParser::parseOptionalParamAccesses(
       return true;
     CallsNum += ParamAccess.Calls.size();
     assert(VContexts.size() == CallsNum);
+    (void)CallsNum;
     Params.emplace_back(std::move(ParamAccess));
   } while (EatIfPresent(lltok::comma));
 
