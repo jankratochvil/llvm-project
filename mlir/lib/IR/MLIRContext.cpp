@@ -332,6 +332,7 @@ public:
   UnitAttr unitAttr;
   UnknownLoc unknownLocAttr;
   DictionaryAttr emptyDictionaryAttr;
+  StringAttr emptyStringAttr;
 
 public:
   MLIRContextImpl() : identifiers(identifierAllocator) {}
@@ -400,6 +401,8 @@ MLIRContext::MLIRContext(const DialectRegistry &registry)
   impl->unitAttr = AttributeUniquer::get<UnitAttr>(this);
   /// The empty dictionary attribute.
   impl->emptyDictionaryAttr = DictionaryAttr::getEmptyUnchecked(this);
+  /// The empty string attribute.
+  impl->emptyStringAttr = StringAttr::getEmptyStringAttrUnchecked(this);
 
   // Register the affine storage objects with the uniquer.
   impl->affineUniquer
@@ -558,7 +561,7 @@ void MLIRContext::allowUnregisteredDialects(bool allowing) {
   impl->allowUnregisteredDialects = allowing;
 }
 
-/// Return true if multi-threading is disabled by the context.
+/// Return true if multi-threading is enabled by the context.
 bool MLIRContext::isMultithreadingEnabled() {
   return impl->threadingIsEnabled && llvm::llvm_is_multithreaded();
 }
@@ -927,6 +930,11 @@ UnknownLoc UnknownLoc::get(MLIRContext *context) {
 /// Return empty dictionary.
 DictionaryAttr DictionaryAttr::getEmpty(MLIRContext *context) {
   return context->getImpl().emptyDictionaryAttr;
+}
+
+/// Return an empty string.
+StringAttr StringAttr::get(MLIRContext *context) {
+  return context->getImpl().emptyStringAttr;
 }
 
 //===----------------------------------------------------------------------===//
