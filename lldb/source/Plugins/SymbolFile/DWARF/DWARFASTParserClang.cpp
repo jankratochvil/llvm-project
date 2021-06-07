@@ -2472,6 +2472,7 @@ void DWARFASTParserClang::ParseSingleMember(
       }
     }
   }
+  bool IsZeroSize = byte_size && *byte_size == 0;
 
   if (prop_name) {
     ConstString fixed_setter;
@@ -2722,7 +2723,7 @@ void DWARFASTParserClang::ParseSingleMember(
 
         field_decl = TypeSystemClang::AddFieldToRecordType(
             class_clang_type, name, member_clang_type, accessibility,
-            bit_size);
+            bit_size, IsZeroSize);
 
         m_ast.SetMetadataAsUserID(field_decl, die.GetID());
 
