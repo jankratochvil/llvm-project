@@ -59,8 +59,8 @@ typedef enum {
   LLVMDIFlagLittleEndian = 1 << 28,
   LLVMDIFlagAllCallsDescribed = 1 << 29,
   LLVMDIFlagIndirectVirtualBase = (1 << 2) | (1 << 5),
-  LLVMDIFlagAccessibility = LLVMDIFlagPrivate | LLVMDIFlagProtected |
-                            LLVMDIFlagPublic,
+  LLVMDIFlagAccessibility =
+      LLVMDIFlagPrivate | LLVMDIFlagProtected | LLVMDIFlagPublic,
   LLVMDIFlagPtrToMemberRep = LLVMDIFlagSingleInheritance |
                              LLVMDIFlagMultipleInheritance |
                              LLVMDIFlagVirtualInheritance
