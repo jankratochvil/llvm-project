@@ -76,7 +76,7 @@ module DIFlag : sig
     | StaticMember
     | LValueReference
     | RValueReference
-    | Reserved
+    | ExportSymbols
     | SingleInheritance
     | MultipleInheritance
     | VirtualInheritance

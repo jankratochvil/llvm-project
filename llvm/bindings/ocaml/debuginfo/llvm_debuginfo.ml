@@ -76,7 +76,7 @@ module DIFlag = struct
     | StaticMember
     | LValueReference
     | RValueReference
-    | Reserved
+    | ExportSymbols
     | SingleInheritance
     | MultipleInheritance
     | VirtualInheritance
