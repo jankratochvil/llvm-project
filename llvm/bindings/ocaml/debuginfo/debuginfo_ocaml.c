@@ -44,7 +44,7 @@ typedef enum {
   i_DIFlagStaticMember,
   i_DIFlagLValueReference,
   i_DIFlagRValueReference,
-  i_DIFlagReserved,
+  i_DIFlagExportSymbols,
   i_DIFlagSingleInheritance,
   i_DIFlagMultipleInheritance,
   i_DIFlagVirtualInheritance,
@@ -100,8 +100,8 @@ static LLVMDIFlags map_DIFlag(LLVMDIFlag_i DIF) {
     return LLVMDIFlagLValueReference;
   case i_DIFlagRValueReference:
     return LLVMDIFlagRValueReference;
-  case i_DIFlagReserved:
-    return LLVMDIFlagReserved;
+  case i_DIFlagExportSymbols:
+    return LLVMDIFlagExportSymbols;
   case i_DIFlagSingleInheritance:
     return LLVMDIFlagSingleInheritance;
   case i_DIFlagMultipleInheritance:
