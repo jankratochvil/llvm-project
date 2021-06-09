@@ -346,8 +346,9 @@ def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary"> {
     /// Return the specified attribute if present and is an instance of
     /// `AttrClass`, null otherwise.
     template<typename AttrClass, typename NameClass>
-    AttrClass getAs(NameClass name) const {
-      return get(name).template dyn_cast_or_null<AttrClass>();
+    AttrClass getAs(NameClass &&name) const {
+      return get(std::forward<NameClass>(name))
+        .template dyn_cast_or_null<AttrClass>();
     }
 
   private:
@@ -707,7 +708,7 @@ def Builtin_SparseElementsAttr
   let extraClassDeclaration = [{
     template <typename T>
     using iterator =
-        llvm::mapped_iterator<decltype(llvm::seq<ptrdiff_t>(0, 0))::const_iterator,
+        llvm::mapped_iterator<llvm::detail::value_sequence_iterator<ptrdiff_t>,
                               std::function<T(ptrdiff_t)>>;
 
     /// Return the values of this attribute in the form of the given type 'T'.
@@ -812,16 +813,9 @@ def Builtin_StringAttr : Builtin_Attr<"String"> {
   let parameters = (ins StringRefParameter<"">:$value,
                         AttributeSelfTypeParameter<"">:$type);
   let builders = [
-    AttrBuilderWithInferredContext<(ins "StringRef":$bytes,
-                                        "Type":$type), [{
-      return $_get(type.getContext(), bytes, type);
-    }]>,
-    AttrBuilder<(ins "StringRef":$bytes), [{
-      if (bytes.empty())
-        return get($_ctxt);
-      return $_get($_ctxt, bytes, NoneType::get($_ctxt));
-    }]>,
-
+    AttrBuilderWithInferredContext<(ins "const Twine &":$bytes, "Type":$type)>,
+    /// Build an string attr with NoneType.
+    AttrBuilder<(ins "const Twine &":$bytes)>,
     /// Build an empty string attr with NoneType.
     AttrBuilder<(ins)>
   ];
