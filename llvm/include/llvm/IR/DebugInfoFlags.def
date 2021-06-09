@@ -23,6 +23,11 @@
 #endif
 
 // General flags kept in DINode.
+// Keep it in sync these files:
+//   llvm/include/llvm-c/DebugInfo.h
+//   llvm/bindings/ocaml/debuginfo/debuginfo_ocaml.c
+//   llvm/bindings/ocaml/debuginfo/llvm_debuginfo.ml
+//   llvm/bindings/ocaml/debuginfo/llvm_debuginfo.mli
 
 HANDLE_DI_FLAG(0, Zero) // Use it as zero value.
                         // For example: void foo(DIFlags Flags = FlagZero).
