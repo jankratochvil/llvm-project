@@ -1401,11 +1401,10 @@ llvm::DIType *CGDebugInfo::createBitFieldType(const FieldDecl *BitFieldDecl,
       Flags, DebugType);
 }
 
-llvm::DIType *
-CGDebugInfo::createFieldType(StringRef name, QualType type, SourceLocation loc,
-                             AccessSpecifier AS, uint64_t offsetInBits,
-                             uint32_t AlignInBits, llvm::DIFile *tunit,
-                             llvm::DIScope *scope, const RecordDecl *RD) {
+llvm::DIType *CGDebugInfo::createFieldType(
+    StringRef name, QualType type, SourceLocation loc, AccessSpecifier AS,
+    uint64_t offsetInBits, uint32_t AlignInBits, llvm::DIFile *tunit,
+    llvm::DIScope *scope, bool IsZeroSize, const RecordDecl *RD) {
   llvm::DIType *debugType = getOrCreateType(type, tunit);
 
   // Get the location for the field.
@@ -1422,6 +1421,8 @@ CGDebugInfo::createFieldType(StringRef name, QualType type, SourceLocation loc,
   }
 
   llvm::DINode::DIFlags flags = getAccessFlag(AS, RD);
+  if (IsZeroSize)
+    flags |= llvm::DINode::FlagIsZeroSize;
   return DBuilder.createMemberType(scope, name, file, line, SizeInBits, Align,
                                    offsetInBits, flags, debugType);
 }
@@ -1439,6 +1440,9 @@ void CGDebugInfo::CollectRecordLambdaFields(
                                              E = CXXDecl->captures_end();
        I != E; ++I, ++Field, ++fieldno) {
     const LambdaCapture &C = *I;
+    bool IsZeroSize = false;
+    assert(!Field->isZeroSize(CGM.getContext()) &&
+           "lambdas cannot use [[no_unique_address]]!");
     if (C.capturesVariable()) {
       SourceLocation Loc = C.getLocation();
       assert(!Field->isBitField() && "lambdas don't have bitfield members!");
@@ -1446,9 +1450,10 @@ void CGDebugInfo::CollectRecordLambdaFields(
       StringRef VName = V->getName();
       llvm::DIFile *VUnit = getOrCreateFile(Loc);
       auto Align = getDeclAlignIfRequired(V, CGM.getContext());
-      llvm::DIType *FieldType = createFieldType(
-          VName, Field->getType(), Loc, Field->getAccess(),
-          layout.getFieldOffset(fieldno), Align, VUnit, RecordTy, CXXDecl);
+      llvm::DIType *FieldType =
+          createFieldType(VName, Field->getType(), Loc, Field->getAccess(),
+                          layout.getFieldOffset(fieldno), Align, VUnit,
+                          RecordTy, IsZeroSize, CXXDecl);
       elements.push_back(FieldType);
     } else if (C.capturesThis()) {
       // TODO: Need to handle 'this' in some way by probably renaming the
@@ -1460,7 +1465,7 @@ void CGDebugInfo::CollectRecordLambdaFields(
       QualType type = f->getType();
       llvm::DIType *fieldType = createFieldType(
           "this", type, f->getLocation(), f->getAccess(),
-          layout.getFieldOffset(fieldno), VUnit, RecordTy, CXXDecl);
+          layout.getFieldOffset(fieldno), VUnit, RecordTy, IsZeroSize, CXXDecl);
 
       elements.push_back(fieldType);
     }
@@ -1513,9 +1518,10 @@ void CGDebugInfo::CollectRecordNormalField(
     FieldType = createBitFieldType(field, RecordTy, RD);
   } else {
     auto Align = getDeclAlignIfRequired(field, CGM.getContext());
+    bool IsZeroSize = field->isZeroSize(CGM.getContext());
     FieldType =
         createFieldType(name, type, field->getLocation(), field->getAccess(),
-                        OffsetInBits, Align, tunit, RecordTy, RD);
+                        OffsetInBits, Align, tunit, RecordTy, IsZeroSize, RD);
   }
 
   elements.push_back(FieldType);
@@ -4563,37 +4569,39 @@ void CGDebugInfo::collectDefaultFieldsForBlockLiteralDeclare(
     const CGBlockInfo &Block, const ASTContext &Context, SourceLocation Loc,
     const llvm::StructLayout &BlockLayout, llvm::DIFile *Unit,
     SmallVectorImpl<llvm::Metadata *> &Fields) {
+  bool IsZeroSize = false;
   // Blocks in OpenCL have unique constraints which make the standard fields
   // redundant while requiring size and align fields for enqueue_kernel. See
   // initializeForBlockHeader in CGBlocks.cpp
   if (CGM.getLangOpts().OpenCL) {
     Fields.push_back(createFieldType("__size", Context.IntTy, Loc, AS_public,
                                      BlockLayout.getElementOffsetInBits(0),
-                                     Unit, Unit));
+                                     Unit, Unit, IsZeroSize));
     Fields.push_back(createFieldType("__align", Context.IntTy, Loc, AS_public,
                                      BlockLayout.getElementOffsetInBits(1),
-                                     Unit, Unit));
+                                     Unit, Unit, IsZeroSize));
   } else {
     Fields.push_back(createFieldType("__isa", Context.VoidPtrTy, Loc, AS_public,
                                      BlockLayout.getElementOffsetInBits(0),
-                                     Unit, Unit));
+                                     Unit, Unit, IsZeroSize));
     Fields.push_back(createFieldType("__flags", Context.IntTy, Loc, AS_public,
                                      BlockLayout.getElementOffsetInBits(1),
-                                     Unit, Unit));
-    Fields.push_back(
-        createFieldType("__reserved", Context.IntTy, Loc, AS_public,
-                        BlockLayout.getElementOffsetInBits(2), Unit, Unit));
+                                     Unit, Unit, IsZeroSize));
+    Fields.push_back(createFieldType(
+        "__reserved", Context.IntTy, Loc, AS_public,
+        BlockLayout.getElementOffsetInBits(2), Unit, Unit, IsZeroSize));
     auto *FnTy = Block.getBlockExpr()->getFunctionType();
     auto FnPtrType = CGM.getContext().getPointerType(FnTy->desugar());
     Fields.push_back(createFieldType("__FuncPtr", FnPtrType, Loc, AS_public,
                                      BlockLayout.getElementOffsetInBits(3),
-                                     Unit, Unit));
+                                     Unit, Unit, IsZeroSize));
     Fields.push_back(createFieldType(
         "__descriptor",
         Context.getPointerType(Block.NeedsCopyDispose
                                    ? Context.getBlockDescriptorExtendedType()
                                    : Context.getBlockDescriptorType()),
-        Loc, AS_public, BlockLayout.getElementOffsetInBits(4), Unit, Unit));
+        Loc, AS_public, BlockLayout.getElementOffsetInBits(4), Unit, Unit,
+        IsZeroSize));
   }
 }
 
@@ -4669,8 +4677,9 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
       else
         llvm_unreachable("unexpected block declcontext");
 
+      bool IsZeroSize = false;
       fields.push_back(createFieldType("this", type, loc, AS_public,
-                                       offsetInBits, tunit, tunit));
+                                       offsetInBits, tunit, tunit, IsZeroSize));
       continue;
     }
 
@@ -4691,8 +4700,10 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
                                             llvm::DINode::FlagZero, fieldType);
     } else {
       auto Align = getDeclAlignIfRequired(variable, CGM.getContext());
-      fieldType = createFieldType(name, variable->getType(), loc, AS_public,
-                                  offsetInBits, Align, tunit, tunit);
+      bool IsZeroSize = false;
+      fieldType =
+          createFieldType(name, variable->getType(), loc, AS_public,
+                          offsetInBits, Align, tunit, tunit, IsZeroSize);
     }
     fields.push_back(fieldType);
   }

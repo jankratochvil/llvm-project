@@ -228,9 +228,10 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
 
   lldb::AccessType access = TranslateMemberAccess(data_member.getAccess());
 
+  bool IsZeroSize = false; // FIXME: Is there [[no_unique_address]] in PDB?
   clang::FieldDecl *decl = TypeSystemClang::AddFieldToRecordType(
       m_derived_ct, data_member.Name, m_ast_builder.ToCompilerType(member_qt),
-      access, bitfield_width);
+      access, bitfield_width, IsZeroSize);
   // FIXME: Add a PdbSymUid namespace for field list members and update
   // the m_uid_to_decl map with this decl.
 
