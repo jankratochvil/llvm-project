@@ -31,7 +31,9 @@ HANDLE_DI_FLAG(2, Protected)
 HANDLE_DI_FLAG(3, Public)
 HANDLE_DI_FLAG((1 << 2), FwdDecl)
 HANDLE_DI_FLAG((1 << 3), AppleBlock)
-// Used to be BlockByRef, can be reused for anything except DICompositeType.
+// IsZeroSize is valid only for DIDerivedType.
+// This bit was used as DIFlagBlockByrefStruct for DICompositeType, do not reuse
+// it for DICompositeType so that Verifier can detect old incompatible bitcode.
 HANDLE_DI_FLAG((1 << 4), IsZeroSize)
 HANDLE_DI_FLAG((1 << 5), Virtual)
 HANDLE_DI_FLAG((1 << 6), Artificial)
