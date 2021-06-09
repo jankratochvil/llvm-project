@@ -19,7 +19,8 @@
 class UniqueDWARFASTType {
 public:
   // Constructors and Destructors
-  UniqueDWARFASTType() : m_type_sp(), m_main_unit(nullptr), m_die(), m_declaration() {}
+  UniqueDWARFASTType()
+      : m_type_sp(), m_main_unit(nullptr), m_die(), m_declaration() {}
 
   UniqueDWARFASTType(lldb::TypeSP &type_sp, DWARFUnit *main_unit,
                      const DWARFDIE &die, const lldb_private::Declaration &decl,
