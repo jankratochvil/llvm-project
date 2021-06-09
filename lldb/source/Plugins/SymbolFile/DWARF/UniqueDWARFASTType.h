@@ -19,11 +19,7 @@
 class UniqueDWARFASTType {
 public:
   // Constructors and Destructors
-  UniqueDWARFASTType()
-      : m_type_sp(), m_main_unit(nullptr), m_die(), m_declaration(),
-        m_byte_size(
-            -1) // Set to negative value to make sure we have a valid value
-  {}
+  UniqueDWARFASTType() : m_type_sp(), m_main_unit(nullptr), m_die(), m_declaration() {}
 
   UniqueDWARFASTType(lldb::TypeSP &type_sp, DWARFUnit *main_unit,
                      const DWARFDIE &die, const lldb_private::Declaration &decl,
@@ -53,7 +49,7 @@ public:
   DWARFUnit *m_main_unit;
   DWARFDIE m_die;
   lldb_private::Declaration m_declaration;
-  int32_t m_byte_size;
+  int32_t m_byte_size = -1;
 };
 
 class UniqueDWARFASTTypeList {
