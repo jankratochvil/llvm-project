@@ -5701,6 +5701,7 @@ public:
                                SourceLocation IdentLoc,
                                IdentifierInfo *Ident);
 
+  void FilterUsingLookup(Scope *S, LookupResult &lookup);
   void HideUsingShadowDecl(Scope *S, UsingShadowDecl *Shadow);
   bool CheckUsingShadowDecl(BaseUsingDecl *BUD, NamedDecl *Target,
                             const LookupResult &PreviousDecls,
@@ -5721,14 +5722,16 @@ public:
                                const LookupResult *R = nullptr,
                                const UsingDecl *UD = nullptr);
 
-  NamedDecl *BuildUsingDeclaration(Scope *S, AccessSpecifier AS,
-                                   SourceLocation UsingLoc,
-                                   bool HasTypenameKeyword,
-                                   SourceLocation TypenameLoc, CXXScopeSpec &SS,
-                                   DeclarationNameInfo NameInfo,
-                                   SourceLocation EllipsisLoc,
-                                   const ParsedAttributesView &AttrList,
-                                   bool IsInstantiation, bool IsUsingIfExists);
+  NamedDecl *BuildUsingDeclaration(
+      Scope *S, AccessSpecifier AS, SourceLocation UsingLoc,
+      bool HasTypenameKeyword, SourceLocation TypenameLoc, CXXScopeSpec &SS,
+      DeclarationNameInfo NameInfo, SourceLocation EllipsisLoc,
+      const ParsedAttributesView &AttrList, bool IsInstantiation,
+      bool IsUsingIfExists);
+  NamedDecl *BuildUsingEnumDeclaration(Scope *S, AccessSpecifier AS,
+                                       SourceLocation UsingLoc,
+                                       SourceLocation EnumLoc,
+                                       SourceLocation NameLoc, EnumDecl *ED);
   NamedDecl *BuildUsingPackDecl(NamedDecl *InstantiatedFrom,
                                 ArrayRef<NamedDecl *> Expansions);
 
@@ -5746,6 +5749,9 @@ public:
                               SourceLocation TypenameLoc, CXXScopeSpec &SS,
                               UnqualifiedId &Name, SourceLocation EllipsisLoc,
                               const ParsedAttributesView &AttrList);
+  Decl *ActOnUsingEnumDeclaration(Scope *CurScope, AccessSpecifier AS,
+                                  SourceLocation UsingLoc,
+                                  SourceLocation EnumLoc, const DeclSpec &);
   Decl *ActOnAliasDeclaration(Scope *CurScope, AccessSpecifier AS,
                               MultiTemplateParamsArg TemplateParams,
                               SourceLocation UsingLoc, UnqualifiedId &Name,
@@ -11281,11 +11287,11 @@ public:
   /// ImpCastExprToType - If Expr is not of type 'Type', insert an implicit
   /// cast.  If there is already an implicit cast, merge into the existing one.
   /// If isLvalue, the result of the cast is an lvalue.
-  ExprResult ImpCastExprToType(Expr *E, QualType Type, CastKind CK,
-                               ExprValueKind VK = VK_RValue,
-                               const CXXCastPath *BasePath = nullptr,
-                               CheckedConversionKind CCK
-                                  = CCK_ImplicitConversion);
+  ExprResult
+  ImpCastExprToType(Expr *E, QualType Type, CastKind CK,
+                    ExprValueKind VK = VK_PRValue,
+                    const CXXCastPath *BasePath = nullptr,
+                    CheckedConversionKind CCK = CCK_ImplicitConversion);
 
   /// ScalarTypeToBooleanCastKind - Returns the cast kind corresponding
   /// to the conversion from scalar type ScalarTy to the Boolean type.
@@ -11570,7 +11576,7 @@ public:
                                        CheckedConversionKind CCK);
 
   ExprResult PerformQualificationConversion(
-      Expr *E, QualType Ty, ExprValueKind VK = VK_RValue,
+      Expr *E, QualType Ty, ExprValueKind VK = VK_PRValue,
       CheckedConversionKind CCK = CCK_ImplicitConversion);
 
   /// the following "Check" methods will return a valid/converted QualType
