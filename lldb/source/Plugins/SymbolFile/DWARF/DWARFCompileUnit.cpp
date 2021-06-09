@@ -141,7 +141,8 @@ DWARFCompileUnit::GetMainUnit(Module &module, CompileUnit *comp_unit,
                               SymbolFileDWARF **dwarf_return) {
   SymbolFile *symfile = module.GetSymbolFile();
   SymbolFileDWARF *dwarf;
-  if (auto *debug_map_symfile = llvm::dyn_cast<SymbolFileDWARFDebugMap>(symfile)) {
+  if (auto *debug_map_symfile =
+          llvm::dyn_cast<SymbolFileDWARFDebugMap>(symfile)) {
     lldbassert(comp_unit);
     dwarf = debug_map_symfile->GetSymbolFile(*comp_unit);
   } else {
