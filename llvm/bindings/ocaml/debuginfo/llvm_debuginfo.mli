@@ -65,7 +65,7 @@ module DIFlag : sig
     | Public
     | FwdDecl
     | AppleBlock
-    | ReservedBit4
+    | IsZeroSize
     | Virtual
     | Artificial
     | Explicit

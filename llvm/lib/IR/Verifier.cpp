@@ -1103,6 +1103,7 @@ void Verifier::visitDICompositeType(const DICompositeType &N) {
   AssertDI(!hasConflictingReferenceFlags(N.getFlags()),
            "invalid reference flags", &N);
   unsigned DIBlockByRefStruct = 1 << 4;
+  static_assert(DIBlockByRefStruct == DIFlagIsZeroSize);
   AssertDI((N.getFlags() & DIBlockByRefStruct) == 0,
            "DIBlockByRefStruct on DICompositeType is no longer supported", &N);
 

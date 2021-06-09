@@ -33,7 +33,7 @@ typedef enum {
   i_DIFlagPublic,
   i_DIFlagFwdDecl,
   i_DIFlagAppleBlock,
-  i_DIFlagReservedBit4,
+  i_DIFlagIsZeroSize,
   i_DIFlagVirtual,
   i_DIFlagArtificial,
   i_DIFlagExplicit,
@@ -78,8 +78,8 @@ static LLVMDIFlags map_DIFlag(LLVMDIFlag_i DIF) {
     return LLVMDIFlagFwdDecl;
   case i_DIFlagAppleBlock:
     return LLVMDIFlagAppleBlock;
-  case i_DIFlagReservedBit4:
-    return LLVMDIFlagReservedBit4;
+  case i_DIFlagIsZeroSize:
+    return LLVMDIFlagIsZeroSize;
   case i_DIFlagVirtual:
     return LLVMDIFlagVirtual;
   case i_DIFlagArtificial:

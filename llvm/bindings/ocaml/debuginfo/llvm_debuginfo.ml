@@ -65,7 +65,7 @@ module DIFlag = struct
     | Public
     | FwdDecl
     | AppleBlock
-    | ReservedBit4
+    | IsZeroSize
     | Virtual
     | Artificial
     | Explicit

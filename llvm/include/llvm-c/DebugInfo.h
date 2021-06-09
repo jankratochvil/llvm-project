@@ -31,7 +31,7 @@ typedef enum {
   LLVMDIFlagPublic = 3,
   LLVMDIFlagFwdDecl = 1 << 2,
   LLVMDIFlagAppleBlock = 1 << 3,
-  LLVMDIFlagReservedBit4 = 1 << 4,
+  LLVMDIFlagIsZeroSize = 1 << 4,
   LLVMDIFlagVirtual = 1 << 5,
   LLVMDIFlagArtificial = 1 << 6,
   LLVMDIFlagExplicit = 1 << 7,
