@@ -99,7 +99,12 @@ bool LibStdcppUniquePtrSyntheticFrontEnd::Update() {
   if (ptr_obj)
     m_ptr_obj = ptr_obj->Clone(ConstString("pointer")).get();
 
-  // GCC 11 std::default_delete<...> has existing child with GetByteSize()==1.
+  // Add a 'deleter' child if there was a non-empty deleter type specified.
+  //
+  // The object might have size=1 in the TypeSystem but occupies no dedicated
+  // storage due to no_unique_address, so infer the actual size from the total
+  // size of the unique_ptr class. If sizeof(unique_ptr) == sizeof(void*) then
+  // the deleter is empty and should be hidden.
   if (tuple_sp->GetByteSize() > ptr_obj->GetByteSize()) {
     ValueObjectSP del_obj = tuple_frontend->GetChildAtIndex(1);
     if (del_obj)
