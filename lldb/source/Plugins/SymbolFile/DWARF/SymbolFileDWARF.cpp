@@ -2519,7 +2519,7 @@ void SymbolFileDWARF::FindTypes(
     return;
 
   m_index->GetTypes(name, [&](DWARFUnit *main_unit, DWARFDIE die) {
-    if (!languages[GetLanguage(*die.GetMainDWARFUnit(main_unit))])
+    if (!languages[GetLanguageFamily(*die.GetMainDWARFUnit(main_unit))])
       return true;
 
     llvm::SmallVector<CompilerContext, 4> die_context;
@@ -4019,4 +4019,11 @@ LanguageType SymbolFileDWARF::GetLanguage(DWARFUnit &unit) {
   // Caller should have called GetMainDWARFUnit().
   lldbassert(unit.GetUnitDIEOnly().Tag() != DW_TAG_partial_unit);
   return LanguageTypeFromDWARF(unit.GetDWARFLanguageType());
+}
+
+LanguageType SymbolFileDWARF::GetLanguageFamily(DWARFUnit &unit) {
+  auto lang = (llvm::dwarf::SourceLanguage)unit.GetDWARFLanguageType();
+  if (llvm::dwarf::isCPlusPlus(lang))
+    lang = DW_LANG_C_plus_plus;
+  return LanguageTypeFromDWARF(lang);
 }
