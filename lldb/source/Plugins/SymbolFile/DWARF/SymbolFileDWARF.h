@@ -323,6 +323,8 @@ public:
   static lldb::LanguageType LanguageTypeFromDWARF(uint64_t val);
 
   static lldb::LanguageType GetLanguage(DWARFUnit &unit);
+  /// Same as GetLanguage() but reports all C++ versions as C++ (no version).
+  static lldb::LanguageType GetLanguageFamily(DWARFUnit &unit);
 
   SymbolFileDWARFDwz *GetDwzSymbolFile() const { return m_dwz_symfile; }
   virtual bool GetIsDwz() const { return false; }
