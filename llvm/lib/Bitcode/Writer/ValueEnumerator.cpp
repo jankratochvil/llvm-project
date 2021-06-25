@@ -28,6 +28,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -364,12 +365,15 @@ ValueEnumerator::ValueEnumerator(const Module &M,
     UseListOrders = predictUseListOrder(M);
 
   // Enumerate the global variables.
-  for (const GlobalVariable &GV : M.globals())
+  for (const GlobalVariable &GV : M.globals()) {
     EnumerateValue(&GV);
+    EnumerateType(GV.getValueType());
+  }
 
   // Enumerate the functions.
   for (const Function & F : M) {
     EnumerateValue(&F);
+    EnumerateType(F.getValueType());
     EnumerateAttributes(F.getAttributes());
   }
 
@@ -463,9 +467,15 @@ ValueEnumerator::ValueEnumerator(const Module &M,
         }
         if (auto *SVI = dyn_cast<ShuffleVectorInst>(&I))
           EnumerateType(SVI->getShuffleMaskForBitcode()->getType());
+        if (auto *GEP = dyn_cast<GetElementPtrInst>(&I))
+          EnumerateType(GEP->getSourceElementType());
+        if (auto *AI = dyn_cast<AllocaInst>(&I))
+          EnumerateType(AI->getAllocatedType());
         EnumerateType(I.getType());
-        if (const auto *Call = dyn_cast<CallBase>(&I))
+        if (const auto *Call = dyn_cast<CallBase>(&I)) {
           EnumerateAttributes(Call->getAttributes());
+          EnumerateType(Call->getFunctionType());
+        }
 
         // Enumerate metadata attached with this instruction.
         MDs.clear();
@@ -1004,9 +1014,12 @@ void ValueEnumerator::EnumerateOperandType(const Value *V) {
 
     EnumerateOperandType(Op);
   }
-  if (auto *CE = dyn_cast<ConstantExpr>(C))
+  if (auto *CE = dyn_cast<ConstantExpr>(C)) {
     if (CE->getOpcode() == Instruction::ShuffleVector)
       EnumerateOperandType(CE->getShuffleMaskForBitcode());
+    if (CE->getOpcode() == Instruction::GetElementPtr)
+      EnumerateType(cast<GEPOperator>(CE)->getSourceElementType());
+  }
 }
 
 void ValueEnumerator::EnumerateAttributes(AttributeList PAL) {
