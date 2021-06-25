@@ -206,9 +206,10 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
   if (!EnableSymbolicExecution)
     return false;
 
+  BasicBlock *Predecessor = L->getLoopPredecessor();
   BasicBlock *Latch = L->getLoopLatch();
 
-  if (!Latch)
+  if (!Predecessor || !Latch)
     return false;
 
   LoopBlocksRPO RPOT(L);
@@ -245,23 +246,33 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
       MarkLiveEdge(BB, Succ);
   };
 
-  // Check if there is only one predecessor on 1st iteration. Note that because
-  // we iterate in RPOT, we have already visited all its (non-latch)
-  // predecessors.
-  auto GetSolePredecessorOnFirstIteration = [&](BasicBlock * BB)->BasicBlock * {
+  // Check if there is only one value coming from all live predecessor blocks.
+  // Note that because we iterate in RPOT, we have already visited all its
+  // (non-latch) predecessors.
+  auto GetSoleInputOnFirstIteration = [&](PHINode & PN)->Value * {
+    BasicBlock *BB = PN.getParent();
+    bool HasLivePreds = false;
+    (void)HasLivePreds;
     if (BB == Header)
-      return L->getLoopPredecessor();
-    BasicBlock *OnlyPred = nullptr;
+      return PN.getIncomingValueForBlock(Predecessor);
+    Value *OnlyInput = nullptr;
     for (auto *Pred : predecessors(BB))
-      if (OnlyPred != Pred && LiveEdges.count({ Pred, BB })) {
-        // 2 live preds.
-        if (OnlyPred)
+      if (LiveEdges.count({ Pred, BB })) {
+        HasLivePreds = true;
+        Value *Incoming = PN.getIncomingValueForBlock(Pred);
+        // Skip undefs. If they are present, we can assume they are equal to
+        // the non-undef input.
+        if (isa<UndefValue>(Incoming))
+          continue;
+        // Two inputs.
+        if (OnlyInput && OnlyInput != Incoming)
           return nullptr;
-        OnlyPred = Pred;
+        OnlyInput = Incoming;
       }
 
-    assert(OnlyPred && "No live predecessors?");
-    return OnlyPred;
+    assert(HasLivePreds && "No live predecessors?");
+    // If all incoming live value were undefs, return undef.
+    return OnlyInput ? OnlyInput : UndefValue::get(PN.getType());
   };
   DenseMap<Value *, Value *> FirstIterValue;
 
@@ -290,18 +301,17 @@ static bool canProveExitOnFirstIteration(Loop *L, DominatorTree &DT,
       continue;
     }
 
-    // If this block has only one live pred, map its phis onto their SCEVs.
-    if (auto *OnlyPred = GetSolePredecessorOnFirstIteration(BB))
-      for (auto &PN : BB->phis()) {
-        if (!PN.getType()->isIntegerTy())
-          continue;
-        auto *Incoming = PN.getIncomingValueForBlock(OnlyPred);
-        if (DT.dominates(Incoming, BB->getTerminator())) {
-          Value *FirstIterV =
-              getValueOnFirstIteration(Incoming, FirstIterValue, SQ);
-          FirstIterValue[&PN] = FirstIterV;
-        }
+    // If Phi has only one input from all live input blocks, use it.
+    for (auto &PN : BB->phis()) {
+      if (!PN.getType()->isIntegerTy())
+        continue;
+      auto *Incoming = GetSoleInputOnFirstIteration(PN);
+      if (Incoming && DT.dominates(Incoming, BB->getTerminator())) {
+        Value *FirstIterV =
+            getValueOnFirstIteration(Incoming, FirstIterValue, SQ);
+        FirstIterValue[&PN] = FirstIterV;
       }
+    }
 
     using namespace PatternMatch;
     ICmpInst::Predicate Pred;
