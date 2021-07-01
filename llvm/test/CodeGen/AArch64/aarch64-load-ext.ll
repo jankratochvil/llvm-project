@@ -278,3 +278,30 @@ define <4 x i32> @anyext_v4i32(<4 x i8> *%a, <4 x i8> *%b) {
   %s = sext <4 x i8> %z to <4 x i32>
   ret <4 x i32> %s
 }
+
+define <4 x i8> @bitcast(i32 %0) {
+; CHECK-LE-LABEL: bitcast:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    sub sp, sp, #16 // =16
+; CHECK-LE-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-LE-NEXT:    str w0, [sp, #12]
+; CHECK-LE-NEXT:    ldr s0, [sp, #12]
+; CHECK-LE-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-LE-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-LE-NEXT:    add sp, sp, #16 // =16
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: bitcast:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    sub sp, sp, #16 // =16
+; CHECK-BE-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-BE-NEXT:    str w0, [sp, #12]
+; CHECK-BE-NEXT:    ldr s0, [sp, #12]
+; CHECK-BE-NEXT:    rev32 v0.8b, v0.8b
+; CHECK-BE-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
+; CHECK-BE-NEXT:    add sp, sp, #16 // =16
+; CHECK-BE-NEXT:    ret
+  %2 = bitcast i32 %0 to <4 x i8>
+  ret <4 x i8> %2
+}
