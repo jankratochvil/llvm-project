@@ -19,6 +19,8 @@
 namespace llvm {
 namespace mca {
 
+InstructionView::~InstructionView() = default;
+
 StringRef InstructionView::printInstructionString(const llvm::MCInst &MCI) const {
   InstructionString = "";
   MCIP.printInst(&MCI, 0, "", STI, InstrStream);
@@ -28,16 +30,19 @@ StringRef InstructionView::printInstructionString(const llvm::MCInst &MCI) const
 }
 
 json::Value InstructionView::toJSON() const {
-  json::Object JO;
   json::Array SourceInfo;
   for (const auto &MCI : getSource()) {
     StringRef Instruction = printInstructionString(MCI);
     SourceInfo.push_back(Instruction.str());
   }
-  JO.try_emplace("Instructions", std::move(SourceInfo));
+  return SourceInfo;
+}
 
+json::Object InstructionView::getJSONTargetInfo(const MCSubtargetInfo &STI) {
   json::Array Resources;
   const MCSchedModel &SM = STI.getSchedModel();
+  StringRef MCPU = STI.getCPU();
+
   for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I) {
     const MCProcResourceDesc &ProcResource = *SM.getProcResource(I);
     unsigned NumUnits = ProcResource.NumUnits;
@@ -52,9 +57,7 @@ json::Value InstructionView::toJSON() const {
       Resources.push_back(ResNameStream.str());
     }
   }
-  JO.try_emplace("Resources", json::Object({{"CPUName", MCPU}, {"Resources", std::move(Resources)}}));
-
-  return JO;
+  return json::Object({{"CPUName", MCPU}, {"Resources", std::move(Resources)}});
 }
 } // namespace mca
 } // namespace llvm

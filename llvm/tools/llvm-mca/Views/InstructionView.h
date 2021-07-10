@@ -28,7 +28,6 @@ class InstructionView : public View {
   const llvm::MCSubtargetInfo &STI;
   llvm::MCInstPrinter &MCIP;
   llvm::ArrayRef<llvm::MCInst> Source;
-  StringRef MCPU;
 
   mutable std::string InstructionString;
   mutable raw_string_ostream InstrStream;
@@ -37,15 +36,13 @@ public:
   void printView(llvm::raw_ostream &) const override {}
   InstructionView(const llvm::MCSubtargetInfo &STI,
                   llvm::MCInstPrinter &Printer,
-                  llvm::ArrayRef<llvm::MCInst> S,
-                  StringRef MCPU = StringRef())
-      : STI(STI), MCIP(Printer), Source(S), MCPU(MCPU),
-        InstrStream(InstructionString) {}
+                  llvm::ArrayRef<llvm::MCInst> S)
+      : STI(STI), MCIP(Printer), Source(S), InstrStream(InstructionString) {}
 
-  virtual ~InstructionView() = default;
+  virtual ~InstructionView();
 
   StringRef getNameAsString() const override {
-    return "Instructions and CPU resources";
+    return "Instructions";
   }
   // Return a reference to a string representing a given machine instruction.
   // The result should be used or copied before the next call to
@@ -60,6 +57,8 @@ public:
     json::Value JV = toJSON();
     OS << formatv("{0:2}", JV) << "\n";
   }
+
+  static json::Object getJSONTargetInfo(const llvm::MCSubtargetInfo &STI);
 };
 } // namespace mca
 } // namespace llvm
