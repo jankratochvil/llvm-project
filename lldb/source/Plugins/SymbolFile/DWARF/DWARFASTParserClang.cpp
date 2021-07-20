@@ -1290,13 +1290,10 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const SymbolContext &sc,
           LinkDeclContextToDIE(function_decl, main_unit, die);
 
           if (!function_param_decls.empty()) {
-            m_ast.SetFunctionParameters(function_decl,
-                                        &function_param_decls.front(),
-                                        function_param_decls.size());
+            m_ast.SetFunctionParameters(function_decl, function_param_decls);
             if (template_function_decl)
               m_ast.SetFunctionParameters(template_function_decl,
-                                          &function_param_decls.front(),
-                                          function_param_decls.size());
+                                          function_param_decls);
           }
 
           ClangASTMetadata metadata;
