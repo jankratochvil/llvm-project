@@ -811,8 +811,8 @@ multiclass RVVUnitStridedSegLoad<string op> {
       llvm::Value *Operands[] = {Ops[NF], Ops[NF + 1]};
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
-      clang::CharUnits Align =
-          CGM.getNaturalTypeAlignment(getContext().getSizeType());
+      clang::CharUnits Align = CharUnits::fromQuantity(
+                                 IntrinsicTypes[0]->getScalarSizeInBits() / 8);
       llvm::Value *V;
       for (unsigned I = 0; I < NF; ++I) {
         V = Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
@@ -836,8 +836,8 @@ multiclass RVVUnitStridedSegLoad<string op> {
       assert(Operands.size() == NF + 3);
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
-      clang::CharUnits Align =
-          CGM.getNaturalTypeAlignment(getContext().getSizeType());
+      clang::CharUnits Align = CharUnits::fromQuantity(
+                                 IntrinsicTypes[0]->getScalarSizeInBits() / 8);
       llvm::Value *V;
       for (unsigned I = 0; I < NF; ++I) {
         V = Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
@@ -882,8 +882,8 @@ multiclass RVVUnitStridedSegLoadFF<string op> {
       Value *NewVL = Ops[NF + 1];
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
-      clang::CharUnits Align =
-          CGM.getNaturalTypeAlignment(getContext().getSizeType());
+      clang::CharUnits Align = CharUnits::fromQuantity(
+                                 IntrinsicTypes[0]->getScalarSizeInBits() / 8);
       for (unsigned I = 0; I < NF; ++I) {
         Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
                             Address(Ops[I], Align));
@@ -909,8 +909,8 @@ multiclass RVVUnitStridedSegLoadFF<string op> {
       assert(Operands.size() == NF + 3);
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
-      clang::CharUnits Align =
-          CGM.getNaturalTypeAlignment(getContext().getSizeType());
+      clang::CharUnits Align = CharUnits::fromQuantity(
+                                 IntrinsicTypes[0]->getScalarSizeInBits() / 8);
       for (unsigned I = 0; I < NF; ++I) {
         Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
                             Address(Ops[I], Align));
@@ -1212,13 +1212,13 @@ let HasVL = false,
 // 7.4. Vector Unit-Stride Instructions
 def vle1: RVVVLEMaskBuiltin;
 defm vle8: RVVVLEBuiltin<["c"]>;
-defm vle16: RVVVLEBuiltin<["s"]>;
+defm vle16: RVVVLEBuiltin<["s","x"]>;
 defm vle32: RVVVLEBuiltin<["i","f"]>;
 defm vle64: RVVVLEBuiltin<["l","d"]>;
 
 def vse1 : RVVVSEMaskBuiltin;
 defm vse8 : RVVVSEBuiltin<["c"]>;
-defm vse16: RVVVSEBuiltin<["s"]>;
+defm vse16: RVVVSEBuiltin<["s","x"]>;
 defm vse32: RVVVSEBuiltin<["i","f"]>;
 defm vse64: RVVVSEBuiltin<["l","d"]>;
 
