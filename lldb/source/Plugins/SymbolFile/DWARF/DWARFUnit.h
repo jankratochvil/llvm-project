@@ -285,7 +285,7 @@ protected:
     return &m_die_array[0];
   }
 
-  const llvm::Optional<llvm::DWARFDebugRnglistTable> &GetRnglist();
+  const llvm::Optional<llvm::DWARFDebugRnglistTable> &GetRnglistTable();
 
   SymbolFileDWARF &m_dwarf;
   std::shared_ptr<DWARFCompileUnit> m_dwo;
