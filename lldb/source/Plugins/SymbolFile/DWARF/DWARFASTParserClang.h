@@ -122,10 +122,9 @@ protected:
       lldb_private::CompileUnit *comp_unit, DWARFUnit *main_unit,
       const DWARFDIE &die, lldb_private::CompilerType &class_compiler_type,
       std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
-      std::vector<int> &member_accessibilities,
       std::vector<DWARFDIE> &member_function_dies,
       DelayedPropertyList &delayed_properties,
-      lldb::AccessType &default_accessibility, bool &is_a_class,
+      lldb::AccessType &default_accessibility,
       lldb_private::ClangASTImporter::LayoutInfo &layout_info);
 
   size_t
@@ -213,7 +212,6 @@ private:
   ParseSingleMember(lldb_private::CompileUnit *comp_unit, DWARFUnit *main_unit,
                     const DWARFDIE &die, const DWARFDIE &parent_die,
                     const lldb_private::CompilerType &class_clang_type,
-                    std::vector<int> &member_accessibilities,
                     lldb::AccessType default_accessibility,
                     DelayedPropertyList &delayed_properties,
                     lldb_private::ClangASTImporter::LayoutInfo &layout_info,
