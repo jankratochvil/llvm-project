@@ -138,7 +138,6 @@ public:
     m_die = m_die.GetSibling();
     return *this;
   }
->>>>>>> origin/main
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDIE_H
