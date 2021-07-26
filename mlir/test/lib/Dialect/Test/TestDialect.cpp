@@ -67,6 +67,7 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
                   StringRef("test_alias_conflict0"))
             .Case("alias_test:sanitize_conflict_b",
                   StringRef("test_alias_conflict0_"))
+            .Case("alias_test:tensor_encoding", StringRef("test_encoding"))
             .Default(llvm::None);
     if (!aliasName)
       return failure();
@@ -780,7 +781,7 @@ LogicalResult OpWithInferTypeInterfaceOp::inferReturnTypes(
 }
 
 LogicalResult OpWithShapedTypeInferTypeInterfaceOp::inferReturnTypeComponents(
-    MLIRContext *context, Optional<Location> location, ValueRange operands,
+    MLIRContext *context, Optional<Location> location, ValueShapeRange operands,
     DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   // Create return type consisting of the last element of the first operand.
