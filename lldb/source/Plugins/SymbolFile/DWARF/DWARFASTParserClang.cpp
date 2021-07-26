@@ -675,8 +675,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
         // Blocks have a __FuncPtr inside them which is a pointer to a
         // function of the proper type.
 
-        for (DWARFDIE child_die = target_die.GetFirstChild();
-             child_die.IsValid(); child_die = child_die.GetSibling()) {
+        for (DWARFDIE child_die : target_die.children()) {
           if (!strcmp(child_die.GetAttributeValueAsString(DW_AT_name, ""),
                       "__FuncPtr")) {
             DWARFDIE function_pointer_type =
@@ -1722,14 +1721,18 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
             die.GetOffset(), attrs.name.GetCString());
       }
 
-      if (tag == DW_TAG_structure_type) // this only applies in C
-      {
+      // If the byte size of the record is specified then overwrite the size
+      // that would be computed by Clang. This is only needed as LLDB's
+      // TypeSystemClang is always in C++ mode, but some compilers such as
+      // GCC and Clang give empty structs a size of 0 in C mode (in contrast to
+      // the size of 1 for empty structs that would be computed in C++ mode).
+      if (attrs.byte_size) {
         clang::RecordDecl *record_decl =
             TypeSystemClang::GetAsRecordDecl(clang_type);
-
         if (record_decl) {
-          GetClangASTImporter().SetRecordLayout(
-              record_decl, ClangASTImporter::LayoutInfo());
+          ClangASTImporter::LayoutInfo layout;
+          layout.bit_size = *attrs.byte_size * 8;
+          GetClangASTImporter().SetRecordLayout(record_decl, layout);
         }
       }
     } else if (clang_type_was_created) {
@@ -1860,8 +1863,7 @@ bool DWARFASTParserClang::ParseTemplateDIE(
   case DW_TAG_GNU_template_parameter_pack: {
     template_param_infos.packed_args =
         std::make_unique<TypeSystemClang::TemplateParameterInfos>();
-    for (DWARFDIE child_die = die.GetFirstChild(); child_die.IsValid();
-         child_die = child_die.GetSibling()) {
+    for (DWARFDIE child_die : die.children()) {
       if (!ParseTemplateDIE(main_unit, child_die,
                             *template_param_infos.packed_args))
         return false;
@@ -1968,8 +1970,7 @@ bool DWARFASTParserClang::ParseTemplateParameterInfos(
   if (!parent_die)
     return false;
 
-  for (DWARFDIE die = parent_die.GetFirstChild(); die.IsValid();
-       die = die.GetSibling()) {
+  for (DWARFDIE die : parent_die.children()) {
     const dw_tag_t tag = die.Tag();
 
     switch (tag) {
@@ -2026,16 +2027,13 @@ bool DWARFASTParserClang::CompleteRecordType(DWARFUnit *main_unit,
     }
 
     std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> bases;
-    std::vector<int> member_accessibilities;
-    bool is_a_class = false;
     // Parse members and base classes first
     std::vector<DWARFDIE> member_function_dies;
 
     DelayedPropertyList delayed_properties;
     ParseChildMembers(comp_unit, main_unit, die, clang_type, bases,
-                      member_accessibilities, member_function_dies,
-                      delayed_properties, default_accessibility, is_a_class,
-                      layout_info);
+                      member_function_dies, delayed_properties,
+                      default_accessibility, layout_info);
 
     // Now parse any methods if there were any...
     for (const DWARFDIE &die : member_function_dies)
@@ -2055,31 +2053,6 @@ bool DWARFASTParserClang::CompleteRecordType(DWARFUnit *main_unit,
              pi != pe; ++pi)
           pi->Finalize();
       }
-    }
-
-    // If we have a DW_TAG_structure_type instead of a DW_TAG_class_type we
-    // need to tell the clang type it is actually a class.
-    if (!type_is_objc_object_or_interface) {
-      if (is_a_class && tag_decl_kind != clang::TTK_Class)
-        m_ast.SetTagTypeKind(ClangUtil::GetQualType(clang_type),
-                             clang::TTK_Class);
-    }
-
-    // Since DW_TAG_structure_type gets used for both classes and
-    // structures, we may need to set any DW_TAG_member fields to have a
-    // "private" access if none was specified. When we parsed the child
-    // members we tracked that actual accessibility value for each
-    // DW_TAG_member in the "member_accessibilities" array. If the value
-    // for the member is zero, then it was set to the
-    // "default_accessibility" which for structs was "public". Below we
-    // correct this by setting any fields to "private" that weren't
-    // correctly set.
-    if (is_a_class && !member_accessibilities.empty()) {
-      // This is a class and all members that didn't have their access
-      // specified are private.
-      m_ast.SetDefaultAccessForRecordFields(
-          m_ast.GetAsRecordDecl(clang_type), eAccessPrivate,
-          &member_accessibilities.front(), member_accessibilities.size());
     }
 
     if (!bases.empty()) {
@@ -2184,8 +2157,7 @@ void DWARFASTParserClang::EnsureAllDIEsInDeclContextHaveBeenParsed(
        it != m_decl_ctx_to_die.end() && it->first == opaque_decl_ctx;
        it = m_decl_ctx_to_die.erase(it)) {
     DWARFUnit *main_unit = it->second.first;
-    for (DWARFDIE decl = it->second.second.GetFirstChild(); decl;
-         decl = decl.GetSibling())
+    for (DWARFDIE decl : it->second.second.children())
       GetClangDeclForDIE(main_unit, decl);
   }
 }
@@ -2226,8 +2198,7 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
 
   size_t enumerators_added = 0;
 
-  for (DWARFDIE die = parent_die.GetFirstChild(); die.IsValid();
-       die = die.GetSibling()) {
+  for (DWARFDIE die : parent_die.children()) {
     const dw_tag_t tag = die.Tag();
     if (tag == DW_TAG_enumerator) {
       DWARFAttributes attributes;
@@ -2406,7 +2377,6 @@ void DWARFASTParserClang::ParseSingleMember(
     lldb_private::CompileUnit *comp_unit, DWARFUnit *main_unit,
     const DWARFDIE &die, const DWARFDIE &parent_die,
     const lldb_private::CompilerType &class_clang_type,
-    std::vector<int> &member_accessibilities,
     lldb::AccessType default_accessibility,
     DelayedPropertyList &delayed_properties,
     lldb_private::ClangASTImporter::LayoutInfo &layout_info,
@@ -2615,7 +2585,6 @@ void DWARFASTParserClang::ParseSingleMember(
 
         if (accessibility == eAccessNone)
           accessibility = default_accessibility;
-        member_accessibilities.push_back(accessibility);
 
         uint64_t field_bit_offset =
             (member_byte_offset == UINT32_MAX ? 0 : (member_byte_offset * 8));
@@ -2828,10 +2797,9 @@ bool DWARFASTParserClang::ParseChildMembers(
     CompileUnit *comp_unit, DWARFUnit *main_unit, const DWARFDIE &parent_die,
     CompilerType &class_clang_type,
     std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
-    std::vector<int> &member_accessibilities,
     std::vector<DWARFDIE> &member_function_dies,
     DelayedPropertyList &delayed_properties, AccessType &default_accessibility,
-    bool &is_a_class, ClangASTImporter::LayoutInfo &layout_info) {
+    ClangASTImporter::LayoutInfo &layout_info) {
   if (!parent_die)
     return false;
 
@@ -2843,16 +2811,15 @@ bool DWARFASTParserClang::ParseChildMembers(
   if (ast == nullptr)
     return false;
 
-  for (DWARFDIE die = parent_die.GetFirstChild(); die.IsValid();
-       die = die.GetSibling()) {
+  for (DWARFDIE die : parent_die.children()) {
     dw_tag_t tag = die.Tag();
 
     switch (tag) {
     case DW_TAG_member:
     case DW_TAG_APPLE_property:
       ParseSingleMember(comp_unit, main_unit, die, parent_die, class_clang_type,
-                        member_accessibilities, default_accessibility,
-                        delayed_properties, layout_info, last_field_info);
+                        default_accessibility, delayed_properties, layout_info,
+                        last_field_info);
       break;
 
     case DW_TAG_subprogram:
@@ -2861,9 +2828,6 @@ bool DWARFASTParserClang::ParseChildMembers(
       break;
 
     case DW_TAG_inheritance: {
-      is_a_class = true;
-      if (default_accessibility == eAccessNone)
-        default_accessibility = eAccessPrivate;
       // TODO: implement DW_TAG_inheritance type parsing
       DWARFAttributes attributes;
       const size_t num_attributes = die.GetAttributes(attributes);
@@ -2995,8 +2959,7 @@ size_t DWARFASTParserClang::ParseChildParameters(
     return 0;
 
   size_t arg_idx = 0;
-  for (DWARFDIE die = parent_die.GetFirstChild(); die.IsValid();
-       die = die.GetSibling()) {
+  for (DWARFDIE die : parent_die.children()) {
     const dw_tag_t tag = die.Tag();
     switch (tag) {
     case DW_TAG_formal_parameter: {
@@ -3116,8 +3079,7 @@ DWARFASTParser::ParseChildArrayInfo(const DWARFDIE &parent_die,
   if (!parent_die)
     return llvm::None;
 
-  for (DWARFDIE die = parent_die.GetFirstChild(); die.IsValid();
-       die = die.GetSibling()) {
+  for (DWARFDIE die : parent_die.children()) {
     const dw_tag_t tag = die.Tag();
     if (tag != DW_TAG_subrange_type)
       continue;
@@ -3429,8 +3391,7 @@ static DWARFDIE GetContainingFunctionWithAbstractOrigin(const DWARFDIE &die) {
 }
 
 static DWARFDIE FindAnyChildWithAbstractOrigin(const DWARFDIE &context) {
-  for (DWARFDIE candidate = context.GetFirstChild(); candidate.IsValid();
-       candidate = candidate.GetSibling()) {
+  for (DWARFDIE candidate : context.children()) {
     if (candidate.GetReferencedDIE(DW_AT_abstract_origin)) {
       return candidate;
     }
@@ -3605,8 +3566,7 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
   UniqueCStringMap<DWARFDIE> dst_name_to_die;
   UniqueCStringMap<DWARFDIE> src_name_to_die_artificial;
   UniqueCStringMap<DWARFDIE> dst_name_to_die_artificial;
-  for (src_die = src_class_die.GetFirstChild(); src_die.IsValid();
-       src_die = src_die.GetSibling()) {
+  for (DWARFDIE src_die : src_class_die.children()) {
     if (src_die.Tag() == DW_TAG_subprogram) {
       // Make sure this is a declaration and not a concrete instance by looking
       // for DW_AT_declaration set to 1. Sometimes concrete function instances
@@ -3624,8 +3584,7 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
       }
     }
   }
-  for (dst_die = dst_class_die.GetFirstChild(); dst_die.IsValid();
-       dst_die = dst_die.GetSibling()) {
+  for (DWARFDIE dst_die : dst_class_die.children()) {
     if (dst_die.Tag() == DW_TAG_subprogram) {
       // Make sure this is a declaration and not a concrete instance by looking
       // for DW_AT_declaration set to 1. Sometimes concrete function instances
