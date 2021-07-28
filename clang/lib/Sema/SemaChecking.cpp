@@ -3395,7 +3395,7 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
      return SemaBuiltinConstantArgRange(TheCall, 3, 0, 7);
   case PPC::BI__builtin_ppc_tw:
   case PPC::BI__builtin_ppc_tdw:
-    return SemaBuiltinConstantArgRange(TheCall, 2, 0, 31);
+    return SemaBuiltinConstantArgRange(TheCall, 2, 1, 31);
   case PPC::BI__builtin_ppc_cmpeqb:
   case PPC::BI__builtin_ppc_setb:
   case PPC::BI__builtin_ppc_maddhd:
@@ -3440,6 +3440,11 @@ bool Sema::CheckPPCBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case PPC::BI__builtin_ppc_lbarx:
     return SemaFeatureCheck(*this, TheCall, "isa-v207-instructions",
                             diag::err_ppc_builtin_only_on_arch, "8");
+  case PPC::BI__builtin_vsx_ldrmb:
+  case PPC::BI__builtin_vsx_strmb:
+    return SemaFeatureCheck(*this, TheCall, "isa-v207-instructions",
+                            diag::err_ppc_builtin_only_on_arch, "8") ||
+           SemaBuiltinConstantArgRange(TheCall, 1, 1, 16);
 #define CUSTOM_BUILTIN(Name, Intr, Types, Acc) \
   case PPC::BI__builtin_##Name: \
     return SemaBuiltinPPCMMACall(TheCall, Types);
