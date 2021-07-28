@@ -67,6 +67,9 @@ namespace std::ranges {
     concept view = ...;
 
   // [range.refinements], other range refinements
+  template<class R, class T>
+    concept output_range = see below;
+
   template<class T>
     concept input_range = see below;
 
@@ -179,6 +182,10 @@ namespace std::ranges {
 #include <iterator>         // Required by the standard.
 #include <type_traits>
 #include <version>
+
+#if defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+# error "The Ranges library is not supported since libc++ has been configured with LIBCXX_ENABLE_INCOMPLETE_FEATURES disabled"
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
