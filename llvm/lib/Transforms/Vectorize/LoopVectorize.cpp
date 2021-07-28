@@ -5817,6 +5817,12 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     }
   }
 
+  // For scalable vectors, don't use tail folding as this is currently not yet
+  // supported. The code is likely to have ended up here if the tripcount is
+  // low, in which case it makes sense not to use scalable vectors.
+  if (MaxFactors.ScalableVF.isVector())
+    MaxFactors.ScalableVF = ElementCount::getScalable(0);
+
   // If we don't know the precise trip count, or if the trip count that we
   // found modulo the vectorization factor is not zero, try to fold the tail
   // by masking.
@@ -6467,9 +6473,21 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
 
     // If we have a scalar reduction (vector reductions are already dealt with
     // by this point), we can increase the critical path length if the loop
-    // we're interleaving is inside another loop. Limit, by default to 2, so the
-    // critical path only gets increased by one reduction operation.
+    // we're interleaving is inside another loop. For tree-wise reductions
+    // set the limit to 2, and for ordered reductions it's best to disable
+    // interleaving entirely.
     if (HasReductions && TheLoop->getLoopDepth() > 1) {
+      bool HasOrderedReductions =
+          any_of(Legal->getReductionVars(), [&](auto &Reduction) -> bool {
+            const RecurrenceDescriptor &RdxDesc = Reduction.second;
+            return RdxDesc.isOrdered();
+          });
+      if (HasOrderedReductions) {
+        LLVM_DEBUG(
+            dbgs() << "LV: Not interleaving scalar ordered reductions.\n");
+        return 1;
+      }
+
       unsigned F = static_cast<unsigned>(MaxNestedScalarReductionIC);
       SmallIC = std::min(SmallIC, F);
       StoresIC = std::min(StoresIC, F);
@@ -6887,7 +6905,8 @@ LoopVectorizationCostModel::expectedCost(
       VectorizationCostTy C = getInstructionCost(&I, VF);
 
       // Check if we should override the cost.
-      if (ForceTargetInstructionCost.getNumOccurrences() > 0)
+      if (C.first.isValid() &&
+          ForceTargetInstructionCost.getNumOccurrences() > 0)
         C.first = InstructionCost(ForceTargetInstructionCost);
 
       // Keep a list of instructions with invalid costs.
