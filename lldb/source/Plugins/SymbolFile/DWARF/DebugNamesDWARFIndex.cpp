@@ -133,6 +133,7 @@ void DebugNamesDWARFIndex::GetGlobalVariables(
     const DWARFUnit &main_unit,
     llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)> callback) {
   uint64_t cu_offset = main_unit.GetOffset();
+  bool found_entry_for_cu = false;
   for (const DebugNames::NameIndex &ni: *m_debug_names_up) {
     for (DebugNames::NameTableEntry nte: ni) {
       uint64_t entry_offset = nte.getEntryOffset();
@@ -143,6 +144,7 @@ void DebugNamesDWARFIndex::GetGlobalVariables(
         if (entry_or->getCUOffset() != cu_offset)
           continue;
 
+        found_entry_for_cu = true;
         if (!ProcessEntry(*entry_or, callback,
                           llvm::StringRef(nte.getString())))
           return;
@@ -150,8 +152,10 @@ void DebugNamesDWARFIndex::GetGlobalVariables(
       MaybeLogLookupError(entry_or.takeError(), ni, nte.getString());
     }
   }
-
-  m_fallback.GetGlobalVariables(main_unit, callback);
+  // If no name index for that particular CU was found, fallback to
+  // creating the manual index.
+  if (!found_entry_for_cu)
+    m_fallback.GetGlobalVariables(main_unit, callback);
 }
 
 void DebugNamesDWARFIndex::GetCompleteObjCClass(
