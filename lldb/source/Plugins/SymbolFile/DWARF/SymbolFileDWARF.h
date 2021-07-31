@@ -384,7 +384,10 @@ protected:
   lldb::TypeSP ParseType(const lldb_private::SymbolContext &sc,
                          const DWARFDIE &die, bool *type_is_new);
 
-  lldb_private::Type *ResolveTypeUID(DWARFUnit *main_unit, const DWARFDIE &die,
+  bool ParseSupportFiles(DWARFUnit &dwarf_cu, const lldb::ModuleSP &module,
+                         lldb_private::FileSpecList &support_files);
+
+  lldb_private::Type *ResolveTypeUID(const DWARFDIE &die,
                                      bool assert_not_being_parsed);
 
   lldb_private::Type *ResolveTypeUID(DWARFUnit *main_unit,
