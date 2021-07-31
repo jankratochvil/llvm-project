@@ -81,7 +81,8 @@ void DWARFUnit::ExtractUnitDIEIfNeeded() {
   if (!dwo_symbol_file)
     return;
 
-  DWARFCompileUnit *dwo_cu = dwo_symbol_file->GetDWOCompileUnitForHash(m_dwo_id);
+  DWARFCompileUnit *dwo_cu =
+      dwo_symbol_file->GetDWOCompileUnitForHash(m_dwo_id);
 
   if (!dwo_cu)
     return; // Can't fetch the compile unit from the dwo file.
