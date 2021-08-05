@@ -32,6 +32,7 @@ using namespace __tsan;
 static StaticSpinMutex mutex128;
 #endif
 
+#if SANITIZER_DEBUG
 static bool IsLoadOrder(morder mo) {
   return mo == mo_relaxed || mo == mo_consume
       || mo == mo_acquire || mo == mo_seq_cst;
@@ -40,6 +41,7 @@ static bool IsLoadOrder(morder mo) {
 static bool IsStoreOrder(morder mo) {
   return mo == mo_relaxed || mo == mo_release || mo == mo_seq_cst;
 }
+#endif
 
 static bool IsReleaseOrder(morder mo) {
   return mo == mo_release || mo == mo_acq_rel || mo == mo_seq_cst;
@@ -161,16 +163,16 @@ a128 func_cas(volatile a128 *v, a128 cmp, a128 xch) {
 }
 #endif
 
-template<typename T>
-static int SizeLog() {
+template <typename T>
+static int AccessSize() {
   if (sizeof(T) <= 1)
-    return kSizeLog1;
+    return 1;
   else if (sizeof(T) <= 2)
-    return kSizeLog2;
+    return 2;
   else if (sizeof(T) <= 4)
-    return kSizeLog4;
+    return 4;
   else
-    return kSizeLog8;
+    return 8;
   // For 16-byte atomics we also use 8-byte memory access,
   // this leads to false negatives only in very obscure cases.
 }
@@ -202,7 +204,7 @@ static memory_order to_mo(morder mo) {
   case mo_acq_rel: return memory_order_acq_rel;
   case mo_seq_cst: return memory_order_seq_cst;
   }
-  CHECK(0);
+  DCHECK(0);
   return memory_order_seq_cst;
 }
 
@@ -220,11 +222,12 @@ static a128 NoTsanAtomicLoad(const volatile a128 *a, morder mo) {
 
 template <typename T>
 static T AtomicLoad(ThreadState *thr, uptr pc, const volatile T *a, morder mo) {
-  CHECK(IsLoadOrder(mo));
+  DCHECK(IsLoadOrder(mo));
   // This fast-path is critical for performance.
   // Assume the access is atomic.
   if (!IsAcquireOrder(mo)) {
-    MemoryReadAtomic(thr, pc, (uptr)a, SizeLog<T>());
+    MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(),
+                 kAccessRead | kAccessAtomic);
     return NoTsanAtomicLoad(a, mo);
   }
   // Don't create sync object if it does not exist yet. For example, an atomic
@@ -238,7 +241,7 @@ static T AtomicLoad(ThreadState *thr, uptr pc, const volatile T *a, morder mo) {
     // of the value and the clock we acquire.
     v = NoTsanAtomicLoad(a, mo);
   }
-  MemoryReadAtomic(thr, pc, (uptr)a, SizeLog<T>());
+  MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), kAccessRead | kAccessAtomic);
   return v;
 }
 
@@ -257,8 +260,8 @@ static void NoTsanAtomicStore(volatile a128 *a, a128 v, morder mo) {
 template <typename T>
 static void AtomicStore(ThreadState *thr, uptr pc, volatile T *a, T v,
                         morder mo) {
-  CHECK(IsStoreOrder(mo));
-  MemoryWriteAtomic(thr, pc, (uptr)a, SizeLog<T>());
+  DCHECK(IsStoreOrder(mo));
+  MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), kAccessWrite | kAccessAtomic);
   // This fast-path is critical for performance.
   // Assume the access is atomic.
   // Strictly saying even relaxed store cuts off release sequence,
@@ -279,7 +282,7 @@ static void AtomicStore(ThreadState *thr, uptr pc, volatile T *a, T v,
 
 template <typename T, T (*F)(volatile T *v, T op)>
 static T AtomicRMW(ThreadState *thr, uptr pc, volatile T *a, T v, morder mo) {
-  MemoryWriteAtomic(thr, pc, (uptr)a, SizeLog<T>());
+  MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), kAccessWrite | kAccessAtomic);
   if (LIKELY(mo == mo_relaxed))
     return F(a, v);
   SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, (uptr)a, false);
@@ -402,9 +405,9 @@ static bool AtomicCAS(ThreadState *thr, uptr pc, volatile T *a, T *c, T v,
   // 31.7.2.18: "The failure argument shall not be memory_order_release
   // nor memory_order_acq_rel". LLVM (2021-05) fallbacks to Monotonic
   // (mo_relaxed) when those are used.
-  CHECK(IsLoadOrder(fmo));
+  DCHECK(IsLoadOrder(fmo));
 
-  MemoryWriteAtomic(thr, pc, (uptr)a, SizeLog<T>());
+  MemoryAccess(thr, pc, (uptr)a, AccessSize<T>(), kAccessWrite | kAccessAtomic);
   if (LIKELY(mo == mo_relaxed && fmo == mo_relaxed)) {
     T cc = *c;
     T pr = func_cas(a, cc, v);
