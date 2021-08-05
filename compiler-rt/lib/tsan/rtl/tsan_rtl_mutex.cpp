@@ -68,7 +68,7 @@ void MutexCreate(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   if (!(flagz & MutexFlagLinkerInit) && IsAppMem(addr)) {
     CHECK(!thr->is_freeing);
     thr->is_freeing = true;
-    MemoryWrite(thr, pc, addr, kSizeLog1);
+    MemoryAccess(thr, pc, addr, 1, kAccessWrite);
     thr->is_freeing = false;
   }
   SyncVar *s = ctx->metamap.GetSyncOrCreate(thr, pc, addr, true);
@@ -132,12 +132,8 @@ void MutexDestroy(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   // Imitate a memory write to catch unlock-destroy races.
   // Do this outside of sync mutex, because it can report a race which locks
   // sync mutexes.
-  if (IsAppMem(addr)) {
-    CHECK(!thr->is_freeing);
-    thr->is_freeing = true;
-    MemoryWrite(thr, pc, addr, kSizeLog1);
-    thr->is_freeing = false;
-  }
+  if (IsAppMem(addr))
+    MemoryAccess(thr, pc, addr, 1, kAccessWrite | kAccessFree);
   // s will be destroyed and freed in MetaMap::FreeBlock.
 }
 
@@ -166,7 +162,7 @@ void MutexPostLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz, int rec) {
   else
     rec = 1;
   if (IsAppMem(addr))
-    MemoryReadAtomic(thr, pc, addr, kSizeLog1);
+    MemoryAccess(thr, pc, addr, 1, kAccessRead | kAccessAtomic);
   u64 mid = 0;
   bool pre_lock = false;
   bool first = false;
@@ -216,7 +212,7 @@ void MutexPostLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz, int rec) {
 int MutexUnlock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   DPrintf("#%d: MutexUnlock %zx flagz=0x%x\n", thr->tid, addr, flagz);
   if (IsAppMem(addr))
-    MemoryReadAtomic(thr, pc, addr, kSizeLog1);
+    MemoryAccess(thr, pc, addr, 1, kAccessRead | kAccessAtomic);
   u64 mid = 0;
   bool report_bad_unlock = false;
   int rec = 0;
@@ -274,7 +270,7 @@ void MutexPreReadLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
 void MutexPostReadLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
   DPrintf("#%d: MutexPostReadLock %zx flagz=0x%x\n", thr->tid, addr, flagz);
   if (IsAppMem(addr))
-    MemoryReadAtomic(thr, pc, addr, kSizeLog1);
+    MemoryAccess(thr, pc, addr, 1, kAccessRead | kAccessAtomic);
   u64 mid = 0;
   bool report_bad_lock = false;
   bool pre_lock = false;
@@ -314,7 +310,7 @@ void MutexPostReadLock(ThreadState *thr, uptr pc, uptr addr, u32 flagz) {
 void MutexReadUnlock(ThreadState *thr, uptr pc, uptr addr) {
   DPrintf("#%d: MutexReadUnlock %zx\n", thr->tid, addr);
   if (IsAppMem(addr))
-    MemoryReadAtomic(thr, pc, addr, kSizeLog1);
+    MemoryAccess(thr, pc, addr, 1, kAccessRead | kAccessAtomic);
   u64 mid = 0;
   bool report_bad_unlock = false;
   {
@@ -347,7 +343,7 @@ void MutexReadUnlock(ThreadState *thr, uptr pc, uptr addr) {
 void MutexReadOrWriteUnlock(ThreadState *thr, uptr pc, uptr addr) {
   DPrintf("#%d: MutexReadOrWriteUnlock %zx\n", thr->tid, addr);
   if (IsAppMem(addr))
-    MemoryReadAtomic(thr, pc, addr, kSizeLog1);
+    MemoryAccess(thr, pc, addr, 1, kAccessRead | kAccessAtomic);
   u64 mid = 0;
   bool report_bad_unlock = false;
   {
