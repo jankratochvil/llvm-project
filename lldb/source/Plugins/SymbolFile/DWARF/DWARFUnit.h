@@ -169,10 +169,9 @@ public:
 
   void SetBaseAddress(dw_addr_t base_addr);
 
-  DWARFBaseDIE GetUnitDIEOnly() { return {this, GetUnitDIEPtrOnly()}; }
-
+  const DWARFDebugInfoEntry *GetDIEPtr(dw_offset_t die_offset);
   DWARFDIE DIE() { return DWARFDIE(this, DIEPtr()); }
-
+  DWARFDIE GetDIE(DWARFCompileUnit *main_cu, dw_offset_t die_offset);
   DWARFDIE GetDIE(dw_offset_t die_offset);
 
   DWARFUnit &GetNonSkeletonUnit();

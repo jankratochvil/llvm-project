@@ -228,7 +228,7 @@ static DWARFRangeList GetRangesOrReportError(DWARFUnit &unit,
 // Gets the valid address ranges for a given DIE by looking for a
 // DW_AT_low_pc/DW_AT_high_pc pair, DW_AT_entry_pc, or DW_AT_ranges attributes.
 bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
-    DWARFUnit *cu, const char *&name, const char *&mangled,
+    DWARFUnitPair cu, const char *&name, const char *&mangled,
     DWARFRangeList &ranges, int &decl_file, int &decl_line, int &decl_column,
     int &call_file, int &call_line, int &call_column,
     DWARFExpression *frame_base) const {
@@ -302,11 +302,11 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
           break;
 
         case DW_AT_abstract_origin:
-          dies.push_back(form_value.Reference());
+          dies.push_back(form_value.Reference(cu.GetMainCU()));
           break;
 
         case DW_AT_specification:
-          dies.push_back(form_value.Reference());
+          dies.push_back(form_value.Reference(cu.GetMainCU()));
           break;
 
         case DW_AT_decl_file:
@@ -440,7 +440,7 @@ size_t DWARFDebugInfoEntry::GetAttributes(DWARFUnit *cu,
       if (recurse == Recurse::yes &&
           ((attr == DW_AT_specification) || (attr == DW_AT_abstract_origin))) {
         if (form_value.ExtractValue(data, &offset)) {
-          DWARFDIE spec_die = form_value.Reference();
+          DWARFDIE spec_die = form_value.Reference(cu.GetMainCU());
           if (spec_die)
             spec_die.GetDIE()->GetAttributes(spec_die.GetCU(), attributes,
                                              recurse, curr_depth + 1);
@@ -466,7 +466,7 @@ size_t DWARFDebugInfoEntry::GetAttributes(DWARFUnit *cu,
 // or zero if we fail since an offset of zero is invalid for an attribute (it
 // would be a compile unit header).
 dw_offset_t DWARFDebugInfoEntry::GetAttributeValue(
-    const DWARFUnit *cu, const dw_attr_t attr, DWARFFormValue &form_value,
+    DWARFUnitPair cu, const dw_attr_t attr, DWARFFormValue &form_value,
     dw_offset_t *end_attr_offset_ptr,
     bool check_specification_or_abstract_origin) const {
   if (const auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu)) {
@@ -494,7 +494,7 @@ dw_offset_t DWARFDebugInfoEntry::GetAttributeValue(
 
   if (check_specification_or_abstract_origin) {
     if (GetAttributeValue(cu, DW_AT_specification, form_value)) {
-      DWARFDIE die = form_value.Reference();
+      DWARFDIE die = form_value.Reference(cu.GetMainCU());
       if (die) {
         dw_offset_t die_offset = die.GetDIE()->GetAttributeValue(
             die.GetCU(), attr, form_value, end_attr_offset_ptr, false);
@@ -504,7 +504,7 @@ dw_offset_t DWARFDebugInfoEntry::GetAttributeValue(
     }
 
     if (GetAttributeValue(cu, DW_AT_abstract_origin, form_value)) {
-      DWARFDIE die = form_value.Reference();
+      DWARFDIE die = form_value.Reference(cu.GetMainCU());
       if (die) {
         dw_offset_t die_offset = die.GetDIE()->GetAttributeValue(
             die.GetCU(), attr, form_value, end_attr_offset_ptr, false);
@@ -555,7 +555,7 @@ DWARFDIE DWARFDebugInfoEntry::GetAttributeValueAsReference(
   DWARFFormValue form_value;
   if (GetAttributeValue(cu, attr, form_value, nullptr,
                         check_specification_or_abstract_origin))
-    return form_value.Reference();
+    return form_value.Reference(cu.GetMainCU());
   return {};
 }
 
@@ -638,7 +638,7 @@ size_t DWARFDebugInfoEntry::GetAttributeAddressRanges(
 //
 // Get value of the DW_AT_name attribute and return it if one exists, else
 // return NULL.
-const char *DWARFDebugInfoEntry::GetName(const DWARFUnit *cu) const {
+const char *DWARFDebugInfoEntry::GetName(DWARFUnitPair cu) const {
   return GetAttributeValueAsString(cu, DW_AT_name, nullptr, true);
 }
 
@@ -647,7 +647,7 @@ const char *DWARFDebugInfoEntry::GetName(const DWARFUnit *cu) const {
 // Get value of the DW_AT_MIPS_linkage_name attribute and return it if one
 // exists, else return the value of the DW_AT_name attribute
 const char *
-DWARFDebugInfoEntry::GetMangledName(const DWARFUnit *cu,
+DWARFDebugInfoEntry::GetMangledName(DWARFUnitPair cu,
                                     bool substitute_name_allowed) const {
   const char *name = nullptr;
 
@@ -670,7 +670,7 @@ DWARFDebugInfoEntry::GetMangledName(const DWARFUnit *cu,
 //
 // Get value the name for a DIE as it should appear for a .debug_pubnames or
 // .debug_pubtypes section.
-const char *DWARFDebugInfoEntry::GetPubname(const DWARFUnit *cu) const {
+const char *DWARFDebugInfoEntry::GetPubname(DWARFUnitPair cu) const {
   const char *name = nullptr;
   if (!cu)
     return name;
@@ -731,12 +731,12 @@ DWARFDebugInfoEntry::GetDWARFDeclContextStatic(const DWARFDebugInfoEntry *die,
   }
 }
 
-DWARFDeclContext DWARFDebugInfoEntry::GetDWARFDeclContext(DWARFUnit *cu) const {
+DWARFDeclContext DWARFDebugInfoEntry::GetDWARFDeclContext(DWARFUnitPair cu) const {
   return GetDWARFDeclContextStatic(this, cu);
 }
 
 DWARFDIE
-DWARFDebugInfoEntry::GetParentDeclContextDIE(DWARFUnit *cu) const {
+DWARFDebugInfoEntry::GetParentDeclContextDIE(DWARFUnitPair cu) const {
   DWARFAttributes attributes;
   GetAttributes(cu, attributes, Recurse::yes);
   return GetParentDeclContextDIE(cu, attributes);
@@ -744,7 +744,7 @@ DWARFDebugInfoEntry::GetParentDeclContextDIE(DWARFUnit *cu) const {
 
 DWARFDIE
 DWARFDebugInfoEntry::GetParentDeclContextDIE(
-    DWARFUnit *cu, const DWARFAttributes &attributes) const {
+    DWARFUnitPair cu, const DWARFAttributes &attributes) const {
   DWARFDIE die(cu, const_cast<DWARFDebugInfoEntry *>(this));
 
   while (die) {
@@ -766,14 +766,14 @@ DWARFDebugInfoEntry::GetParentDeclContextDIE(
       }
     }
 
-    DWARFDIE spec_die = attributes.FormValueAsReference(DW_AT_specification);
+    DWARFDIE spec_die = attributes.FormValueAsReference(DW_AT_specification, cu.GetMainCU());
     if (spec_die) {
       DWARFDIE decl_ctx_die = spec_die.GetParentDeclContextDIE();
       if (decl_ctx_die)
         return decl_ctx_die;
     }
 
-    DWARFDIE abs_die = attributes.FormValueAsReference(DW_AT_abstract_origin);
+    DWARFDIE abs_die = attributes.FormValueAsReference(DW_AT_abstract_origin, cu.GetMainCU());
     if (abs_die) {
       DWARFDIE decl_ctx_die = abs_die.GetParentDeclContextDIE();
       if (decl_ctx_die)
@@ -785,7 +785,7 @@ DWARFDebugInfoEntry::GetParentDeclContextDIE(
   return DWARFDIE();
 }
 
-const char *DWARFDebugInfoEntry::GetQualifiedName(DWARFUnit *cu,
+const char *DWARFDebugInfoEntry::GetQualifiedName(DWARFUnitPair cu,
                                                   std::string &storage) const {
   DWARFAttributes attributes;
   GetAttributes(cu, attributes, Recurse::yes);
@@ -793,7 +793,7 @@ const char *DWARFDebugInfoEntry::GetQualifiedName(DWARFUnit *cu,
 }
 
 const char *
-DWARFDebugInfoEntry::GetQualifiedName(DWARFUnit *cu,
+DWARFDebugInfoEntry::GetQualifiedName(DWARFUnitPair cu,
                                       const DWARFAttributes &attributes,
                                       std::string &storage) const {
 

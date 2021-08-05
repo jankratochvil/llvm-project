@@ -11,6 +11,7 @@
 
 #include "lldb/Core/dwarf.h"
 #include "lldb/lldb-types.h"
+#include "Plugins/SymbolFile/DWARF/DWARFUnitPair.h"
 
 #include "llvm/Support/Error.h"
 
@@ -26,18 +27,11 @@ class DWARFBaseDIE {
 public:
   DWARFBaseDIE() = default;
 
-  DWARFBaseDIE(DWARFUnit *cu, DWARFDebugInfoEntry *die)
+  DWARFBaseDIE(DWARFUnitPair cu, DWARFDebugInfoEntry *die)
       : m_cu(cu), m_die(die) {}
 
-  DWARFBaseDIE(const DWARFUnit *cu, DWARFDebugInfoEntry *die)
-      : m_cu(const_cast<DWARFUnit *>(cu)), m_die(die) {}
-
-  DWARFBaseDIE(DWARFUnit *cu, const DWARFDebugInfoEntry *die)
+  DWARFBaseDIE(DWARFUnitPair cu, const DWARFDebugInfoEntry *die)
       : m_cu(cu), m_die(const_cast<DWARFDebugInfoEntry *>(die)) {}
-
-  DWARFBaseDIE(const DWARFUnit *cu, const DWARFDebugInfoEntry *die)
-      : m_cu(const_cast<DWARFUnit *>(cu)),
-        m_die(const_cast<DWARFDebugInfoEntry *>(die)) {}
 
   // Tests
   explicit operator bool() const { return IsValid(); }
@@ -52,12 +46,13 @@ public:
   SymbolFileDWARF *GetDWARF() const;
 
   DWARFUnit *GetCU() const { return m_cu; }
+  DWARFCompileUnit *GetMainCU() const { return m_cu.GetMainCU(); }
 
   DWARFDebugInfoEntry *GetDIE() const { return m_die; }
 
   llvm::Optional<DIERef> GetDIERef() const;
 
-  void Set(DWARFUnit *cu, DWARFDebugInfoEntry *die) {
+  void Set(DWARFUnitPair cu, DWARFDebugInfoEntry *die) {
     if (cu && die) {
       m_cu = cu;
       m_die = die;
@@ -67,7 +62,7 @@ public:
   }
 
   void Clear() {
-    m_cu = nullptr;
+    m_cu.Clear();
     m_die = nullptr;
   }
 
@@ -115,8 +110,8 @@ public:
                        Recurse recurse = Recurse::yes) const;
 
 protected:
-  DWARFUnit *m_cu = nullptr;
-  DWARFDebugInfoEntry *m_die = nullptr;
+  DWARFUnitPair m_cu;
+  DWARFDebugInfoEntry *m_die;
 };
 
 bool operator==(const DWARFBaseDIE &lhs, const DWARFBaseDIE &rhs);

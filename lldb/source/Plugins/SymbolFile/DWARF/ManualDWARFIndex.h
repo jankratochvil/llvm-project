@@ -11,6 +11,7 @@
 
 #include "Plugins/SymbolFile/DWARF/DWARFIndex.h"
 #include "Plugins/SymbolFile/DWARF/NameToDIE.h"
+#include "Plugins/SymbolFile/DWARF/DWARFUnitPair.h"
 #include "llvm/ADT/DenseSet.h"
 
 class DWARFDebugInfo;
@@ -68,8 +69,9 @@ private:
   };
   void Index();
   void IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp, IndexSet &set);
+  void IndexUnit(DWARFUnitPair unit, SymbolFileDWARFDwo *dwp, IndexSet &set);
 
-  static void IndexUnitImpl(DWARFUnit &unit,
+  static void IndexUnitImpl(DWARFUnitPair unit,
                             const lldb::LanguageType cu_language,
                             IndexSet &set);
 

@@ -24,12 +24,18 @@ public:
 
   static bool classof(const DWARFUnit *unit) { return unit->IsTypeUnit(); }
 
+  // To be called only from DWARFUnitPair.
+  lldb::LanguageType GetLanguageType() { return DWARFUnit::GetLanguageType(); }
+  llvm::Expected<lldb_private::TypeSystem &> GetTypeSystem() { return DWARFUnit::GetTypeSystem(); }
+
 private:
   DWARFTypeUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
                 const DWARFUnitHeader &header,
                 const DWARFAbbreviationDeclarationSet &abbrevs,
                 DIERef::Section section, bool is_dwo)
-      : DWARFUnit(dwarf, uid, header, abbrevs, section, is_dwo) {}
+      : DWARFUnit(dwarf, uid, header, abbrevs, section, is_dwo) {
+//FIXME:    assert(!dwarf.GetIsDwz());
+  }
 
   friend class DWARFUnit;
 };

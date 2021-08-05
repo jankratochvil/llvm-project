@@ -15,6 +15,7 @@
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private.h"
+#include "Plugins/SymbolFile/DWARF/DWARFUnitPair.h"
 #include <functional>
 
 class DWARFUnit;
@@ -42,7 +43,7 @@ public:
   ///     A data extractor configured to read the DWARF location expression's
   ///     bytecode.
   DWARFExpression(lldb::ModuleSP module, const DataExtractor &data,
-                  const DWARFUnit *dwarf_cu);
+                  DWARFUnitPair dwarf_cu);
 
   /// Destructor
   virtual ~DWARFExpression();
@@ -202,7 +203,7 @@ public:
   ///     details of the failure are provided through it.
   static bool Evaluate(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
                        lldb::ModuleSP opcode_ctx, const DataExtractor &opcodes,
-                       const DWARFUnit *dwarf_cu,
+                       DWARFUnitPair dwarf_cu,
                        const lldb::RegisterKind reg_set,
                        const Value *initial_value_ptr,
                        const Value *object_address_ptr, Value &result,
@@ -250,7 +251,7 @@ private:
   /// The DWARF compile unit this expression belongs to. It is used to evaluate
   /// values indexing into the .debug_addr section (e.g. DW_OP_GNU_addr_index,
   /// DW_OP_GNU_const_index)
-  const DWARFUnit *m_dwarf_cu = nullptr;
+  DWARFUnitPair m_dwarf_cu;
 
   /// One of the defines that starts with LLDB_REGKIND_
   lldb::RegisterKind m_reg_kind = lldb::eRegisterKindDWARF;

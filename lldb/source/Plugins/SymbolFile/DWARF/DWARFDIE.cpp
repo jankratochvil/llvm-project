@@ -13,6 +13,7 @@
 #include "DWARFDebugInfoEntry.h"
 #include "DWARFDeclContext.h"
 #include "DWARFUnit.h"
+#include "DWARFCompileUnit.h"
 
 using namespace lldb_private;
 
@@ -121,7 +122,7 @@ DWARFDIE::GetReferencedDIE(const dw_attr_t attr) const {
 DWARFDIE
 DWARFDIE::GetDIE(dw_offset_t die_offset) const {
   if (IsValid())
-    return m_cu->GetDIE(die_offset);
+    return m_cu->GetDIE(GetMainCU(), die_offset);
   else
     return DWARFDIE();
 }
@@ -129,12 +130,12 @@ DWARFDIE::GetDIE(dw_offset_t die_offset) const {
 DWARFDIE
 DWARFDIE::GetAttributeValueAsReferenceDIE(const dw_attr_t attr) const {
   if (IsValid()) {
-    DWARFUnit *cu = GetCU();
+    DWARFUnitPair cu = GetCU();
     const bool check_specification_or_abstract_origin = true;
     DWARFFormValue form_value;
     if (m_die->GetAttributeValue(cu, attr, form_value, nullptr,
                                  check_specification_or_abstract_origin))
-      return form_value.Reference();
+      return form_value.Reference(cu.GetMainCU());
   }
   return DWARFDIE();
 }

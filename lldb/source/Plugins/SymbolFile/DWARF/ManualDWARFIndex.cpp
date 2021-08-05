@@ -12,6 +12,7 @@
 #include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDwo.h"
+#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Progress.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -126,19 +127,43 @@ void ManualDWARFIndex::Index() {
   pool.wait();
 }
 
-void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
+void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp, IndexSet &set) {
+  // DWZ DW_TAG_partial_unit will get indexed by DW_AT_import
+  // from its DW_TAG_compile_unit (possibly transitively).
+  // Try to prevent GetUnitDIEOnly() which is expensive.
+//FIXME:  if (unit.GetSymbolFileDWARF().GetIsDwz())
+//FIXME:    return;
+  if (unit.GetUnitDIEOnly().Tag() == DW_TAG_partial_unit)
+    return;
+  IndexUnit(DWARFUnitPair(&unit,llvm::dyn_cast<DWARFCompileUnit>(&unit)), dwp, set);
+}
+
+void ManualDWARFIndex::IndexUnit(DWARFUnitPair unit, SymbolFileDWARFDwo *dwp,
                                  IndexSet &set) {
+  assert(
+      !unit->GetSymbolFileDWARF().GetBaseCompileUnit() &&
+      "DWARFUnit associated with .dwo or .dwp should not be indexed directly");
+
+  // Are we called for DW_TAG_compile_unit (contrary to DW_TAG_partial_unit)?
+  if (unit.GetMainCU() == &unit) {
+    // DWZ DW_TAG_partial_unit will get indexed by DW_AT_import
+    // from its DW_TAG_compile_unit (possibly transitively).
+    // GetUnitDIEPtrOnly() is too expensive.
+    if (unit.GetSymbolFileDWARF().GetIsDwz())
+      return;
+    if (unit.GetUnitDIEOnly().Tag() == DW_TAG_partial_unit)
+      return;
+  }
+
   Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_LOOKUPS);
 
   if (log) {
     m_module.LogMessage(
-        log, "ManualDWARFIndex::IndexUnit for unit at .debug_info[0x%8.8x]",
-        unit.GetOffset());
+        log, "ManualDWARFIndex::IndexUnit for unit at .debug_info[0x%8.8x] from .debug_info[0x%8.8x]",
+        unit->GetOffset(), unit.GetMainCU()->GetOffset());
   }
 
-  const LanguageType cu_language = SymbolFileDWARF::GetLanguage(unit);
-
-  IndexUnitImpl(unit, cu_language, set);
+  IndexUnitImpl(unit, set);
 
   if (SymbolFileDWARFDwo *dwo_symbol_file = unit.GetDwoSymbolFile()) {
     // Type units in a dwp file are indexed separately, so we just need to
@@ -147,16 +172,23 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
     if (dwo_symbol_file == dwp) {
       IndexUnitImpl(unit.GetNonSkeletonUnit(), cu_language, set);
     } else {
-      DWARFDebugInfo &dwo_info = dwo_symbol_file->DebugInfo();
-      for (size_t i = 0; i < dwo_info.GetNumUnits(); ++i)
-        IndexUnitImpl(*dwo_info.GetUnitAtIndex(i), cu_language, set);
+      assert(unit.GetCU() == unit.GetMainCU());
+      DWARFDebugInfo &dwo_info = *dwo_symbol_file->DebugInfo();
+      for (size_t i = 0; i < dwo_info.GetNumUnits(); ++i) {
+        // Separate main CU is not used for DWO CUs.
+        DWARFUnit *dwo_cu = dwo_info.GetUnitAtIndex(i);
+        IndexUnitImpl({dwo_cu, llvm::dyn_cast<DWARFCompileUnit>(dwo_cu)}, set);
+      }
     }
   }
 }
 
-void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
-                                     const LanguageType cu_language,
+void ManualDWARFIndex::IndexUnitImpl(DWARFUnitPair unitpair,
                                      IndexSet &set) {
+
+  DWARFUnit &unit = unitpair;
+  const LanguageType cu_language = unitpair.GetLanguageType();
+
   for (const DWARFDebugInfoEntry &die : unit.dies()) {
     const dw_tag_t tag = die.Tag();
 
@@ -239,7 +271,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
       }
     }
 
-    DIERef ref = *DWARFDIE(&unit, &die).GetDIERef();
+    DIERef ref = *DWARFDIE(unitpair, &die).GetDIERef();
     switch (tag) {
     case DW_TAG_inlined_subroutine:
     case DW_TAG_subprogram:
@@ -272,7 +304,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
           }
           // If we have a mangled name, then the DW_AT_name attribute is
           // usually the method name without the class or any parameters
-          bool is_method = DWARFDIE(&unit, &die).IsMethod();
+          bool is_method = DWARFDIE(unitpair, &die).IsMethod();
 
           if (is_method)
             set.function_methods.Insert(ConstString(name), ref);

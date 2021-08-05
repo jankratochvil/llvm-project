@@ -39,6 +39,8 @@ void DWARFCompileUnit::BuildAddressRangeTable(
   const dw_offset_t cu_offset = GetOffset();
   if (die) {
     DWARFRangeList ranges;
+    // It does not make sense to build address table for DW_TAG_partial_unit as
+    // those never contain any addresses.
     const size_t num_ranges =
         die->GetAttributeAddressRanges(this, ranges, /*check_hi_lo_pc=*/true);
     if (num_ranges > 0) {
@@ -114,3 +116,34 @@ DWARFDIE DWARFCompileUnit::LookupAddress(const dw_addr_t address) {
   }
   return DWARFDIE();
 }
+
+size_t DWARFCompileUnit::AppendDIEsWithTag(const dw_tag_t tag,
+                                    std::vector<DWARFDIE> &dies,
+                                    uint32_t depth) const {
+  size_t old_size = dies.size();
+  {
+    llvm::sys::ScopedReader lock(m_die_array_mutex);
+    DWARFDebugInfoEntry::const_iterator pos;
+    DWARFDebugInfoEntry::const_iterator end = m_die_array.end();
+    DWARFUnitPair unitpair = DWARFUnitPair(const_cast<DWARFCompileUnit *>(this));
+    for (pos = m_die_array.begin(); pos != end; ++pos) {
+      if (pos->Tag() == tag)
+        dies.emplace_back(unitpair, &(*pos));
+    }
+  }
+
+  // Return the number of DIEs added to the collection
+  return dies.size() - old_size;
+}
+
+DWARFDIE DWARFCompileUnit::LookupAddress(const dw_addr_t address) {
+  if (GetUnitDIEPtrOnly()) {
+    const DWARFDebugAranges &func_aranges = GetFunctionAranges();
+
+    // Re-check the aranges auto pointer contents in case it was created above
+    if (!func_aranges.IsEmpty())
+      return GetDIE(func_aranges.FindAddress(address));
+  }
+  return DWARFDIE();
+}
+

@@ -24,6 +24,19 @@ public:
 
   DWARFDIE LookupAddress(const dw_addr_t address);
 
+  // To be called only from DWARFUnitPair.
+  lldb::LanguageType GetLanguageType() { return DWARFUnit::GetLanguageType(); }
+  llvm::Expected<lldb_private::TypeSystem &> GetTypeSystem() { return DWARFUnit::GetTypeSystem(); }
+
+  DWARFDIE GetDIE(dw_offset_t die_offset) { return DWARFUnit::GetDIE(this,die_offset); }
+
+  DWARFDIE DIE() { return DWARFDIE(DWARFUnitPair(this), DIEPtr()); }
+
+  size_t AppendDIEsWithTag(const dw_tag_t tag, std::vector<DWARFDIE> &dies,
+                           uint32_t depth = UINT32_MAX) const;
+
+  DWARFDIE LookupAddress(const dw_addr_t address);
+
 private:
   DWARFCompileUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
                    const DWARFUnitHeader &header,

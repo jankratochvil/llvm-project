@@ -484,7 +484,7 @@ protected:
 
   void FindDwpSymbolFile();
 
-  const lldb_private::FileSpecList &GetTypeUnitSupportFiles(DWARFTypeUnit &tu);
+  const lldb_private::FileSpecList &GetSharedUnitSupportFiles(DWARFUnit &tu);
 
   lldb::ModuleWP m_debug_map_module_wp;
   SymbolFileDWARFDebugMap *m_debug_map_symfile;
@@ -519,7 +519,7 @@ protected:
   DIEToClangType m_forward_decl_die_to_clang_type;
   ClangTypeToDIE m_forward_decl_clang_type_to_die;
   llvm::DenseMap<dw_offset_t, lldb_private::FileSpecList>
-      m_type_unit_support_files;
+      m_shared_unit_support_files;
   std::vector<uint32_t> m_lldb_cu_to_dwarf_unit;
 };
 

@@ -9,6 +9,7 @@
 #include "DWARFBaseDIE.h"
 
 #include "DWARFUnit.h"
+#include "DWARFCompileUnit.h"
 #include "DWARFDebugInfoEntry.h"
 #include "SymbolFileDWARF.h"
 
@@ -22,7 +23,9 @@ llvm::Optional<DIERef> DWARFBaseDIE::GetDIERef() const {
   if (!IsValid())
     return llvm::None;
 
-  return DIERef(m_cu->GetSymbolFileDWARF().GetDwoNum(), m_cu->GetDebugSection(),
+  return DIERef(m_cu.GetSymbolFileDWARF().GetDwoNum(), (!m_cu.GetMainCUOrNull() ? llvm::None : llvm::Optional<uint32_t>(m_cu.GetMainCU()->GetID())),
+    GetCU()->GetSymbolFileDWARF().GetIsDwz() ? DIERef::CommonDwz : DIERef::MainDwz,
+  m_cu.GetDebugSection(),
                 m_die->GetOffset());
 }
 
@@ -90,8 +93,8 @@ dw_offset_t DWARFBaseDIE::GetOffset() const {
 }
 
 SymbolFileDWARF *DWARFBaseDIE::GetDWARF() const {
-  if (m_cu)
-    return &m_cu->GetSymbolFileDWARF();
+  if (m_cu.GetMainCU())
+    return &m_cu->GetMainCU()->GetSymbolFileDWARF();
   else
     return nullptr;
 }
@@ -106,10 +109,7 @@ bool DWARFBaseDIE::Supports_DW_AT_APPLE_objc_complete_type() const {
 
 size_t DWARFBaseDIE::GetAttributes(DWARFAttributes &attributes,
                                    Recurse recurse) const {
-  if (IsValid())
-    return m_die->GetAttributes(m_cu, attributes, recurse);
-  attributes.Clear();
-  return 0;
+  return DWARFSimpleDIE(*this).GetAttributes(attributes, recurse);
 }
 
 bool operator==(const DWARFBaseDIE &lhs, const DWARFBaseDIE &rhs) {
@@ -123,5 +123,5 @@ bool operator!=(const DWARFBaseDIE &lhs, const DWARFBaseDIE &rhs) {
 const DWARFDataExtractor &DWARFBaseDIE::GetData() const {
   // Clients must check if this DIE is valid before calling this function.
   assert(IsValid());
-  return m_cu->GetData();
+  return m_cu.GetData();
 }

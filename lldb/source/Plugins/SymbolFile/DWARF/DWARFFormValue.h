@@ -14,8 +14,27 @@
 #include <cstddef>
 
 class DWARFUnit;
+class DWARFCompileUnit;
 class SymbolFileDWARF;
 class DWARFDIE;
+class DWARFDebugInfoEntry;
+
+#include "DWARFBaseDIE.h" // FIXME
+class DWARFSimpleDIE {
+public:
+  DWARFSimpleDIE() {}
+  DWARFSimpleDIE(DWARFUnit *cu,const DWARFDebugInfoEntry *die):m_cu(cu),m_die(die) { assert(m_cu); assert(m_die); }
+  DWARFSimpleDIE(const DWARFBaseDIE &die):DWARFSimpleDIE(die.GetCU(), die.GetDIE()) {}
+  DWARFUnit *GetCU() const { return m_cu; }
+  const DWARFDebugInfoEntry *GetDIE() const { return m_die; }
+  dw_offset_t GetOffset() const;
+  size_t GetAttributes(DWARFAttributes &attributes, uint32_t depth) const;
+  bool IsValid() const { return m_die != nullptr; }
+
+private:
+  DWARFUnit *m_cu=nullptr;
+  const DWARFDebugInfoEntry *m_die=nullptr;
+};
 
 class DWARFFormValue {
 public:
@@ -58,7 +77,8 @@ public:
   static llvm::Optional<uint8_t> GetFixedSize(dw_form_t form,
                                               const DWARFUnit *u);
   llvm::Optional<uint8_t> GetFixedSize() const;
-  DWARFDIE Reference() const;
+  DWARFSimpleDIE Reference() const;
+  DWARFDIE Reference(DWARFCompileUnit *main_unit) const;
   uint64_t Reference(dw_offset_t offset) const;
   bool Boolean() const { return m_value.value.uval != 0; }
   uint64_t Unsigned() const { return m_value.value.uval; }

@@ -59,7 +59,7 @@ DWARFExpression::DWARFExpression() : m_module_wp(), m_data() {}
 
 DWARFExpression::DWARFExpression(lldb::ModuleSP module_sp,
                                  const DataExtractor &data,
-                                 const DWARFUnit *dwarf_cu)
+                                 DWARFUnitPair dwarf_cu)
     : m_module_wp(), m_data(data), m_dwarf_cu(dwarf_cu),
       m_reg_kind(eRegisterKindDWARF) {
   if (module_sp)
@@ -951,7 +951,7 @@ void UpdateValueTypeFromLocationDescription(Log *log, const DWARFUnit *dwarf_cu,
 bool DWARFExpression::Evaluate(
     ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
     lldb::ModuleSP module_sp, const DataExtractor &opcodes,
-    const DWARFUnit *dwarf_cu, const lldb::RegisterKind reg_kind,
+    DWARFUnitPair dwarf_cu, const lldb::RegisterKind reg_kind,
     const Value *initial_value_ptr, const Value *object_address_ptr,
     Value &result, Status *error_ptr) {
 
@@ -2469,8 +2469,7 @@ bool DWARFExpression::Evaluate(
         }
       } else {
         // Retrieve the type DIE that the value is being converted to.
-        // FIXME: the constness has annoying ripple effects.
-        DWARFDIE die = const_cast<DWARFUnit *>(dwarf_cu)->GetDIE(die_offset);
+        DWARFDIE die = dwarf_cu.GetCU()->GetDIE(dwarf_cu.GetMainCU(), die_offset);
         if (!die) {
           if (error_ptr)
             error_ptr->SetErrorString("Cannot resolve DW_OP_convert type DIE");

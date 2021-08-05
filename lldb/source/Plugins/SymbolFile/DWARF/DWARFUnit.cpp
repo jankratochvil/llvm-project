@@ -87,8 +87,9 @@ void DWARFUnit::ExtractUnitDIEIfNeeded() {
     return; // Can't fetch the compile unit from the dwo file.
   dwo_cu->SetUserData(this);
 
-  DWARFBaseDIE dwo_cu_die = dwo_cu->GetUnitDIEOnly();
-  if (!dwo_cu_die.IsValid())
+  // 'main_cu' is not used.
+  const DWARFDebugInfoEntry *dwo_cu_die = dwo_cu->GetUnitDIEPtrOnly();
+  if (!dwo_cu_die)
     return; // Can't fetch the compile unit DIE from the dwo file.
 
   // Here for DWO CU we want to use the address base set in the skeleton unit
@@ -574,6 +575,29 @@ void DWARFUnit::SetBaseAddress(dw_addr_t base_addr) { m_base_addr = base_addr; }
 static bool CompareDIEOffset(const DWARFDebugInfoEntry &die,
                              const dw_offset_t die_offset) {
   return die.GetOffset() < die_offset;
+}
+
+const DWARFDebugInfoEntry *DWARFUnit::GetDIEPtr(dw_offset_t die_offset) {
+  if (die_offset == DW_INVALID_OFFSET)
+    return nullptr;
+  lldbassert(!GetDwoSymbolFile());
+
+  if (!ContainsDIEOffset(die_offset)) {
+    GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
+        "GetDIE for DIE 0x%" PRIx32 " is outside of its CU 0x%" PRIx32,
+        die_offset, GetOffset());
+    return nullptr;
+  }
+
+  ExtractDIEsIfNeeded();
+  DWARFDebugInfoEntry::const_iterator end = m_die_array.cend();
+  DWARFDebugInfoEntry::const_iterator pos =
+      lower_bound(m_die_array.cbegin(), end, die_offset, CompareDIEOffset);
+  if (pos != end) {
+    if (die_offset == (*pos).GetOffset())
+      return &(*pos);
+  }
+  return nullptr;
 }
 
 // GetDIE()

@@ -16,6 +16,7 @@
 #include "DWARFDebugInfo.h"
 #include "DWARFFormValue.h"
 #include "DWARFUnit.h"
+#include "DWARFCompileUnit.h"
 
 class DWARFUnit;
 
@@ -498,14 +499,14 @@ dw_addr_t DWARFFormValue::Address() const {
       &offset, index_size);
 }
 
-DWARFDIE DWARFFormValue::Reference() const {
+DWARFSimpleDIE DWARFFormValue::Reference() const {
   uint64_t value = m_value.value.uval;
   switch (m_form) {
   case DW_FORM_ref1:
   case DW_FORM_ref2:
   case DW_FORM_ref4:
   case DW_FORM_ref8:
-  case DW_FORM_ref_udata:
+  case DW_FORM_ref_udata: {
     assert(m_unit); // Unit must be valid for DW_FORM_ref forms that are compile
                     // unit relative or we will get this wrong
     value += m_unit->GetOffset();
@@ -515,7 +516,9 @@ DWARFDIE DWARFFormValue::Reference() const {
           value);
       return {};
     }
-    return const_cast<DWARFUnit *>(m_unit)->GetDIE(value);
+    DWARFUnit *cu = const_cast<DWARFUnit *>(m_unit);
+    return {cu, cu->GetDIEPtr(value)};
+  }
 
   case DW_FORM_ref_addr: {
     DWARFUnit *ref_cu =
@@ -527,7 +530,7 @@ DWARFDIE DWARFFormValue::Reference() const {
           value);
       return {};
     }
-    return ref_cu->GetDIE(value);
+    return {ref_cu, ref_cu->GetDIEPtr(value)};
   }
 
   case DW_FORM_ref_sig8: {
@@ -535,12 +538,25 @@ DWARFDIE DWARFFormValue::Reference() const {
         m_unit->GetSymbolFileDWARF().DebugInfo().GetTypeUnitForHash(value);
     if (!tu)
       return {};
-    return tu->GetDIE(tu->GetTypeOffset());
+    return {tu, tu->GetDIEPtr(tu->GetTypeOffset())};
   }
 
   default:
     return {};
   }
+}
+
+DWARFDIE DWARFFormValue::Reference(DWARFCompileUnit *main_unit) const {
+  DWARFSimpleDIE die = Reference();
+  if (!die.IsValid())
+    return {};
+
+  // MainCU may differ from CU only for DW_TAG_partial_unit units.
+  if (die.GetCU()->IsTypeUnit())
+    main_unit=nullptr;
+  else if (die.GetCU()->GetUnitDIEOnly().Tag()!=DW_TAG_partial_unit)
+    main_unit=llvm::cast<DWARFCompileUnit>(die.GetCU());
+  return {{die.GetCU(),main_unit}, die.GetDIE()};
 }
 
 uint64_t DWARFFormValue::Reference(dw_offset_t base_offset) const {
@@ -634,4 +650,14 @@ bool DWARFFormValue::FormIsSupported(dw_form_t form) {
       break;
   }
   return false;
+}
+
+dw_offset_t DWARFSimpleDIE::GetOffset() const { return !m_die ? DW_INVALID_OFFSET : m_die->GetOffset(); } // FIXME
+
+size_t DWARFSimpleDIE::GetAttributes(DWARFAttributes &attributes,
+                                     Recurse recurse) const {
+  if (IsValid())
+    return m_die->GetAttributes(m_cu, attributes, recurse);
+  attributes.Clear();
+  return 0;
 }

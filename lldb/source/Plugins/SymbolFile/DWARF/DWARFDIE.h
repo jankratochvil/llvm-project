@@ -37,7 +37,7 @@ public:
 
   void AppendTypeName(lldb_private::Stream &s) const;
 
-  lldb_private::Type *ResolveType() const;
+  lldb_private::Type *ResolveType(SymbolFileDWARF &dwarf) const;
 
   // Resolve a type by UID using this DIE's DWARF file
   lldb_private::Type *ResolveTypeUID(const DWARFDIE &die) const;

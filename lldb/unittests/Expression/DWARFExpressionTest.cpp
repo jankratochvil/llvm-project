@@ -25,6 +25,7 @@ using namespace lldb_private;
 
 static llvm::Expected<Scalar> Evaluate(llvm::ArrayRef<uint8_t> expr,
                                        lldb::ModuleSP module_sp = {},
+                                       DWARFUnitPair unit = {},
                                        DWARFUnit *unit = nullptr,
                                        ExecutionContext *exe_ctx = nullptr) {
   DataExtractor extractor(expr.data(), expr.size(), lldb::eByteOrderLittle,
@@ -202,7 +203,7 @@ DWARF:
   uint8_t offs_schar = 0x0000001a;
 
   DWARFExpressionTester t(yamldata);
-  ASSERT_TRUE((bool)t.GetDwarfUnit());
+  ASSERT_TRUE((bool)t.GetDwarfUnit().GetCU());
 
   // Constant is given as little-endian.
   bool is_signed = true;
