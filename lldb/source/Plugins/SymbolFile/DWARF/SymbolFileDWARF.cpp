@@ -2552,7 +2552,7 @@ TypeSP SymbolFileDWARF::GetTypeForDIE(const DWARFDIE &die,
     Type *type_ptr = GetDIEToType().lookup(die.GetDIE());
     if (type_ptr == nullptr) {
       SymbolContextScope *scope;
-      if (auto *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(die.GetCU()))
+      if (auto *dwarf_cu = die.GetMainCU())
         scope = GetCompUnitForDWARFCompUnit(*dwarf_cu);
       else
         scope = GetObjectFile()->GetModule().get();
@@ -3016,7 +3016,7 @@ size_t SymbolFileDWARF::ParseBlocksRecursive(Function &func) {
   CompileUnit *comp_unit = func.GetCompileUnit();
   lldbassert(comp_unit);
 
-  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(comp_unit);
+  DWARFCompileUnit *dwarf_cu = GetDWARFCompileUnit(comp_unit);
   if (!dwarf_cu)
     return 0;
 
