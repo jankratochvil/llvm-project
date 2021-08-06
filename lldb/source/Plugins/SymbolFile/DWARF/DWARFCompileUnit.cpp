@@ -135,15 +135,3 @@ size_t DWARFCompileUnit::AppendDIEsWithTag(const dw_tag_t tag,
   // Return the number of DIEs added to the collection
   return dies.size() - old_size;
 }
-
-DWARFDIE DWARFCompileUnit::LookupAddress(const dw_addr_t address) {
-  if (GetUnitDIEPtrOnly()) {
-    const DWARFDebugAranges &func_aranges = GetFunctionAranges();
-
-    // Re-check the aranges auto pointer contents in case it was created above
-    if (!func_aranges.IsEmpty())
-      return GetDIE(func_aranges.FindAddress(address));
-  }
-  return DWARFDIE();
-}
-

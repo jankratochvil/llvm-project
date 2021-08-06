@@ -24,10 +24,6 @@ public:
 
   static bool classof(const DWARFUnit *unit) { return unit->IsTypeUnit(); }
 
-  // To be called only from DWARFUnitPair.
-  lldb::LanguageType GetLanguageType() { return DWARFUnit::GetLanguageType(); }
-  llvm::Expected<lldb_private::TypeSystem &> GetTypeSystem() { return DWARFUnit::GetTypeSystem(); }
-
 private:
   DWARFTypeUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
                 const DWARFUnitHeader &header,

@@ -655,7 +655,7 @@ bool DWARFFormValue::FormIsSupported(dw_form_t form) {
 dw_offset_t DWARFSimpleDIE::GetOffset() const { return !m_die ? DW_INVALID_OFFSET : m_die->GetOffset(); } // FIXME
 
 size_t DWARFSimpleDIE::GetAttributes(DWARFAttributes &attributes,
-                                     Recurse recurse) const {
+                                     DWARFBaseDIE::Recurse recurse) const {
   if (IsValid())
     return m_die->GetAttributes(m_cu, attributes, recurse);
   attributes.Clear();

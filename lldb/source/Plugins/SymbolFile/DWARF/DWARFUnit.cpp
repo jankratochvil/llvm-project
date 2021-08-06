@@ -606,25 +606,15 @@ const DWARFDebugInfoEntry *DWARFUnit::GetDIEPtr(dw_offset_t die_offset) {
 // checking if the DIE is contained within this compile unit and grabbing the
 // DIE from this compile unit. Otherwise we grab the DIE from the DWARF file.
 DWARFDIE
-DWARFUnit::GetDIE(dw_offset_t die_offset) {
-  if (die_offset == DW_INVALID_OFFSET)
-    return DWARFDIE(); // Not found
-
-  if (!ContainsDIEOffset(die_offset)) {
-    GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
-        "GetDIE for DIE 0x%" PRIx32 " is outside of its CU 0x%" PRIx32,
-        die_offset, GetOffset());
-    return DWARFDIE(); // Not found
+DWARFUnit::GetDIE(DWARFCompileUnit *main_cu, dw_offset_t die_offset) {
+  if (GetDwoSymbolFile()) {
+    assert(this == main_cu);
+    return GetDwoSymbolFile()->GetCompileUnit()->GetDIE(die_offset);
   }
-
-  ExtractDIEsIfNeeded();
-  DWARFDebugInfoEntry::const_iterator end = m_die_array.cend();
-  DWARFDebugInfoEntry::const_iterator pos =
-      lower_bound(m_die_array.cbegin(), end, die_offset, CompareDIEOffset);
-
-  if (pos != end && die_offset == (*pos).GetOffset())
-    return DWARFDIE(this, &(*pos));
-  return DWARFDIE(); // Not found
+  const DWARFDebugInfoEntry *die = GetDIEPtr(die_offset);
+  if (!die)
+    return DWARFDIE();
+  return DWARFDIE({this, main_cu}, die);
 }
 
 DWARFUnit &DWARFUnit::GetNonSkeletonUnit() {

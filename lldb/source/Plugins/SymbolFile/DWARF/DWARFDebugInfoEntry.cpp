@@ -440,7 +440,7 @@ size_t DWARFDebugInfoEntry::GetAttributes(DWARFUnit *cu,
       if (recurse == Recurse::yes &&
           ((attr == DW_AT_specification) || (attr == DW_AT_abstract_origin))) {
         if (form_value.ExtractValue(data, &offset)) {
-          DWARFDIE spec_die = form_value.Reference(cu.GetMainCU());
+          DWARFSimpleDIE spec_die = form_value.Reference();
           if (spec_die)
             spec_die.GetDIE()->GetAttributes(spec_die.GetCU(), attributes,
                                              recurse, curr_depth + 1);
@@ -466,7 +466,7 @@ size_t DWARFDebugInfoEntry::GetAttributes(DWARFUnit *cu,
 // or zero if we fail since an offset of zero is invalid for an attribute (it
 // would be a compile unit header).
 dw_offset_t DWARFDebugInfoEntry::GetAttributeValue(
-    DWARFUnitPair cu, const dw_attr_t attr, DWARFFormValue &form_value,
+    const DWARFUnit *cu, const dw_attr_t attr, DWARFFormValue &form_value,
     dw_offset_t *end_attr_offset_ptr,
     bool check_specification_or_abstract_origin) const {
   if (const auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu)) {
@@ -494,7 +494,7 @@ dw_offset_t DWARFDebugInfoEntry::GetAttributeValue(
 
   if (check_specification_or_abstract_origin) {
     if (GetAttributeValue(cu, DW_AT_specification, form_value)) {
-      DWARFDIE die = form_value.Reference(cu.GetMainCU());
+      DWARFSimpleDIE die = form_value.Reference();
       if (die) {
         dw_offset_t die_offset = die.GetDIE()->GetAttributeValue(
             die.GetCU(), attr, form_value, end_attr_offset_ptr, false);
@@ -504,7 +504,7 @@ dw_offset_t DWARFDebugInfoEntry::GetAttributeValue(
     }
 
     if (GetAttributeValue(cu, DW_AT_abstract_origin, form_value)) {
-      DWARFDIE die = form_value.Reference(cu.GetMainCU());
+      DWARFSimpleDIE die = form_value.Reference();
       if (die) {
         dw_offset_t die_offset = die.GetDIE()->GetAttributeValue(
             die.GetCU(), attr, form_value, end_attr_offset_ptr, false);
@@ -549,14 +549,23 @@ uint64_t DWARFDebugInfoEntry::GetAttributeValueAsUnsigned(
 //
 // Get the value of an attribute as reference and fix up and compile unit
 // relative offsets as needed.
-DWARFDIE DWARFDebugInfoEntry::GetAttributeValueAsReference(
+DWARFSimpleDIE DWARFDebugInfoEntry::GetAttributeValueAsReference(
     const DWARFUnit *cu, const dw_attr_t attr,
     bool check_specification_or_abstract_origin) const {
   DWARFFormValue form_value;
   if (GetAttributeValue(cu, attr, form_value, nullptr,
                         check_specification_or_abstract_origin))
-    return form_value.Reference(cu.GetMainCU());
+    return form_value.Reference();
   return {};
+}
+
+DWARFDIE DWARFDebugInfoEntry::GetAttributeValueAsReference(
+    DWARFUnitPair cu, const dw_attr_t attr,
+    bool check_specification_or_abstract_origin) const {
+  DWARFSimpleDIE die = GetAttributeValueAsReference(cu.GetCU(), attr, check_specification_or_abstract_origin);
+  if (!die.IsValid())
+    return {};
+  return {{die.GetCU(),cu.GetMainCU()},die.GetDIE()};
 }
 
 uint64_t DWARFDebugInfoEntry::GetAttributeValueAsAddress(
@@ -713,7 +722,7 @@ void DWARFDebugInfoEntry::BuildFunctionAddressRangeTable(
 
 DWARFDeclContext
 DWARFDebugInfoEntry::GetDWARFDeclContextStatic(const DWARFDebugInfoEntry *die,
-                                               DWARFUnit *cu) {
+                                               DWARFUnitPair cu) {
   DWARFDeclContext dwarf_decl_ctx;
   for (;;) {
     const dw_tag_t tag = die->Tag();

@@ -28,8 +28,9 @@ public:
   DWARFUnit *GetCU() const { return m_cu; }
   const DWARFDebugInfoEntry *GetDIE() const { return m_die; }
   dw_offset_t GetOffset() const;
-  size_t GetAttributes(DWARFAttributes &attributes, uint32_t depth) const;
+  size_t GetAttributes(DWARFAttributes &attributes, DWARFBaseDIE::Recurse recurse) const;
   bool IsValid() const { return m_die != nullptr; }
+  explicit operator bool() const { return IsValid(); }
 
 private:
   DWARFUnit *m_cu=nullptr;

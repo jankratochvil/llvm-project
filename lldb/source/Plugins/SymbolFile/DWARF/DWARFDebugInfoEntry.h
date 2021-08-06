@@ -54,21 +54,21 @@ public:
   }
 
   dw_offset_t
-  GetAttributeValue(DWARFUnit *cu, const dw_attr_t attr,
+  GetAttributeValue(const DWARFUnit *cu, const dw_attr_t attr,
                     DWARFFormValue &formValue,
                     dw_offset_t *end_attr_offset_ptr = nullptr,
                     bool check_specification_or_abstract_origin = false) const;
 
   const char *GetAttributeValueAsString(
-      DWARFUnit *cu, const dw_attr_t attr, const char *fail_value,
+      const DWARFUnit *cu, const dw_attr_t attr, const char *fail_value,
       bool check_specification_or_abstract_origin = false) const;
 
   uint64_t GetAttributeValueAsUnsigned(
-      DWARFUnit *cu, const dw_attr_t attr, uint64_t fail_value,
+      const DWARFUnit *cu, const dw_attr_t attr, uint64_t fail_value,
       bool check_specification_or_abstract_origin = false) const;
 
   DWARFSimpleDIE GetAttributeValueAsReference(
-      DWARFUnit *cu, const dw_attr_t attr,
+      const DWARFUnit *cu, const dw_attr_t attr,
       bool check_specification_or_abstract_origin = false) const;
 
   DWARFDIE GetAttributeValueAsReference(
@@ -76,15 +76,15 @@ public:
       bool check_specification_or_abstract_origin = false) const;
 
   uint64_t GetAttributeValueAsAddress(
-      DWARFUnit *cu, const dw_attr_t attr, uint64_t fail_value,
+      const DWARFUnit *cu, const dw_attr_t attr, uint64_t fail_value,
       bool check_specification_or_abstract_origin = false) const;
 
   dw_addr_t
-  GetAttributeHighPC(DWARFUnit *cu, dw_addr_t lo_pc, uint64_t fail_value,
+  GetAttributeHighPC(const DWARFUnit *cu, dw_addr_t lo_pc, uint64_t fail_value,
                      bool check_specification_or_abstract_origin = false) const;
 
   bool GetAttributeAddressRange(
-      DWARFUnit *cu, dw_addr_t &lo_pc, dw_addr_t &hi_pc,
+      const DWARFUnit *cu, dw_addr_t &lo_pc, dw_addr_t &hi_pc,
       uint64_t fail_value,
       bool check_specification_or_abstract_origin = false) const;
 
@@ -94,18 +94,15 @@ public:
   const char *GetName(DWARFUnitPair cu) const;
   const char *GetName(const DWARFUnit *cu) const;
   const char *GetMangledName(DWARFUnitPair cu,
-  const char *GetMangledName(const DWARFUnit *cu,
                              bool substitute_name_allowed = true) const;
   const char *GetPubname(DWARFUnitPair cu) const;
   const char *GetPubname(const DWARFUnit *cu) const;
   const char *GetQualifiedName(DWARFUnitPair cu, std::string &storage) const;
-  const char *GetQualifiedName(DWARFUnit *cu, std::string &storage) const;
   const char *GetQualifiedName(DWARFUnitPair cu, const DWARFAttributes &attributes,
-  const char *GetQualifiedName(DWARFUnit *cu, const DWARFAttributes &attributes,
                                std::string &storage) const;
 
   bool GetDIENamesAndRanges(
-      DWARFUnit *cu, const char *&name, const char *&mangled,
+      DWARFUnitPair cu, const char *&name, const char *&mangled,
       DWARFRangeList &rangeList, int &decl_file, int &decl_line,
       int &decl_column, int &call_file, int &call_line, int &call_column,
       lldb_private::DWARFExpression *frame_base = nullptr) const;
@@ -167,7 +164,7 @@ public:
 
 protected:
   static DWARFDeclContext
-  GetDWARFDeclContextStatic(const DWARFDebugInfoEntry *die, DWARFUnit *cu);
+  GetDWARFDeclContextStatic(const DWARFDebugInfoEntry *die, DWARFUnitPair cu);
 
   dw_offset_t m_offset; // Offset within the .debug_info/.debug_types
   uint32_t m_parent_idx = 0;   // How many to subtract from "this" to get the

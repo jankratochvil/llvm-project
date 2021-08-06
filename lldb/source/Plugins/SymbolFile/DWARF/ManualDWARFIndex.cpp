@@ -140,10 +140,6 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp, Index
 
 void ManualDWARFIndex::IndexUnit(DWARFUnitPair unit, SymbolFileDWARFDwo *dwp,
                                  IndexSet &set) {
-  assert(
-      !unit->GetSymbolFileDWARF().GetBaseCompileUnit() &&
-      "DWARFUnit associated with .dwo or .dwp should not be indexed directly");
-
   // Are we called for DW_TAG_compile_unit (contrary to DW_TAG_partial_unit)?
   if (unit.GetMainCU() == &unit) {
     // DWZ DW_TAG_partial_unit will get indexed by DW_AT_import
