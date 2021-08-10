@@ -36,6 +36,7 @@ public:
       const RegularExpression &regex,
       llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)>
           callback) = 0;
+  /// \a main_unit must be the skeleton unit if possible, not GetNonSkeletonUnit().
   virtual void GetGlobalVariables(
       DWARFUnit &main_unit,
       llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)>
