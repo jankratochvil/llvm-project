@@ -124,6 +124,7 @@ DWARFUnit *DWARFCompileUnit::GetMainDWARFUnit(DWARFUnit *main_unit) {
   if (GetUnitDIEOnly().Tag() != DW_TAG_partial_unit)
     main_unit = this;
   main_unit = &main_unit->GetNonSkeletonUnit();
+main_unit = this; // FIXME
   return main_unit;
 }
 

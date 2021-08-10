@@ -204,6 +204,7 @@ DWARFDebugInfo::GetDIE(const DIERef &die_ref, DWARFUnit **main_unit_return) {
   DWARFUnit *cu = GetUnit(die_ref);
   if (cu) {
     DWARFUnit *main_unit = GetMainUnit(die_ref);
+main_unit = cu; //FIXME
     if (main_unit == cu)
       cu = main_unit = &main_unit->GetNonSkeletonUnit();
     if (main_unit_return)
