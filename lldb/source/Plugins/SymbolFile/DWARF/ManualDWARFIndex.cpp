@@ -141,13 +141,13 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp, Index
 void ManualDWARFIndex::IndexUnit(DWARFUnitPair unit, SymbolFileDWARFDwo *dwp,
                                  IndexSet &set) {
   // Are we called for DW_TAG_compile_unit (contrary to DW_TAG_partial_unit)?
-  if (unit.GetMainCU() == &unit) {
+  if (unit.GetMainCU() == unit.GetCU()) {
     // DWZ DW_TAG_partial_unit will get indexed by DW_AT_import
     // from its DW_TAG_compile_unit (possibly transitively).
     // GetUnitDIEPtrOnly() is too expensive.
-    if (unit.GetSymbolFileDWARF().GetIsDwz())
-      return;
-    if (unit.GetUnitDIEOnly().Tag() == DW_TAG_partial_unit)
+//FIXME:    if (unit->GetSymbolFileDWARF().GetIsDwz())
+//FIXME:      return;
+    if (unit->GetUnitDIEOnly().Tag() == DW_TAG_partial_unit)
       return;
   }
 
@@ -161,15 +161,15 @@ void ManualDWARFIndex::IndexUnit(DWARFUnitPair unit, SymbolFileDWARFDwo *dwp,
 
   IndexUnitImpl(unit, set);
 
-  if (SymbolFileDWARFDwo *dwo_symbol_file = unit.GetDwoSymbolFile()) {
+  if (SymbolFileDWARFDwo *dwo_symbol_file = unit->GetDwoSymbolFile()) {
     // Type units in a dwp file are indexed separately, so we just need to
     // process the split unit here. However, if the split unit is in a dwo file,
     // then we need to process type units here.
     if (dwo_symbol_file == dwp) {
-      IndexUnitImpl(unit.GetNonSkeletonUnit(), cu_language, set);
+      IndexUnitImpl(unit, set);
     } else {
       assert(unit.GetCU() == unit.GetMainCU());
-      DWARFDebugInfo &dwo_info = *dwo_symbol_file->DebugInfo();
+      DWARFDebugInfo &dwo_info = dwo_symbol_file->DebugInfo();
       for (size_t i = 0; i < dwo_info.GetNumUnits(); ++i) {
         // Separate main CU is not used for DWO CUs.
         DWARFUnit *dwo_cu = dwo_info.GetUnitAtIndex(i);

@@ -72,7 +72,6 @@ private:
   void IndexUnit(DWARFUnitPair unit, SymbolFileDWARFDwo *dwp, IndexSet &set);
 
   static void IndexUnitImpl(DWARFUnitPair unit,
-                            const lldb::LanguageType cu_language,
                             IndexSet &set);
 
   /// The DWARF file which we are indexing. Set to nullptr after the index is

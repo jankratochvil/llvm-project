@@ -607,10 +607,6 @@ const DWARFDebugInfoEntry *DWARFUnit::GetDIEPtr(dw_offset_t die_offset) {
 // DIE from this compile unit. Otherwise we grab the DIE from the DWARF file.
 DWARFDIE
 DWARFUnit::GetDIE(DWARFCompileUnit *main_cu, dw_offset_t die_offset) {
-  if (GetDwoSymbolFile()) {
-    assert(this == main_cu);
-    return GetDwoSymbolFile()->GetCompileUnit()->GetDIE(die_offset);
-  }
   const DWARFDebugInfoEntry *die = GetDIEPtr(die_offset);
   if (!die)
     return DWARFDIE();

@@ -26,7 +26,9 @@ public:
 
   DWARFDIE GetDIE(dw_offset_t die_offset) { return DWARFUnit::GetDIE(this,die_offset); }
 
-  DWARFDIE DIE() { return DWARFDIE(DWARFUnitPair(this), DIEPtr()); }
+  DWARFBaseDIE GetUnitDIEOnly() { return {DWARFUnitPair(this), DIEPtr()}; }
+
+  DWARFDIE DIE() { return {DWARFUnitPair(this), DIEPtr()}; }
 
   size_t AppendDIEsWithTag(const dw_tag_t tag, std::vector<DWARFDIE> &dies,
                            uint32_t depth = UINT32_MAX) const;
