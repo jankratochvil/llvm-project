@@ -132,6 +132,7 @@ void DebugNamesDWARFIndex::GetGlobalVariables(
 void DebugNamesDWARFIndex::GetGlobalVariables(
     DWARFUnit &main_unit,
     llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)> callback) {
+  lldbassert(!main_unit.GetSymbolFileDWARF().GetDwoNum());
   uint64_t main_unit_offset = main_unit.GetOffset();
   bool found_entry_for_main_unit = false;
   for (const DebugNames::NameIndex &ni: *m_debug_names_up) {
