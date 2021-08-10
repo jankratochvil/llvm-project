@@ -118,6 +118,7 @@ DWARFDIE DWARFCompileUnit::LookupAddress(const dw_addr_t address) {
 
 DWARFUnit *DWARFCompileUnit::GetMainDWARFUnit(DWARFUnit *main_unit) {
   main_unit = &main_unit->GetNonSkeletonUnit();
+main_unit = this; // FIXME
   return main_unit;
 }
 
