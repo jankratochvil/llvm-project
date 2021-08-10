@@ -183,7 +183,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnitPair unitpair,
                                      IndexSet &set) {
 
   DWARFUnit &unit = unitpair;
-  const LanguageType cu_language = unitpair.GetLanguageType();
+  const LanguageType cu_language = SymbolFileDWARF::GetLanguage(*unitpair.GetMainCU());
 
   for (const DWARFDebugInfoEntry &die : unit.dies()) {
     const dw_tag_t tag = die.Tag();

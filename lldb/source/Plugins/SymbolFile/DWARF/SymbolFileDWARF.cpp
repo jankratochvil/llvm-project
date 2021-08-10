@@ -3178,7 +3178,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
       location_form = form_value;
       break;
     case DW_AT_specification:
-      spec_die = form_value.Reference();
+      spec_die = form_value.Reference(die.GetMainCU());
       break;
     case DW_AT_start_scope:
       // TODO: Implement this.
@@ -3717,7 +3717,7 @@ SymbolFileDWARF::CollectCallEdges(ModuleSP module, DWARFDIE function_die) {
 
       // Extract DW_AT_call_origin (the call target's DIE).
       if (attr == DW_AT_call_origin || attr == DW_AT_abstract_origin) {
-        call_origin = form_value.Reference();
+        call_origin = form_value.Reference(function_die.GetMainCU());
         if (!call_origin->IsValid()) {
           LLDB_LOG(log, "CollectCallEdges: Invalid call origin in {0}",
                    function_die.GetPubname());

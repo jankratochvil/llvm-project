@@ -33,8 +33,8 @@ public:
   operator DWARFUnit &() const;
   bool operator ==(const DWARFUnitPair &rhs) const;
   void Clear();
-  lldb::LanguageType GetLanguageType() const;
-  llvm::Expected<lldb_private::TypeSystem &> GetTypeSystem() const;
+//  lldb::LanguageType GetLanguageType() const;
+//  llvm::Expected<lldb_private::TypeSystem &> GetTypeSystem() const;
 
 private:
   DWARFUnit *m_cu;
