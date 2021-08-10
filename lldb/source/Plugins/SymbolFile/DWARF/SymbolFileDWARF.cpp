@@ -3180,7 +3180,6 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
       DWARFUnit *main_unit = GetDWARFCompileUnit(sc.comp_unit);
       if (!main_unit)
         return 0;
-      main_unit = &main_unit->GetNonSkeletonUnit();
 
       uint32_t vars_added = 0;
       VariableListSP variables(sc.comp_unit->GetVariableList(false));
@@ -3191,8 +3190,9 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
 
         m_index->GetGlobalVariables(
             *main_unit, [&](DWARFUnit *main_unit_check, DWARFDIE die) {
-              lldbassert(main_unit_check == main_unit ||
-                         main_unit_check == nullptr);
+              lldbassert(main_unit_check == nullptr ||
+                         main_unit_check == main_unit ||
+                         main_unit_check == &main_unit->GetNonSkeletonUnit());
               VariableSP var_sp(
                   ParseVariableDIE(sc, die, LLDB_INVALID_ADDRESS));
               if (var_sp) {
