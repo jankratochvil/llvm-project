@@ -25,18 +25,15 @@ public:
 
   void Preload() override { m_fallback.Preload(); }
 
-  void GetGlobalVariables(
-      ConstString basename,
-      llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)> callback)
-      override;
-  void GetGlobalVariables(
-      const RegularExpression &regex,
-      llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)> callback)
-      override;
-  void GetGlobalVariables(
-      const DWARFUnit &main_unit,
-      llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)> callback)
-      override;
+  void
+  GetGlobalVariables(ConstString basename,
+                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void
+  GetGlobalVariables(const RegularExpression &regex,
+                     llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void
+  GetGlobalVariables(DWARFUnit &main_unit,
+                     llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)> callback) override;
   void
   GetObjCMethods(ConstString class_name,
                  llvm::function_ref<bool(DWARFUnit *main_unit, DWARFDIE die)>
