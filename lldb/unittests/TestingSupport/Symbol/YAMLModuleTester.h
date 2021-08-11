@@ -29,12 +29,12 @@ protected:
       subsystems;
   llvm::Optional<TestFile> m_file;
   lldb::ModuleSP m_module_sp;
-  DWARFUnit *m_dwarf_unit;
+  DWARFCompileUnit *m_dwarf_unit;
 
 public:
   /// Parse the debug info sections from the YAML description.
   YAMLModuleTester(llvm::StringRef yaml_data);
-  DWARFUnit *GetDwarfUnit() const { return m_dwarf_unit; }
+  DWARFCompileUnit *GetDwarfUnit() const { return m_dwarf_unit; }
   lldb::ModuleSP GetModule() const { return m_module_sp; }
 };
 

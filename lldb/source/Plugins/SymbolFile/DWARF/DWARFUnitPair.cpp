@@ -25,7 +25,7 @@ DWARFCompileUnit *DWARFUnitPair::GetMainCU() const { return m_main_cu; }
 DWARFCompileUnit *DWARFUnitPair::GetMainCUOrNull() const { if (m_main_cu == m_cu) return nullptr; return m_main_cu; }
 
 DWARFUnitPair::operator bool() const{ return m_cu != nullptr; }
-DWARFUnitPair::operator DWARFUnit *() const { assert(m_cu); return m_cu; }
+DWARFUnitPair::operator DWARFUnit *() const { /*assert(m_cu);*/ return m_cu; }
 DWARFUnitPair::operator DWARFUnit &() const { assert(m_cu); return *m_cu; }
 bool DWARFUnitPair::operator ==(const DWARFUnitPair &rhs) const {
   return m_cu == rhs.m_cu && m_main_cu == rhs.m_main_cu;
