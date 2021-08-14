@@ -2365,7 +2365,7 @@ unsigned X86TargetLowering::getByValTypeAlignment(Type *Ty,
 /// preferred vector width.
 EVT X86TargetLowering::getOptimalMemOpType(
     const MemOp &Op, const AttributeList &FuncAttributes) const {
-  if (!FuncAttributes.hasFnAttribute(Attribute::NoImplicitFloat)) {
+  if (!FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat)) {
     if (Op.size() >= 16 &&
         (!Subtarget.isUnalignedMem16Slow() || Op.isAligned(Align(16)))) {
       // FIXME: Check if unaligned 64-byte accesses are slow.
@@ -27235,11 +27235,11 @@ SDValue X86TargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
 
       if (!Attrs.isEmpty() && !Func->isVarArg()) {
         unsigned InRegCount = 0;
-        unsigned Idx = 1;
+        unsigned Idx = 0;
 
         for (FunctionType::param_iterator I = FTy->param_begin(),
              E = FTy->param_end(); I != E; ++I, ++Idx)
-          if (Attrs.hasAttribute(Idx, Attribute::InReg)) {
+          if (Attrs.hasParamAttr(Idx, Attribute::InReg)) {
             const DataLayout &DL = DAG.getDataLayout();
             // FIXME: should only count parameters that are lowered to integers.
             InRegCount += (DL.getTypeSizeInBits(*I) + 31) / 32;
@@ -52761,7 +52761,7 @@ bool X86TargetLowering::isIntDivCheap(EVT VT, AttributeList Attr) const {
   // integer division, leaving the division as-is is a loss even in terms of
   // size, because it will have to be scalarized, while the alternative code
   // sequence can be performed in vector form.
-  bool OptSize = Attr.hasFnAttribute(Attribute::MinSize);
+  bool OptSize = Attr.hasFnAttr(Attribute::MinSize);
   return OptSize && !VT.isVector();
 }
 
