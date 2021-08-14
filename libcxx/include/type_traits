@@ -1681,7 +1681,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_final_v
 #endif
 
 // is_aggregate
-#if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_IS_AGGREGATE)
+#if _LIBCPP_STD_VER > 14
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS
 is_aggregate : public integral_constant<bool, __is_aggregate(_Tp)> {};
@@ -1692,7 +1692,7 @@ _LIBCPP_INLINE_VAR constexpr bool is_aggregate_v
     = is_aggregate<_Tp>::value;
 #endif
 
-#endif // _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_IS_AGGREGATE)
+#endif // _LIBCPP_STD_VER > 14
 
 // is_base_of
 
@@ -1914,7 +1914,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool has_virtual_destructor_v
 
 // has_unique_object_representations
 
-#if _LIBCPP_STD_VER > 14 && defined(_LIBCPP_HAS_UNIQUE_OBJECT_REPRESENTATIONS)
+#if _LIBCPP_STD_VER > 14
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS has_unique_object_representations
     : public integral_constant<bool,
@@ -4348,40 +4348,6 @@ template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
 typename __sfinae_underlying_type<_Tp>::__promoted_type
 __convert_to_integral(_Tp __val) { return __val; }
-
-#ifndef _LIBCPP_CXX03_LANG
-
-template <class _Tp>
-struct __has_operator_addressof_member_imp
-{
-    template <class _Up>
-        static auto __test(int)
-            -> typename __select_2nd<decltype(declval<_Up>().operator&()), true_type>::type;
-    template <class>
-        static auto __test(long) -> false_type;
-
-    static const bool value = decltype(__test<_Tp>(0))::value;
-};
-
-template <class _Tp>
-struct __has_operator_addressof_free_imp
-{
-    template <class _Up>
-        static auto __test(int)
-            -> typename __select_2nd<decltype(operator&(declval<_Up>())), true_type>::type;
-    template <class>
-        static auto __test(long) -> false_type;
-
-    static const bool value = decltype(__test<_Tp>(0))::value;
-};
-
-template <class _Tp>
-struct __has_operator_addressof
-    : public integral_constant<bool, __has_operator_addressof_member_imp<_Tp>::value
-                                  || __has_operator_addressof_free_imp<_Tp>::value>
-{};
-
-#endif // _LIBCPP_CXX03_LANG
 
 // is_scoped_enum [meta.unary.prop]
 
