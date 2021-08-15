@@ -159,15 +159,15 @@ DWARFUnit *DWARFDebugInfo::GetUnit(const DIERef &die_ref) {
   return GetUnitContainingDIEOffset(die_ref.section(), die_ref.die_offset());
 }
 
-DWARFCompileUnit *DWARFDebugInfo::GetMainUnit(const DIERef &die_ref) {
+DWARFUnit *DWARFDebugInfo::GetMainUnit(const DIERef &die_ref) {
   DWARFUnit *cu;
 //FIXME:  if (!die_ref.main_cu())
     cu = GetUnit(die_ref);
 //FIXME:  else
 //FIXME:    cu = GetUnitAtIndex(*die_ref.main_cu());
-  if (!cu || cu->IsTypeUnit())
-    return nullptr;
-  return llvm::cast<DWARFCompileUnit>(cu);
+//FIXME:  if (!cu || cu->IsTypeUnit())
+//FIXME:    return nullptr;
+  return cu;
 }
 
 DWARFUnit *
@@ -200,7 +200,7 @@ DWARFDIE
 DWARFDebugInfo::GetDIE(const DIERef &die_ref) {
   DWARFUnit *cu = GetUnit(die_ref);
   if (cu) {
-    DWARFCompileUnit *main_cu = GetMainUnit(die_ref);
+    DWARFUnit *main_cu = GetMainUnit(die_ref);
     return cu->GetNonSkeletonUnit().GetDIE(main_cu, die_ref.die_offset());
   }
   return DWARFDIE(); // Not found

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/SymbolFile/DWARF/DWARFDIE.h"
-#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
 #include "llvm/ADT/STLExtras.h"
 #include "gmock/gmock.h"
@@ -68,8 +67,8 @@ DWARF:
   YAMLModuleTester t(yamldata);
   ASSERT_TRUE((bool)t.GetDwarfUnit());
 
-  DWARFCompileUnit *unit = t.GetDwarfUnit();
-  const DWARFDebugInfoEntry *die_first = unit->DIE().GetDIE();
+  DWARFUnit *unit = t.GetDwarfUnit();
+  const DWARFDebugInfoEntry *die_first = unit->DIE(unit).GetDIE();
 
   // Create a DWARFDIE that has three DW_TAG_base_type children.
   DWARFDIE top_die(unit, die_first);

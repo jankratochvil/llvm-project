@@ -135,7 +135,7 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp, Index
 //FIXME:    return;
   if (unit.GetUnitDIEOnly().Tag() == DW_TAG_partial_unit)
     return;
-  IndexUnit(DWARFUnitPair(&unit,llvm::dyn_cast<DWARFCompileUnit>(&unit)), dwp, set);
+  IndexUnit(&unit, dwp, set);
 }
 
 void ManualDWARFIndex::IndexUnit(DWARFUnitPair unit, SymbolFileDWARFDwo *dwp,

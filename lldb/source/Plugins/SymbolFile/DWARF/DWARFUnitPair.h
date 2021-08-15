@@ -14,20 +14,17 @@
 #include "lldb/Symbol/TypeSystem.h"
 
 class DWARFUnit;
-class DWARFCompileUnit;
 class DWARFTypeUnit;
 
 class DWARFUnitPair {
 public:
   DWARFUnitPair();
-  DWARFUnitPair(DWARFUnit *cu,DWARFCompileUnit *main_cu);
-  DWARFUnitPair(DWARFCompileUnit *cu,DWARFCompileUnit *main_cu)=delete;
-  DWARFUnitPair(DWARFCompileUnit *main_cu);
+  DWARFUnitPair(DWARFUnit *cu,DWARFUnit *main_cu);
+  DWARFUnitPair(DWARFUnit *main_cu);
   DWARFUnit *operator ->() const;
   DWARFUnit &operator *() const;
   DWARFUnit *GetCU() const;
-  DWARFCompileUnit *GetMainCU() const;
-  DWARFCompileUnit *GetMainCUOrNull() const;
+  DWARFUnit *GetMainCU() const;
   explicit operator bool() const;
   operator DWARFUnit *() const;
   operator DWARFUnit &() const;
@@ -39,7 +36,7 @@ public:
 private:
   DWARFUnit *m_cu;
   // For non-DWZ setups it is either equal to 'm_cu' or nullptr if 'm_cu' is a DWARFTypeUnit.
-  DWARFCompileUnit *m_main_cu;
+  DWARFUnit *m_main_cu;
 
   template<class DWARFCompileUnitT,class DWARFTypeUnitT> auto CompileOrTypeMethod(DWARFCompileUnitT compile_method,DWARFTypeUnitT type_method) const -> decltype((m_main_cu->*compile_method)());
 };

@@ -546,16 +546,16 @@ DWARFSimpleDIE DWARFFormValue::Reference() const {
   }
 }
 
-DWARFDIE DWARFFormValue::Reference(DWARFCompileUnit *main_unit) const {
+DWARFDIE DWARFFormValue::Reference(DWARFUnit *main_unit) const {
   DWARFSimpleDIE die = Reference();
   if (!die.IsValid())
     return {};
 
   // MainCU may differ from CU only for DW_TAG_partial_unit units.
-  if (die.GetCU()->IsTypeUnit())
-    main_unit=nullptr;
-  else if (die.GetCU()->GetUnitDIEOnly().Tag()!=DW_TAG_partial_unit)
-    main_unit=llvm::cast<DWARFCompileUnit>(die.GetCU());
+  if (die.GetCU()->GetUnitDIEOnly().Tag()!=DW_TAG_partial_unit) {
+    main_unit=die.GetCU();
+    lldbassert(llvm::isa<DWARFCompileUnit>(main_unit) || llvm::isa<DWARFTypeUnit>(main_unit));
+  }
   return {{die.GetCU(),main_unit}, die.GetDIE()};
 }
 

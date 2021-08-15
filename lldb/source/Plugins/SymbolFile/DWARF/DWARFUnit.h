@@ -176,13 +176,13 @@ public:
     return *dieptr;
   }
 
-  DWARFBaseDIE GetUnitDIEOnly(DWARFCompileUnit *main_cu) { return {DWARFUnitPair(this,main_cu), DIEPtr()}; }
+  DWARFBaseDIE GetUnitDIEOnly(DWARFUnit *main_cu) { return {DWARFUnitPair(this,main_cu), DIEPtr()}; }
 
-  DWARFDIE DIE(DWARFCompileUnit *main_cu) { return {DWARFUnitPair(this, main_cu), DIEPtr()}; }
+  DWARFDIE DIE(DWARFUnit *main_cu) { return {DWARFUnitPair(this, main_cu), DIEPtr()}; }
 
   const DWARFDebugInfoEntry *GetDIEPtr(dw_offset_t die_offset);
 
-  DWARFDIE GetDIE(DWARFCompileUnit *main_cu, dw_offset_t die_offset);
+  DWARFDIE GetDIE(DWARFUnit *main_cu, dw_offset_t die_offset);
 
   DWARFUnit &GetNonSkeletonUnit();
 

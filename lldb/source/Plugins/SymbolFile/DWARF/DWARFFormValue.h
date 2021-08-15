@@ -79,7 +79,7 @@ public:
                                               const DWARFUnit *u);
   llvm::Optional<uint8_t> GetFixedSize() const;
   DWARFSimpleDIE Reference() const;
-  DWARFDIE Reference(DWARFCompileUnit *main_unit) const;
+  DWARFDIE Reference(DWARFUnit *main_unit) const;
   uint64_t Reference(dw_offset_t offset) const;
   bool Boolean() const { return m_value.value.uval != 0; }
   uint64_t Unsigned() const { return m_value.value.uval; }

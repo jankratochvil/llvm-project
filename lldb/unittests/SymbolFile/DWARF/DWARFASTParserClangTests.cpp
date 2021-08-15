@@ -95,8 +95,8 @@ DWARF:
   TypeSystemClang ast_ctx("dummy ASTContext", HostInfoBase::GetTargetTriple());
   DWARFASTParserClangStub ast_parser(ast_ctx);
 
-  DWARFCompileUnit *unit = t.GetDwarfUnit();
-  const DWARFDebugInfoEntry *die_first = unit->DIE().GetDIE();
+  DWARFUnit *unit = t.GetDwarfUnit();
+  const DWARFDebugInfoEntry *die_first = unit->DIE(unit).GetDIE();
   const DWARFDebugInfoEntry *die_child0 = die_first->GetFirstChild();
   const DWARFDebugInfoEntry *die_child1 = die_child0->GetSibling();
   const DWARFDebugInfoEntry *die_child2 = die_child1->GetSibling();

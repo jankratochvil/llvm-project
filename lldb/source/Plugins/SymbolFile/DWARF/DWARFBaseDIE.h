@@ -47,7 +47,7 @@ public:
   SymbolFileDWARF *GetMainDWARF() const;
 
   DWARFUnitPair GetCU() const { return m_cu; }
-  DWARFCompileUnit *GetMainCU() const { return m_cu.GetMainCU(); }
+  DWARFUnit *GetMainCU() const { return m_cu.GetMainCU(); }
 
   DWARFDebugInfoEntry *GetDIE() const { return m_die; }
 

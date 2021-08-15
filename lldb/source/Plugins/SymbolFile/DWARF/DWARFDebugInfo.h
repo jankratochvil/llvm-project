@@ -41,7 +41,7 @@ public:
   DWARFUnit *GetUnitContainingDIEOffset(DIERef::Section section,
                                         dw_offset_t die_offset);
   DWARFUnit *GetUnit(const DIERef &die_ref);
-  DWARFCompileUnit *GetMainUnit(const DIERef &die_ref);
+  DWARFUnit *GetMainUnit(const DIERef &die_ref);
   DWARFTypeUnit *GetTypeUnitForHash(uint64_t hash);
   bool ContainsTypeUnits();
   DWARFDIE GetDIE(const DIERef &die_ref);

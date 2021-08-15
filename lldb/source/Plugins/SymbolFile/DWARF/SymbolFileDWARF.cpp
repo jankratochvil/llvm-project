@@ -383,7 +383,7 @@ void SymbolFileDWARF::GetTypes(SymbolContextScope *sc_scope,
   const auto &get = [&](DWARFUnit *unit) {
     if (!unit)
       return;
-    DWARFCompileUnit *main_unit = llvm::dyn_cast_or_null<DWARFCompileUnit>(unit);
+    DWARFUnit *main_unit = unit;
     unit = &unit->GetNonSkeletonUnit();
     GetTypes(unit->DIE(main_unit), unit->GetOffset(), unit->GetNextUnitOffset(),
              type_mask, type_set);
@@ -2144,7 +2144,7 @@ void SymbolFileDWARF::FindGlobalVariables(
     if (die.Tag() != DW_TAG_variable)
       return true;
 
-    auto *dwarf_cu = die.GetCU().GetMainCU();
+    auto *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(die.GetMainCU());
     if (!dwarf_cu)
       return true;
     sc.comp_unit = GetCompUnitForDWARFCompUnit(*dwarf_cu);
@@ -2564,7 +2564,7 @@ TypeSP SymbolFileDWARF::GetTypeForDIE(const DWARFDIE &die,
     Type *type_ptr = GetDIEToType().lookup(die.GetDIE());
     if (type_ptr == nullptr) {
       SymbolContextScope *scope;
-      if (auto *dwarf_cu = die.GetMainCU())
+      if (auto *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(die.GetMainCU()))
         scope = GetCompUnitForDWARFCompUnit(*dwarf_cu);
       else
         scope = GetObjectFile()->GetModule().get();

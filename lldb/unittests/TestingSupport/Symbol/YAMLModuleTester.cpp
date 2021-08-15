@@ -8,7 +8,6 @@
 
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
-#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Section.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
@@ -23,6 +22,5 @@ YAMLModuleTester::YAMLModuleTester(llvm::StringRef yaml_data) {
   m_module_sp = std::make_shared<Module>(m_file->moduleSpec());
   auto &symfile = *llvm::cast<SymbolFileDWARF>(m_module_sp->GetSymbolFile());
 
-  m_dwarf_unit = llvm::dyn_cast<DWARFCompileUnit>(symfile.DebugInfo().GetUnitAtIndex(0));
-  EXPECT_TRUE(m_dwarf_unit);
+  m_dwarf_unit = symfile.DebugInfo().GetUnitAtIndex(0);
 }

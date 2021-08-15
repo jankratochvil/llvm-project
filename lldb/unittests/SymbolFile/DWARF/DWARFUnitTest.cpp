@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
+#include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -42,8 +42,8 @@ DWARF:
   YAMLModuleTester t(yamldata);
   ASSERT_TRUE((bool)t.GetDwarfUnit());
 
-  DWARFCompileUnit *unit = t.GetDwarfUnit();
-  const DWARFDebugInfoEntry *die_first = unit->DIE().GetDIE();
+  DWARFUnit *unit = t.GetDwarfUnit();
+  const DWARFDebugInfoEntry *die_first = unit->DIE(unit).GetDIE();
   ASSERT_NE(die_first, nullptr);
   EXPECT_TRUE(die_first->IsNULL());
 }
@@ -78,8 +78,8 @@ DWARF:
   YAMLModuleTester t(yamldata);
   ASSERT_TRUE((bool)t.GetDwarfUnit());
 
-  DWARFCompileUnit *unit = t.GetDwarfUnit();
-  const DWARFDebugInfoEntry *die_first = unit->DIE().GetDIE();
+  DWARFUnit *unit = t.GetDwarfUnit();
+  const DWARFDebugInfoEntry *die_first = unit->DIE(unit).GetDIE();
   ASSERT_NE(die_first, nullptr);
   EXPECT_EQ(die_first->GetFirstChild(), nullptr);
   EXPECT_EQ(die_first->GetSibling(), nullptr);
