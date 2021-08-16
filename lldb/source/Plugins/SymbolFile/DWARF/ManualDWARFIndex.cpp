@@ -173,7 +173,7 @@ void ManualDWARFIndex::IndexUnit(DWARFUnitPair unit, SymbolFileDWARFDwo *dwp,
       for (size_t i = 0; i < dwo_info.GetNumUnits(); ++i) {
         // Separate main CU is not used for DWO CUs.
         DWARFUnit *dwo_cu = dwo_info.GetUnitAtIndex(i);
-        IndexUnitImpl({dwo_cu, llvm::dyn_cast<DWARFCompileUnit>(dwo_cu)}, set);
+        IndexUnitImpl(dwo_cu, set);
       }
     }
   }

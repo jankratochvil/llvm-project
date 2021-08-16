@@ -1345,6 +1345,10 @@ user_id_t SymbolFileDWARF::GetUID(DIERef ref) {
     return GetID() | ref.die_offset();
 
   lldbassert(GetDwoNum().getValueOr(0) <= 0x3fffffff);
+  return user_id_t(GetDwoNum().getValueOr(0)) << 32 | ref.die_offset() |
+         lldb::user_id_t(GetDwoNum().hasValue()) << 62 |
+         lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes) << 63;
+#if 0 // FIXME
   return user_id_t(ref.dwo_num() ? *ref.dwo_num() : (
 //FIXME: ref.main_cu() ? *ref.main_cu() :
 0x1fffffff)) << 32 |
@@ -1356,6 +1360,7 @@ user_id_t SymbolFileDWARF::GetUID(DIERef ref) {
 ) << 61 |
 //FIXME:         user_id_t(bool(ref.main_cu())) << 62 |
          (lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes)) << 63;
+#endif
 }
 
 llvm::Optional<SymbolFileDWARF::DecodedUID>
@@ -1385,6 +1390,14 @@ DIERef::Section::DebugInfo, dw_offset_t(uid)}};
   DIERef::Section section =
       uid >> 63 ? DIERef::Section::DebugTypes : DIERef::Section::DebugInfo;
 
+  llvm::Optional<uint32_t> dwo_num;
+  bool dwo_valid = uid >> 62 & 1;
+  if (dwo_valid)
+    dwo_num = uid >> 32 & 0x3fffffff;
+
+  return DecodedUID{*this, {dwo_num, section, die_offset}};
+
+#if 0 // FIXME
   bool is_main_cu = (uid >> 62) & 1;
 //FIXME:  bool is_dwz_common = (uid >> 61) & 1;
 
@@ -1399,6 +1412,7 @@ DIERef::Section::DebugInfo, dw_offset_t(uid)}};
   return DecodedUID{*this, {dwo_num,
 //FIXME: main_cu, is_dwz_common ? DIERef::CommonDwz : DIERef::MainDwz,
 section, die_offset}};
+#endif
 }
 
 DWARFDIE

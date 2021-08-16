@@ -580,7 +580,6 @@ static bool CompareDIEOffset(const DWARFDebugInfoEntry &die,
 const DWARFDebugInfoEntry *DWARFUnit::GetDIEPtr(dw_offset_t die_offset) {
   if (die_offset == DW_INVALID_OFFSET)
     return nullptr;
-  lldbassert(!GetDwoSymbolFile());
 
   if (!ContainsDIEOffset(die_offset)) {
     GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
