@@ -166,7 +166,7 @@ void ManualDWARFIndex::IndexUnit(DWARFUnitPair unit, SymbolFileDWARFDwo *dwp,
     // process the split unit here. However, if the split unit is in a dwo file,
     // then we need to process type units here.
     if (dwo_symbol_file == dwp) {
-      IndexUnitImpl(unit, set);
+      IndexUnitImpl(&unit->GetNonSkeletonUnit(), set);
     } else {
       assert(unit.GetCU() == unit.GetMainCU());
       DWARFDebugInfo &dwo_info = dwo_symbol_file->DebugInfo();
