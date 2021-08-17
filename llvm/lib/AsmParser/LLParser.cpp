@@ -3876,10 +3876,6 @@ struct MDField : public MDFieldImpl<Metadata *> {
   MDField(bool AllowNull = true) : ImplTy(nullptr), AllowNull(AllowNull) {}
 };
 
-struct MDConstant : public MDFieldImpl<ConstantAsMetadata *> {
-  MDConstant() : ImplTy(nullptr) {}
-};
-
 struct MDStringField : public MDFieldImpl<MDString *> {
   bool AllowEmpty;
   MDStringField(bool AllowEmpty = true)
@@ -3910,22 +3906,6 @@ struct MDSignedOrMDField : MDEitherFieldImpl<MDSignedField, MDField> {
   }
   Metadata *getMDFieldValue() const {
     assert(isMDField() && "Wrong field type");
-    return B.Val;
-  }
-};
-
-struct MDSignedOrUnsignedField
-    : MDEitherFieldImpl<MDSignedField, MDUnsignedField> {
-  MDSignedOrUnsignedField() : ImplTy(MDSignedField(0), MDUnsignedField(0)) {}
-
-  bool isMDSignedField() const { return WhatIs == IsTypeA; }
-  bool isMDUnsignedField() const { return WhatIs == IsTypeB; }
-  int64_t getMDSignedValue() const {
-    assert(isMDSignedField() && "Wrong field type");
-    return A.Val;
-  }
-  uint64_t getMDUnsignedValue() const {
-    assert(isMDUnsignedField() && "Wrong field type");
     return B.Val;
   }
 };
