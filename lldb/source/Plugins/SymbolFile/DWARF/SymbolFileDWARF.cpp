@@ -981,9 +981,9 @@ bool SymbolFileDWARF::ParseSupportFiles(DWARFUnit &dwarf_cu,
 FileSpec SymbolFileDWARF::GetFile(DWARFUnit &unit, size_t file_idx) {
   if (auto *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(&unit)) {
     // Try to prevent GetUnitDIEOnly() which is expensive.
-    if (
-true //FIXME: !unit.GetSymbolFileDWARF().GetIsDwz()
-      && unit.GetUnitDIEOnly().Tag() == DW_TAG_compile_unit) {
+//FIXME:    if (!unit.GetSymbolFileDWARF().GetIsDwz()
+//FIXME:      && unit.GetUnitDIEOnly().Tag() == DW_TAG_compile_unit)
+    {
       if (CompileUnit *lldb_cu = GetCompUnitForDWARFCompUnit(*dwarf_cu))
         return lldb_cu->GetSupportFiles().GetFileSpecAtIndex(file_idx);
       return FileSpec();
@@ -1783,11 +1783,10 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
       continue;
 
     const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
-    if (!die || !die.HasChildren() || !die.GetDIE())
+    if (!die || die.HasChildren() || !die.GetDIE())
       continue;
 
     const char *name = die.GetAttributeValueAsString(DW_AT_name, nullptr);
-
     if (!name)
       continue;
 
