@@ -3669,6 +3669,7 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
       }
     }
   }
+
   const uint32_t src_size_artificial = src_name_to_die_artificial.GetSize();
   const uint32_t dst_size_artificial = dst_name_to_die_artificial.GetSize();
 
