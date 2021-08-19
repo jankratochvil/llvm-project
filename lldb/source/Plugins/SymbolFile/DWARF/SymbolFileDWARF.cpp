@@ -990,15 +990,14 @@ FileSpec SymbolFileDWARF::GetFile(DWARFUnit &unit, size_t file_idx) {
     }
   }
 
-  auto &tu = llvm::cast<DWARFTypeUnit>(unit);
-  return GetTypeUnitSupportFiles(tu).GetFileSpecAtIndex(file_idx);
+  return GetSharedUnitSupportFiles(unit).GetFileSpecAtIndex(file_idx);
 }
 
 const FileSpecList &
-SymbolFileDWARF::GetTypeUnitSupportFiles(DWARFTypeUnit &tu) {
+SymbolFileDWARF::GetSharedUnitSupportFiles(DWARFUnit &unit) {
   static FileSpecList empty_list;
 
-  dw_offset_t offset = tu.GetLineTableOffset();
+  dw_offset_t offset = unit.GetLineTableOffset();
   if (offset == DW_INVALID_OFFSET ||
       offset == llvm::DenseMapInfo<dw_offset_t>::getEmptyKey() ||
       offset == llvm::DenseMapInfo<dw_offset_t>::getTombstoneKey())
@@ -1006,7 +1005,7 @@ SymbolFileDWARF::GetTypeUnitSupportFiles(DWARFTypeUnit &tu) {
 
   // Many type units can share a line table, so parse the support file list
   // once, and cache it based on the offset field.
-  auto iter_bool = m_type_unit_support_files.try_emplace(offset);
+  auto iter_bool = m_shared_unit_support_files.try_emplace(offset);
   FileSpecList &list = iter_bool.first->second;
   if (iter_bool.second) {
     uint64_t line_table_offset = offset;
@@ -1015,16 +1014,17 @@ SymbolFileDWARF::GetTypeUnitSupportFiles(DWARFTypeUnit &tu) {
     llvm::DWARFDebugLine::Prologue prologue;
     auto report = [](llvm::Error error) {
       Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO);
-      LLDB_LOG_ERROR(log, std::move(error),
-                     "SymbolFileDWARF::GetTypeUnitSupportFiles failed to parse "
-                     "the line table prologue");
+      LLDB_LOG_ERROR(
+          log, std::move(error),
+          "SymbolFileDWARF::GetSharedUnitSupportFiles failed to parse "
+          "the line table prologue");
     };
     llvm::Error error = prologue.parse(data, &line_table_offset, report, ctx);
     if (error) {
       report(std::move(error));
     } else {
       list = ParseSupportFilesFromPrologue(GetObjectFile()->GetModule(),
-                                           prologue, tu.GetPathStyle());
+                                           prologue, unit.GetPathStyle());
     }
   }
   return list;
