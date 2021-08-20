@@ -23,8 +23,17 @@ llvm::Optional<DIERef> DWARFBaseDIE::GetDIERef() const {
   if (!IsValid())
     return llvm::None;
 
-  return DIERef(m_cu->GetSymbolFileDWARF().GetDwoNum(), m_cu->GetDebugSection(),
-                m_die->GetOffset());
+  DWARFUnit *main_unit = GetMainCU();
+
+  if (GetCU()->GetSymbolFileDWARF().GetDwoNum().hasValue())
+    main_unit = nullptr;
+  if (GetCU().GetCU() == main_unit)
+    main_unit = nullptr;
+
+  return DIERef(
+      m_cu->GetSymbolFileDWARF().GetDwoNum(),
+      (!main_unit ? llvm::None : llvm::Optional<uint32_t>(main_unit->GetID())),
+      DIERef::MainDwz, m_cu->GetDebugSection(), m_die->GetOffset());
 }
 
 dw_tag_t DWARFBaseDIE::Tag() const {
