@@ -52,6 +52,7 @@ class DWARFTypeUnit;
 class SymbolFileDWARFDebugMap;
 class SymbolFileDWARFDwo;
 class SymbolFileDWARFDwp;
+class SymbolFileDWARFDwz;
 
 #define DIE_IS_BEING_PARSED ((lldb_private::Type *)1)
 
@@ -75,6 +76,7 @@ public:
   friend class DWARFCompileUnit;
   friend class DWARFDIE;
   friend class DWARFASTParserClang;
+  friend class SymbolFileDWARFDwz;
 
   // Static Functions
   static void Initialize();
@@ -320,6 +322,11 @@ public:
   /// Same as GetLanguage() but reports all C++ versions as C++ (no version).
   static lldb::LanguageType GetLanguageFamily(DWARFUnit &unit);
 
+  SymbolFileDWARFDwz *GetDwzSymbolFile() const { return m_dwz_symfile; }
+  virtual bool GetIsDwz() const { return false; }
+
+  llvm::Optional<uint32_t> GetDWARFUnitIndex(uint32_t cu_idx);
+
 protected:
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb_private::Type *>
       DIEToTypePtr;
@@ -474,7 +481,6 @@ protected:
   }
 
   void BuildCuTranslationTable();
-  llvm::Optional<uint32_t> GetDWARFUnitIndex(uint32_t cu_idx);
 
   struct DecodedUID {
     SymbolFileDWARF &dwarf;
@@ -485,6 +491,8 @@ protected:
   void FindDwpSymbolFile();
 
   const lldb_private::FileSpecList &GetSharedUnitSupportFiles(DWARFUnit &tu);
+
+  SymbolFileDWARFDwz *m_dwz_symfile = nullptr;
 
   lldb::ModuleWP m_debug_map_module_wp;
   SymbolFileDWARFDebugMap *m_debug_map_symfile;

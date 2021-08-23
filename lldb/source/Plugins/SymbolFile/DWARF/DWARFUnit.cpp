@@ -720,6 +720,8 @@ uint32_t DWARFUnit::GetProducerVersionUpdate() {
 }
 
 uint64_t DWARFUnit::GetDWARFLanguageType() {
+  lldbassert(!GetSymbolFileDWARF().GetIsDwz());
+
   if (m_language_type)
     return *m_language_type;
 

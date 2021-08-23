@@ -36,6 +36,10 @@ void DWARFCompileUnit::BuildAddressRangeTable(
   // First get the compile unit DIE only and check contains ranges information.
   const DWARFDebugInfoEntry *die = GetUnitDIEPtrOnly();
 
+  // DWZ partial units never contain any PC.
+  if (die && die->Tag() == DW_TAG_partial_unit)
+    return;
+
   const dw_offset_t cu_offset = GetOffset();
   if (die) {
     DWARFRangeList ranges;
@@ -134,4 +138,41 @@ size_t DWARFCompileUnit::AppendDIEsWithTag(const dw_tag_t tag,
 
   // Return the number of DIEs added to the collection
   return dies.size() - old_size;
+}
+
+DWARFCompileUnit *
+DWARFCompileUnit::GetMainUnit(Module &module, CompileUnit *comp_unit,
+                              SymbolFileDWARF **dwarf_return) {
+  SymbolFile *symfile = module.GetSymbolFile();
+  SymbolFileDWARF *dwarf;
+  if (auto *debug_map_symfile =
+          llvm::dyn_cast<SymbolFileDWARFDebugMap>(symfile)) {
+    lldbassert(comp_unit);
+    dwarf = debug_map_symfile->GetSymbolFile(*comp_unit);
+  } else {
+    dwarf = llvm::dyn_cast<SymbolFileDWARF>(symfile);
+    lldbassert(dwarf);
+  }
+  if (dwarf_return)
+    *dwarf_return = dwarf;
+  if (!comp_unit) {
+    lldbassert(dwarf_return);
+    return nullptr;
+  }
+  return dwarf->GetDWARFCompileUnit(comp_unit);
+}
+
+DWARFCompileUnit *
+DWARFCompileUnit::GetMainUnit(CompileUnit &comp_unit,
+                              SymbolFileDWARF **dwarf_return) {
+  ModuleSP module_sp = comp_unit.CalculateSymbolContextModule();
+  lldbassert(module_sp);
+  return GetMainUnit(*module_sp, &comp_unit, dwarf_return);
+}
+
+DWARFCompileUnit *
+DWARFCompileUnit::GetMainUnit(const SymbolContext &sc,
+                              SymbolFileDWARF **dwarf_return) {
+  lldbassert(sc.module_sp);
+  return GetMainUnit(*sc.module_sp, sc.comp_unit, dwarf_return);
 }

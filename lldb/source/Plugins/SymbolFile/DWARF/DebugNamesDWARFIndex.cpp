@@ -46,6 +46,7 @@ DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) {
   if (!cu_offset)
     return llvm::None;
 
+  // FIXME: .debug_names have no DWZ support yet.
   DWARFUnit *cu = m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo, *cu_offset);
   if (!cu)
     return llvm::None;
@@ -170,6 +171,7 @@ void DebugNamesDWARFIndex::GetCompleteObjCClass(
     if (!ref)
       continue;
 
+    // FIXME: .debug_names have no DWZ support yet.
     DWARFUnit *cu = m_debug_info.GetUnit(*ref);
     if (!cu || !cu->Supports_DW_AT_APPLE_objc_complete_type()) {
       incomplete_types.push_back(*ref);

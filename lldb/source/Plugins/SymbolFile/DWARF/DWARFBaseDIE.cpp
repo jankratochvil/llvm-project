@@ -33,7 +33,9 @@ llvm::Optional<DIERef> DWARFBaseDIE::GetDIERef() const {
   return DIERef(
       m_cu->GetSymbolFileDWARF().GetDwoNum(),
       (!main_unit ? llvm::None : llvm::Optional<uint32_t>(main_unit->GetID())),
-      DIERef::MainDwz, m_cu->GetDebugSection(), m_die->GetOffset());
+      GetCU()->GetSymbolFileDWARF().GetIsDwz() ? DIERef::CommonDwz
+                                               : DIERef::MainDwz,
+      m_cu->GetDebugSection(), m_die->GetOffset());
 }
 
 dw_tag_t DWARFBaseDIE::Tag() const {
