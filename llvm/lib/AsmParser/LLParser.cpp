@@ -141,7 +141,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
     if (Function *Fn = dyn_cast<Function>(V)) {
       AttributeList AS = Fn->getAttributes();
       AttrBuilder FnAttrs(AS.getFnAttrs());
-      AS = AS.removeAttributes(Context, AttributeList::FunctionIndex);
+      AS = AS.removeFnAttributes(Context);
 
       FnAttrs.merge(B);
 
@@ -157,21 +157,21 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
     } else if (CallInst *CI = dyn_cast<CallInst>(V)) {
       AttributeList AS = CI->getAttributes();
       AttrBuilder FnAttrs(AS.getFnAttrs());
-      AS = AS.removeAttributes(Context, AttributeList::FunctionIndex);
+      AS = AS.removeFnAttributes(Context);
       FnAttrs.merge(B);
       AS = AS.addFnAttributes(Context, AttributeSet::get(Context, FnAttrs));
       CI->setAttributes(AS);
     } else if (InvokeInst *II = dyn_cast<InvokeInst>(V)) {
       AttributeList AS = II->getAttributes();
       AttrBuilder FnAttrs(AS.getFnAttrs());
-      AS = AS.removeAttributes(Context, AttributeList::FunctionIndex);
+      AS = AS.removeFnAttributes(Context);
       FnAttrs.merge(B);
       AS = AS.addFnAttributes(Context, AttributeSet::get(Context, FnAttrs));
       II->setAttributes(AS);
     } else if (CallBrInst *CBI = dyn_cast<CallBrInst>(V)) {
       AttributeList AS = CBI->getAttributes();
       AttrBuilder FnAttrs(AS.getFnAttrs());
-      AS = AS.removeAttributes(Context, AttributeList::FunctionIndex);
+      AS = AS.removeFnAttributes(Context);
       FnAttrs.merge(B);
       AS = AS.addFnAttributes(Context, AttributeSet::get(Context, FnAttrs));
       CBI->setAttributes(AS);
@@ -4554,7 +4554,8 @@ bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(offset, MDUnsignedField, (0, UINT64_MAX));                          \
   OPTIONAL(flags, DIFlagField, );                                              \
   OPTIONAL(extraData, MDField, );                                              \
-  OPTIONAL(dwarfAddressSpace, MDUnsignedField, (UINT32_MAX, UINT32_MAX));
+  OPTIONAL(dwarfAddressSpace, MDUnsignedField, (UINT32_MAX, UINT32_MAX));      \
+  OPTIONAL(annotations, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -4566,7 +4567,7 @@ bool LLParser::parseDIDerivedType(MDNode *&Result, bool IsDistinct) {
                            (Context, tag.Val, name.Val, file.Val, line.Val,
                             scope.Val, baseType.Val, size.Val, align.Val,
                             offset.Val, DWARFAddressSpace, flags.Val,
-                            extraData.Val));
+                            extraData.Val, annotations.Val));
   return false;
 }
 
@@ -4591,7 +4592,8 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(dataLocation, MDField, );                                           \
   OPTIONAL(associated, MDField, );                                             \
   OPTIONAL(allocated, MDField, );                                              \
-  OPTIONAL(rank, MDSignedOrMDField, );
+  OPTIONAL(rank, MDSignedOrMDField, );                                         \
+  OPTIONAL(annotations, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -4609,7 +4611,7 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
             scope.Val, baseType.Val, size.Val, align.Val, offset.Val, flags.Val,
             elements.Val, runtimeLang.Val, vtableHolder.Val, templateParams.Val,
             discriminator.Val, dataLocation.Val, associated.Val, allocated.Val,
-            Rank)) {
+            Rank, annotations.Val)) {
       Result = CT;
       return false;
     }
@@ -4621,8 +4623,8 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
       (Context, tag.Val, name.Val, file.Val, line.Val, scope.Val, baseType.Val,
        size.Val, align.Val, offset.Val, flags.Val, elements.Val,
        runtimeLang.Val, vtableHolder.Val, templateParams.Val, identifier.Val,
-       discriminator.Val, dataLocation.Val, associated.Val, allocated.Val,
-       Rank));
+       discriminator.Val, dataLocation.Val, associated.Val, allocated.Val, Rank,
+       annotations.Val));
   return false;
 }
 
@@ -4722,7 +4724,8 @@ bool LLParser::parseDICompileUnit(MDNode *&Result, bool IsDistinct) {
 ///                     virtuality: DW_VIRTUALTIY_pure_virtual,
 ///                     virtualIndex: 10, thisAdjustment: 4, flags: 11,
 ///                     spFlags: 10, isOptimized: false, templateParams: !4,
-///                     declaration: !5, retainedNodes: !6, thrownTypes: !7)
+///                     declaration: !5, retainedNodes: !6, thrownTypes: !7,
+///                     annotations: !8)
 bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
   auto Loc = Lex.getLoc();
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
@@ -4746,7 +4749,8 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(templateParams, MDField, );                                         \
   OPTIONAL(declaration, MDField, );                                            \
   OPTIONAL(retainedNodes, MDField, );                                          \
-  OPTIONAL(thrownTypes, MDField, );
+  OPTIONAL(thrownTypes, MDField, );                                            \
+  OPTIONAL(annotations, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -4765,7 +4769,7 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
       (Context, scope.Val, name.Val, linkageName.Val, file.Val, line.Val,
        type.Val, scopeLine.Val, containingType.Val, virtualIndex.Val,
        thisAdjustment.Val, flags.Val, SPFlags, unit.Val, templateParams.Val,
-       declaration.Val, retainedNodes.Val, thrownTypes.Val));
+       declaration.Val, retainedNodes.Val, thrownTypes.Val, annotations.Val));
   return false;
 }
 
