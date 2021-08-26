@@ -588,7 +588,7 @@ DWARFSimpleDIE DWARFFormValue::Reference() const {
           value);
       return {};
     }
-    return target_cu->GetDIE(value);
+    return target_cu->GetDIE(m_unit, value);
   }
 
   case DW_FORM_ref_addr: {

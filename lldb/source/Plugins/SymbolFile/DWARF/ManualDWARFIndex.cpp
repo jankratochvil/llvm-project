@@ -163,9 +163,9 @@ void ManualDWARFIndex::IndexUnit(DWARFUnitPair unit, SymbolFileDWARFDwo *dwp,
   // its main DW_TAG_compile_unit (possibly transitively). Indexing it
   // standalone is not possible as we would not have its main CU. Also try to
   // prevent calling GetUnitDIEOnly() which may be expensive.
-  if (unit.GetSymbolFileDWARF().GetIsDwz())
+  if (unit->GetSymbolFileDWARF().GetIsDwz())
     return;
-  if (unit.GetUnitDIEOnly().Tag() == DW_TAG_partial_unit)
+  if (unit->GetUnitDIEOnly().Tag() == DW_TAG_partial_unit)
     return;
 
   IndexUnitImpl(unit, set);
@@ -395,7 +395,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnitPair unitpair,
               unit.GetOffset(), die.GetOffset());
           break;
         }
-        DWARFDIE import_die = import_die_form.Reference();
+        DWARFSimpleDIE import_die = import_die_form.Reference();
         if (!import_die.IsValid())
           break;
         DWARFUnit *import_cu = import_die.GetCU();
@@ -409,7 +409,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnitPair unitpair,
               import_cu_firstdie_offset);
           break;
         }
-        IndexUnitImpl(*import_cu, main_unit, cu_language, set);
+        IndexUnitImpl(*import_cu, unitpair.GetMainCU(), cu_language, set);
       }
       break;
 
