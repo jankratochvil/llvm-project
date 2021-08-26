@@ -1376,8 +1376,6 @@ user_id_t SymbolFileDWARF::GetUID(DIERef ref) {
 #ifndef NDEBUG
   DWARFDIE dwarfdie_check2 = GetDIE(retval);
   lldbassert(dwarfdie_check2 == dwarfdie_check);
-  lldbassert(dwarfdie_check.GetCU()->GetUnitDIEOnly().Tag() !=
-                 DW_TAG_partial_unit /* || main_unit_check == main_unit*/);
 #endif
 
   return retval;
