@@ -3385,7 +3385,7 @@ bool DWARFASTParserClang::NamespaceDIEIsInline(const DWARFDIE &nsdie) const {
     if (myname.Tag() == DW_TAG_namespace)
       namevec.push_back(myname.GetName());
   lldbassert(!namevec.empty());
-  DWARFDIE finddie = nsdie.GetMainCU()->DIE();
+  DWARFDIE finddie = nsdie.GetMainCU()->DIE(nsdie.GetMainCU());
   while (!namevec.empty()) {
     llvm::StringRef findname = namevec.back();
     namevec.pop_back();
@@ -3414,7 +3414,6 @@ DWARFASTParserClang::ResolveNamespaceDIE(const DWARFDIE &die) {
       clang::DeclContext *containing_decl_ctx =
           GetClangDeclContextContainingDIE(die, nullptr);
       bool is_inline = NamespaceDIEIsInline(die);
-          die.GetAttributeValueAsUnsigned(DW_AT_export_symbols, 0) != 0;
 
       namespace_decl = m_ast.GetUniqueNamespaceDeclaration(
           namespace_name, containing_decl_ctx, GetOwningClangModule(die),
