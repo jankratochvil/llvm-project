@@ -15,7 +15,7 @@ from lldbsuite.support import gmodules
 
 
 debug_info_categories = [
-    'dwarf', 'dwo', 'dsym', 'gmodules'
+    'dwarf', 'dwo', 'dsym', 'gmodules', 'dwz'
 ]
 
 all_categories = {
@@ -26,6 +26,7 @@ all_categories = {
     'dsym': 'Tests that can be run with DSYM debug information',
     'dwarf': 'Tests that can be run with DWARF debug information',
     'dwo': 'Tests that can be run with DWO debug information',
+    'dwz': 'Tests using DWZ and its DWARF partial units',
     'dyntype': 'Tests related to dynamic type support',
     'expression': 'Tests related to the expression parser',
     'flakey': 'Flakey test cases, i.e. tests that do not reliably pass at each execution',
@@ -67,6 +68,8 @@ def is_supported_on_platform(category, platform, compiler_path):
         if platform not in ["freebsd", "darwin", "macosx", "ios", "watchos", "tvos", "bridgeos"]:
             return False
         return gmodules.is_compiler_clang_with_gmodules(compiler_path)
+    elif category == "dwz":
+        return platform in ["linux"]
     return True
 
 
