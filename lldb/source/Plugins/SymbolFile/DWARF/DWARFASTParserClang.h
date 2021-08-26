@@ -215,6 +215,7 @@ private:
                               ParsedDWARFTypeAttributes &attrs);
   lldb::TypeSP ParsePointerToMemberType(const DWARFDIE &die,
                                         const ParsedDWARFTypeAttributes &attrs);
+  bool NamespaceDIEIsInline(DWARFUnit *main_unit, const DWARFDIE &nsdie) const;
 };
 
 /// Parsed form of all attributes that are relevant for type reconstruction.

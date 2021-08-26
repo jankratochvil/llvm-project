@@ -3372,6 +3372,34 @@ clang::BlockDecl *DWARFASTParserClang::ResolveBlockDIE(const DWARFDIE &die) {
   return nullptr;
 }
 
+// Workaround for DWZ tool bug producing corrupted DWARF:
+// Multifile drops DW_TAG_namespace::DW_AT_export_symbols
+// https://sourceware.org/bugzilla/show_bug.cgi?id=27572
+bool DWARFASTParserClang::NamespaceDIEIsInline(const DWARFDIE &nsdie) const {
+  if (nsdie.GetAttributeValueAsUnsigned(DW_AT_export_symbols, 0) != 0)
+    return true;
+  if (nsdie.GetCU()->GetUnitDIEOnly().Tag() != DW_TAG_partial_unit)
+    return false;
+  llvm::SmallVector<const char *, 4> namevec;
+  for (DWARFDIE myname = nsdie; myname.IsValid(); myname = myname.GetParent())
+    if (myname.Tag() == DW_TAG_namespace)
+      namevec.push_back(myname.GetName());
+  lldbassert(!namevec.empty());
+  DWARFDIE finddie = nsdie.GetMainCU()->DIE();
+  while (!namevec.empty()) {
+    llvm::StringRef findname = namevec.back();
+    namevec.pop_back();
+    for (finddie = finddie.GetFirstChild();; finddie = finddie.GetSibling()) {
+      if (!finddie.IsValid())
+        return false;
+      if (finddie.Tag() == DW_TAG_namespace &&
+          findname == llvm::StringRef(finddie.GetName()))
+        break;
+    }
+  }
+  return finddie.GetAttributeValueAsUnsigned(DW_AT_export_symbols, 0) != 0;
+}
+
 clang::NamespaceDecl *
 DWARFASTParserClang::ResolveNamespaceDIE(const DWARFDIE &die) {
   if (die && die.Tag() == DW_TAG_namespace) {
@@ -3385,7 +3413,7 @@ DWARFASTParserClang::ResolveNamespaceDIE(const DWARFDIE &die) {
       const char *namespace_name = die.GetName();
       clang::DeclContext *containing_decl_ctx =
           GetClangDeclContextContainingDIE(die, nullptr);
-      bool is_inline =
+      bool is_inline = NamespaceDIEIsInline(die);
           die.GetAttributeValueAsUnsigned(DW_AT_export_symbols, 0) != 0;
 
       namespace_decl = m_ast.GetUniqueNamespaceDeclaration(
