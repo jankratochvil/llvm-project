@@ -1350,16 +1350,6 @@ void SymbolFileDWARF::ParseDeclsForContext(CompilerDeclContext decl_ctx) {
         decl_ctx);
 }
 
-user_id_t SymbolFileDWARF::GetUID(const DWARFBaseDIE &die) {
-  if (!die.IsValid())
-    return LLDB_INVALID_UID;
-  // Try to prevent GetUnitDIEOnly() which may be expensive.
-  DWARFUnit *main_unit = die.GetMainCU();
-  if (!GetIsDwz() && die.GetCU()->GetUnitDIEOnly().Tag() != DW_TAG_partial_unit)
-    main_unit = nullptr;
-  return GetUID(main_unit, die.GetDIERef(main_unit));
-}
-
 user_id_t SymbolFileDWARF::GetUID(DIERef ref) {
   if (GetDebugMapSymfile())
     return GetID() | ref.die_offset();

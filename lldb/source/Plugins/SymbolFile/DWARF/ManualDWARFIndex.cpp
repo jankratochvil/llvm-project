@@ -409,7 +409,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnitPair unitpair,
               import_cu_firstdie_offset);
           break;
         }
-        IndexUnitImpl(*import_cu, unitpair.GetMainCU(), cu_language, set);
+        IndexUnitImpl({import_cu, unitpair.GetMainCU()}, set);
       }
       break;
 
