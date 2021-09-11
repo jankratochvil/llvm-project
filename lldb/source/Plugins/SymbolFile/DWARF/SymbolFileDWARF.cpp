@@ -1345,6 +1345,8 @@ user_id_t SymbolFileDWARF::GetUID(DIERef ref) {
   if (GetDebugMapSymfile())
     return GetID() | ref.die_offset();
 
+  lldbassert(!GetIsDwz());
+
 #ifndef NDEBUG
   DWARFDIE dwarfdie_check = GetDIE(ref);
   lldbassert(dwarfdie_check.IsValid());
