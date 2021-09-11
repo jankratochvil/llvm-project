@@ -354,7 +354,7 @@ lldb_private::Type *DWARFDIE::ResolveType(SymbolFileDWARF &dwarf) const {
 }
 
 lldb_private::Type *DWARFDIE::ResolveTypeUID(const DWARFDIE &die) const {
-  if (SymbolFileDWARF *dwarf = GetDWARF())
+  if (SymbolFileDWARF *dwarf = GetMainDWARF())
     return dwarf->ResolveTypeUID(die, true);
   return nullptr;
 }
