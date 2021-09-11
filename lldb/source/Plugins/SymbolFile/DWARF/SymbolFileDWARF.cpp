@@ -3125,8 +3125,8 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
 VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                                              const DWARFDIE &die,
                                              const lldb::addr_t func_low_pc) {
-  if (die.GetDWARF() != this)
-    return die.GetDWARF()->ParseVariableDIE(sc, die, func_low_pc);
+  if (die.GetMainDWARF() != this)
+    return die.GetMainDWARF()->ParseVariableDIE(sc, die, func_low_pc);
 
   if (!die)
     return nullptr;
@@ -3951,7 +3951,7 @@ DWARFDeclContext SymbolFileDWARF::GetDWARFDeclContext(const DWARFDIE &die) {
   if (!die.IsValid())
     return {};
   DWARFDeclContext dwarf_decl_ctx =
-      die.GetDIE()->GetDWARFDeclContext(die.GetMainCU());
+      die.GetDIE()->GetDWARFDeclContext(die.GetCU());
   dwarf_decl_ctx.SetLanguage(GetLanguage(*die.GetMainCU()));
   return dwarf_decl_ctx;
 }
