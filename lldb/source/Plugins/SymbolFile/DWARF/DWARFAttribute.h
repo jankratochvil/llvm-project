@@ -14,9 +14,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include <vector>
 
-// FIXME
-#include "Plugins/SymbolFile/DWARF/DWARFUnitPair.h"
-
 class DWARFUnit;
 
 class DWARFAttribute {
