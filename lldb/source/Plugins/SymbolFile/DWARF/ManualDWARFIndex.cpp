@@ -13,6 +13,7 @@
 #include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDwo.h"
 #include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
+#include "Plugins/SymbolFile/DWARF/DWARFSimpleDIE.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Progress.h"
 #include "lldb/Symbol/ObjectFile.h"
