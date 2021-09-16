@@ -8,11 +8,11 @@
 
 #include "Plugins/SymbolFile/DWARF/ManualDWARFIndex.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
+#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDeclContext.h"
 #include "Plugins/SymbolFile/DWARF/LogChannelDWARF.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDwo.h"
-#include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Progress.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -127,7 +127,8 @@ void ManualDWARFIndex::Index() {
   pool.wait();
 }
 
-void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp, IndexSet &set) {
+void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
+                                 IndexSet &set) {
   // DWZ DW_TAG_partial_unit will get indexed by DW_AT_import
   // from its DW_TAG_compile_unit (possibly transitively).
   // Try to prevent GetUnitDIEOnly() which is expensive.
@@ -150,9 +151,10 @@ void ManualDWARFIndex::IndexUnit(DWARFUnitPair unit, SymbolFileDWARFDwo *dwp,
   Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_LOOKUPS);
 
   if (log) {
-    m_module.LogMessage(
-        log, "ManualDWARFIndex::IndexUnit for unit at .debug_info[0x%8.8x] from .debug_info[0x%8.8x]",
-        unit->GetOffset(), unit.GetMainCU()->GetOffset());
+    m_module.LogMessage(log,
+                        "ManualDWARFIndex::IndexUnit for unit at "
+                        ".debug_info[0x%8.8x] from .debug_info[0x%8.8x]",
+                        unit->GetOffset(), unit.GetMainCU()->GetOffset());
   }
 
   IndexUnitImpl(unit, set);
@@ -175,11 +177,11 @@ void ManualDWARFIndex::IndexUnit(DWARFUnitPair unit, SymbolFileDWARFDwo *dwp,
   }
 }
 
-void ManualDWARFIndex::IndexUnitImpl(DWARFUnitPair unitpair,
-                                     IndexSet &set) {
+void ManualDWARFIndex::IndexUnitImpl(DWARFUnitPair unitpair, IndexSet &set) {
 
   DWARFUnit &unit = unitpair;
-  const LanguageType cu_language = SymbolFileDWARF::GetLanguage(*unitpair.GetMainCU());
+  const LanguageType cu_language =
+      SymbolFileDWARF::GetLanguage(*unitpair.GetMainCU());
 
   for (const DWARFDebugInfoEntry &die : unit.dies()) {
     const dw_tag_t tag = die.Tag();

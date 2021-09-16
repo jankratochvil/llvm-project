@@ -47,15 +47,17 @@ bool DWARFAttributes::ExtractFormValueAtIndex(
 }
 
 DWARFDIE
-DWARFAttributes::FormValueAsReference(dw_attr_t attr,DWARFUnit *main_unit) const {
+DWARFAttributes::FormValueAsReference(dw_attr_t attr,
+                                      DWARFUnit *main_unit) const {
   const uint32_t attr_idx = FindAttributeIndex(attr);
   if (attr_idx != UINT32_MAX)
-    return FormValueAsReferenceAtIndex(attr_idx,main_unit);
+    return FormValueAsReferenceAtIndex(attr_idx, main_unit);
   return {};
 }
 
 DWARFDIE
-DWARFAttributes::FormValueAsReferenceAtIndex(uint32_t i,DWARFUnit *main_unit) const {
+DWARFAttributes::FormValueAsReferenceAtIndex(uint32_t i,
+                                             DWARFUnit *main_unit) const {
   DWARFFormValue form_value;
   if (ExtractFormValueAtIndex(i, form_value))
     return form_value.Reference(main_unit);
