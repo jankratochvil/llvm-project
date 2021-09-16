@@ -15,7 +15,7 @@ DWARFUnitPair::DWARFUnitPair():m_cu(nullptr),m_main_cu(nullptr) {}
 DWARFUnitPair::DWARFUnitPair(DWARFUnit *cu,DWARFUnit *main_cu):m_cu(cu),m_main_cu(main_cu) {
   assert(m_cu);
   assert(m_main_cu);
-  assert(!m_main_cu->GetSymbolFileDWARF().GetIsDwz());
+//FIXME:  assert(!m_main_cu->GetSymbolFileDWARF().GetIsDwz());
 }
 DWARFUnitPair::DWARFUnitPair(DWARFUnit *main_cu):DWARFUnitPair(static_cast<DWARFUnit *>(main_cu), main_cu) {}
 DWARFUnit *DWARFUnitPair::operator ->() const { assert(m_cu); return m_cu; }
