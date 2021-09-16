@@ -13,11 +13,11 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/Stream.h"
 
+#include "DWARFCompileUnit.h"
 #include "DWARFDebugInfo.h"
 #include "DWARFFormValue.h"
-#include "DWARFUnit.h"
-#include "DWARFCompileUnit.h"
 #include "DWARFSimpleDIE.h"
+#include "DWARFUnit.h"
 #include "SymbolFileDWARFDwz.h"
 
 class DWARFUnit;
@@ -625,11 +625,12 @@ DWARFDIE DWARFFormValue::Reference(DWARFUnit *main_unit) const {
     return {};
 
   // MainCU may differ from CU only for DW_TAG_partial_unit units.
-  if (die.GetCU()->GetUnitDIEOnly().Tag()!=DW_TAG_partial_unit) {
-    main_unit=die.GetCU();
-    lldbassert(llvm::isa<DWARFCompileUnit>(main_unit) || llvm::isa<DWARFTypeUnit>(main_unit));
+  if (die.GetCU()->GetUnitDIEOnly().Tag() != DW_TAG_partial_unit) {
+    main_unit = die.GetCU();
+    lldbassert(llvm::isa<DWARFCompileUnit>(main_unit) ||
+               llvm::isa<DWARFTypeUnit>(main_unit));
   }
-  return {{die.GetCU(),main_unit}, die.GetDIE()};
+  return {{die.GetCU(), main_unit}, die.GetDIE()};
 }
 
 uint64_t DWARFFormValue::Reference(dw_offset_t base_offset) const {
