@@ -589,7 +589,6 @@ DWARFSimpleDIE DWARFFormValue::Reference() const {
           value);
       return {};
     }
-    // FIXME: const_cast
     return target_cu->GetDIE(const_cast<DWARFUnit *>(m_unit), value);
   }
 
