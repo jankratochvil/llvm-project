@@ -29,6 +29,7 @@ add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN
   DWARFDIE.cpp
   DWARFFormValue.cpp
   DWARFIndex.cpp
+  DWARFSimpleDIE.cpp
   DWARFTypeUnit.cpp
   DWARFUnit.cpp
   DWARFUnitPair.cpp
