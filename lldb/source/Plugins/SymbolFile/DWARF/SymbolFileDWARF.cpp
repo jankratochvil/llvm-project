@@ -1354,7 +1354,7 @@ user_id_t SymbolFileDWARF::GetUID(DIERef ref) {
   if (GetDebugMapSymfile())
     return GetID() | ref.die_offset();
 
-//FIXME:  lldbassert(!GetIsDwz());
+  lldbassert(!GetIsDwz());
 
 #ifndef NDEBUG
   DWARFDIE dwarfdie_check = GetDIE(ref);
