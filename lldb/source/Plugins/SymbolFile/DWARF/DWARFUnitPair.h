@@ -14,7 +14,6 @@
 #include "lldb/Symbol/TypeSystem.h"
 
 class DWARFUnit;
-class DWARFTypeUnit;
 
 class DWARFUnitPair {
 public:
@@ -33,10 +32,8 @@ public:
 
 private:
   DWARFUnit *m_cu;
-  // For non-DWZ setups it is either equal to 'm_cu' or nullptr if 'm_cu' is a DWARFTypeUnit.
+  // For non-DWZ setups it is equal to 'm_cu'.
   DWARFUnit *m_main_cu;
-
-  template<class DWARFCompileUnitT,class DWARFTypeUnitT> auto CompileOrTypeMethod(DWARFCompileUnitT compile_method,DWARFTypeUnitT type_method) const -> decltype((m_main_cu->*compile_method)());
 };
 
 #endif // liblldb_DWARFUnitPair_h_
