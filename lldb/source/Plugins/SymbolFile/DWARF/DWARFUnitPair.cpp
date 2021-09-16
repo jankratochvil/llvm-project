@@ -30,12 +30,3 @@ bool DWARFUnitPair::operator ==(const DWARFUnitPair &rhs) const {
   return m_cu == rhs.m_cu && m_main_cu == rhs.m_main_cu;
 }
 void DWARFUnitPair::Clear() { m_cu = nullptr; m_main_cu=nullptr; }
-
-//template<class DWARFCompileUnitT,class DWARFTypeUnitT> auto DWARFUnitPair::CompileOrTypeMethod(DWARFCompileUnitT compile_method,DWARFTypeUnitT type_method) const -> decltype((m_main_cu->*compile_method)()) {
-//  if (m_main_cu)
-//    return (m_main_cu->*compile_method)();
-//  return (llvm::cast<DWARFTypeUnit>(m_cu)->*type_method)();
-//}
-
-//lldb::LanguageType DWARFUnitPair::GetLanguageType() const { return CompileOrTypeMethod(&DWARFCompileUnit::GetLanguageType,&DWARFTypeUnit::GetLanguageType); }
-//llvm::Expected<lldb_private::TypeSystem &> DWARFUnitPair::GetTypeSystem() const { return CompileOrTypeMethod(&DWARFCompileUnit::GetTypeSystem,&DWARFTypeUnit::GetTypeSystem); }
