@@ -9,13 +9,13 @@
 #ifndef LLDB_EXPRESSION_DWARFEXPRESSION_H
 #define LLDB_EXPRESSION_DWARFEXPRESSION_H
 
+#include "Plugins/SymbolFile/DWARF/DWARFUnitPair.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private.h"
-#include "Plugins/SymbolFile/DWARF/DWARFUnitPair.h"
 #include <functional>
 
 class DWARFUnit;
@@ -203,8 +203,7 @@ public:
   ///     details of the failure are provided through it.
   static bool Evaluate(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
                        lldb::ModuleSP opcode_ctx, const DataExtractor &opcodes,
-                       DWARFUnitPair dwarf_cu,
-                       const lldb::RegisterKind reg_set,
+                       DWARFUnitPair dwarf_cu, const lldb::RegisterKind reg_set,
                        const Value *initial_value_ptr,
                        const Value *object_address_ptr, Value &result,
                        Status *error_ptr);

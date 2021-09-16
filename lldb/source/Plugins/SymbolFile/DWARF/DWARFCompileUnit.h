@@ -24,7 +24,9 @@ public:
 
   DWARFDIE LookupAddress(const dw_addr_t address);
 
-  DWARFDIE GetDIE(dw_offset_t die_offset) { return DWARFUnit::GetDIE(this,die_offset); }
+  DWARFDIE GetDIE(dw_offset_t die_offset) {
+    return DWARFUnit::GetDIE(this, die_offset);
+  }
 
   DWARFBaseDIE GetUnitDIEOnly() { return {DWARFUnitPair(this), DIEPtr()}; }
 

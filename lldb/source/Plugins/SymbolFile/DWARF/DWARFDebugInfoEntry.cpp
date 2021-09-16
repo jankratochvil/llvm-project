@@ -563,10 +563,11 @@ DWARFSimpleDIE DWARFDebugInfoEntry::GetAttributeValueAsReference(
 DWARFDIE DWARFDebugInfoEntry::GetAttributeValueAsReference(
     DWARFUnitPair cu, const dw_attr_t attr,
     bool check_specification_or_abstract_origin) const {
-  DWARFSimpleDIE die = GetAttributeValueAsReference(cu.GetCU(), attr, check_specification_or_abstract_origin);
+  DWARFSimpleDIE die = GetAttributeValueAsReference(
+      cu.GetCU(), attr, check_specification_or_abstract_origin);
   if (!die.IsValid())
     return {};
-  return {{die.GetCU(),cu.GetMainCU()},die.GetDIE()};
+  return {{die.GetCU(), cu.GetMainCU()}, die.GetDIE()};
 }
 
 uint64_t DWARFDebugInfoEntry::GetAttributeValueAsAddress(
@@ -741,7 +742,8 @@ DWARFDebugInfoEntry::GetDWARFDeclContextStatic(const DWARFDebugInfoEntry *die,
   }
 }
 
-DWARFDeclContext DWARFDebugInfoEntry::GetDWARFDeclContext(DWARFUnitPair cu) const {
+DWARFDeclContext
+DWARFDebugInfoEntry::GetDWARFDeclContext(DWARFUnitPair cu) const {
   return GetDWARFDeclContextStatic(this, cu);
 }
 
@@ -776,14 +778,16 @@ DWARFDebugInfoEntry::GetParentDeclContextDIE(
       }
     }
 
-    DWARFDIE spec_die = attributes.FormValueAsReference(DW_AT_specification, cu.GetMainCU());
+    DWARFDIE spec_die =
+        attributes.FormValueAsReference(DW_AT_specification, cu.GetMainCU());
     if (spec_die) {
       DWARFDIE decl_ctx_die = spec_die.GetParentDeclContextDIE();
       if (decl_ctx_die)
         return decl_ctx_die;
     }
 
-    DWARFDIE abs_die = attributes.FormValueAsReference(DW_AT_abstract_origin, cu.GetMainCU());
+    DWARFDIE abs_die =
+        attributes.FormValueAsReference(DW_AT_abstract_origin, cu.GetMainCU());
     if (abs_die) {
       DWARFDIE decl_ctx_die = abs_die.GetParentDeclContextDIE();
       if (decl_ctx_die)
