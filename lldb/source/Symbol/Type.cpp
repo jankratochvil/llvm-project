@@ -151,6 +151,14 @@ Type::Type(lldb::user_id_t uid, SymbolFile *symbol_file, ConstString name,
       m_compiler_type_resolve_state(compiler_type ? compiler_type_resolve_state
                                                   : ResolveState::Unresolved),
       m_payload(opaque_payload) {
+  // FIXME
+  if (symbol_file && symbol_file->GetObjectFile()->GetFileSpec().GetPath().find(
+                         ".debug.dwz") != std::string::npos) {
+    fprintf(stderr, "%s:%s\n",
+            symbol_file->GetObjectFile()->GetFileSpec().GetPath().c_str(),
+            name.AsCString());
+    lldbassert(0);
+  }
   if (byte_size) {
     m_byte_size = *byte_size;
     m_byte_size_has_value = true;
