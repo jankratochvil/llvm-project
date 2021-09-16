@@ -98,7 +98,8 @@ public:
   const char *GetPubname(DWARFUnitPair cu) const;
   const char *GetPubname(const DWARFUnit *cu) const;
   const char *GetQualifiedName(DWARFUnitPair cu, std::string &storage) const;
-  const char *GetQualifiedName(DWARFUnitPair cu, const DWARFAttributes &attributes,
+  const char *GetQualifiedName(DWARFUnitPair cu,
+                               const DWARFAttributes &attributes,
                                std::string &storage) const;
 
   bool GetDIENamesAndRanges(

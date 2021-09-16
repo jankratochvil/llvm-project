@@ -10,8 +10,8 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_MANUALDWARFINDEX_H
 
 #include "Plugins/SymbolFile/DWARF/DWARFIndex.h"
-#include "Plugins/SymbolFile/DWARF/NameToDIE.h"
 #include "Plugins/SymbolFile/DWARF/DWARFUnitPair.h"
+#include "Plugins/SymbolFile/DWARF/NameToDIE.h"
 #include "llvm/ADT/DenseSet.h"
 
 class DWARFDebugInfo;
@@ -71,8 +71,7 @@ private:
   void IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp, IndexSet &set);
   void IndexUnit(DWARFUnitPair unit, SymbolFileDWARFDwo *dwp, IndexSet &set);
 
-  static void IndexUnitImpl(DWARFUnitPair unit,
-                            IndexSet &set);
+  static void IndexUnitImpl(DWARFUnitPair unit, IndexSet &set);
 
   /// The DWARF file which we are indexing. Set to nullptr after the index is
   /// built.

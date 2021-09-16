@@ -828,7 +828,8 @@ Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
   if (!die.IsValid())
     return nullptr;
 
-  auto type_system_or_err = GetTypeSystemForLanguage(GetLanguage(*die.GetMainCU()));
+  auto type_system_or_err =
+      GetTypeSystemForLanguage(GetLanguage(*die.GetMainCU()));
   if (auto err = type_system_or_err.takeError()) {
     LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
                    std::move(err), "Unable to parse function");
@@ -2209,7 +2210,8 @@ void SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
       sc.module_sp = m_objfile_sp->GetModule();
     assert(sc.module_sp);
 
-    DWARFCompileUnit *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(die.GetCU().GetMainCU());
+    DWARFCompileUnit *dwarf_cu =
+        llvm::dyn_cast<DWARFCompileUnit>(die.GetCU().GetMainCU());
     if (!dwarf_cu)
       return true;
     sc.comp_unit = GetCompUnitForDWARFCompUnit(*dwarf_cu);
@@ -2958,7 +2960,8 @@ TypeSP SymbolFileDWARF::ParseType(const SymbolContext &sc, const DWARFDIE &die,
   if (!die)
     return {};
 
-  auto type_system_or_err = GetTypeSystemForLanguage(GetLanguage(*die.GetMainCU()));
+  auto type_system_or_err =
+      GetTypeSystemForLanguage(GetLanguage(*die.GetMainCU()));
   if (auto err = type_system_or_err.takeError()) {
     LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
                    std::move(err), "Unable to parse type");
