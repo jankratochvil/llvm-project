@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Plugins/SymbolFile/DWARF/DWARFUnitPair.h"
+#include "DWARFUnitPair.h"
+#include "DWARFUnit.h"
 #include <assert.h>
 
 DWARFUnitPair::DWARFUnitPair():m_cu(nullptr),m_main_cu(nullptr) {}
