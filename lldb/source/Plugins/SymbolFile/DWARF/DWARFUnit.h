@@ -176,9 +176,13 @@ public:
     return *dieptr;
   }
 
-  DWARFBaseDIE GetUnitDIEOnly(DWARFUnit *main_cu) { return {DWARFUnitPair(this,main_cu), DIEPtr()}; }
+  DWARFBaseDIE GetUnitDIEOnly(DWARFUnit *main_cu) {
+    return {DWARFUnitPair(this, main_cu), DIEPtr()};
+  }
 
-  DWARFDIE DIE(DWARFUnit *main_cu) { return {DWARFUnitPair(this, main_cu), DIEPtr()}; }
+  DWARFDIE DIE(DWARFUnit *main_cu) {
+    return {DWARFUnitPair(this, main_cu), DIEPtr()};
+  }
 
   const DWARFDebugInfoEntry *GetDIEPtr(dw_offset_t die_offset);
 

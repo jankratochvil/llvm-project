@@ -9,9 +9,9 @@
 #ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFBASEDIE_H
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFBASEDIE_H
 
+#include "Plugins/SymbolFile/DWARF/DWARFUnitPair.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/lldb-types.h"
-#include "Plugins/SymbolFile/DWARF/DWARFUnitPair.h"
 
 #include "llvm/Support/Error.h"
 
