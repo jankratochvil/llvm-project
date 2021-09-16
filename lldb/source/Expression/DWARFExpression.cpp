@@ -2469,7 +2469,8 @@ bool DWARFExpression::Evaluate(
         }
       } else {
         // Retrieve the type DIE that the value is being converted to.
-        DWARFDIE die = dwarf_cu.GetCU()->GetDIE(dwarf_cu.GetMainCU(), die_offset);
+        DWARFDIE die =
+            dwarf_cu.GetCU()->GetDIE(dwarf_cu.GetMainCU(), die_offset);
         if (!die) {
           if (error_ptr)
             error_ptr->SetErrorString("Cannot resolve DW_OP_convert type DIE");
