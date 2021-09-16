@@ -131,8 +131,6 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp, Index
   // DWZ DW_TAG_partial_unit will get indexed by DW_AT_import
   // from its DW_TAG_compile_unit (possibly transitively).
   // Try to prevent GetUnitDIEOnly() which is expensive.
-//FIXME:  if (unit.GetSymbolFileDWARF().GetIsDwz())
-//FIXME:    return;
   if (unit.GetUnitDIEOnly().Tag() == DW_TAG_partial_unit)
     return;
   IndexUnit(&unit, dwp, set);
@@ -145,8 +143,6 @@ void ManualDWARFIndex::IndexUnit(DWARFUnitPair unit, SymbolFileDWARFDwo *dwp,
     // DWZ DW_TAG_partial_unit will get indexed by DW_AT_import
     // from its DW_TAG_compile_unit (possibly transitively).
     // GetUnitDIEPtrOnly() is too expensive.
-//FIXME:    if (unit->GetSymbolFileDWARF().GetIsDwz())
-//FIXME:      return;
     if (unit->GetUnitDIEOnly().Tag() == DW_TAG_partial_unit)
       return;
   }

@@ -980,14 +980,9 @@ bool SymbolFileDWARF::ParseSupportFiles(DWARFUnit &dwarf_cu,
 
 FileSpec SymbolFileDWARF::GetFile(DWARFUnit &unit, size_t file_idx) {
   if (auto *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(&unit)) {
-    // Try to prevent GetUnitDIEOnly() which is expensive.
-//FIXME:    if (!unit.GetSymbolFileDWARF().GetIsDwz()
-//FIXME:      && unit.GetUnitDIEOnly().Tag() == DW_TAG_compile_unit)
-    {
-      if (CompileUnit *lldb_cu = GetCompUnitForDWARFCompUnit(*dwarf_cu))
-        return lldb_cu->GetSupportFiles().GetFileSpecAtIndex(file_idx);
-      return FileSpec();
-    }
+    if (CompileUnit *lldb_cu = GetCompUnitForDWARFCompUnit(*dwarf_cu))
+      return lldb_cu->GetSupportFiles().GetFileSpecAtIndex(file_idx);
+    return FileSpec();
   }
 
   return GetSharedUnitSupportFiles(unit).GetFileSpecAtIndex(file_idx);
