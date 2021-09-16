@@ -9,25 +9,25 @@
 #ifndef liblldb_DWARFUnitPair_h_
 #define liblldb_DWARFUnitPair_h_
 
-#include "llvm/Support/Error.h"
-#include "lldb/lldb-enumerations.h"
 #include "lldb/Symbol/TypeSystem.h"
+#include "lldb/lldb-enumerations.h"
+#include "llvm/Support/Error.h"
 
 class DWARFUnit;
 
 class DWARFUnitPair {
 public:
   DWARFUnitPair();
-  DWARFUnitPair(DWARFUnit *cu,DWARFUnit *main_cu);
+  DWARFUnitPair(DWARFUnit *cu, DWARFUnit *main_cu);
   DWARFUnitPair(DWARFUnit *main_cu);
-  DWARFUnit *operator ->() const;
-  DWARFUnit &operator *() const;
+  DWARFUnit *operator->() const;
+  DWARFUnit &operator*() const;
   DWARFUnit *GetCU() const;
   DWARFUnit *GetMainCU() const;
   explicit operator bool() const;
   operator DWARFUnit *() const;
   operator DWARFUnit &() const;
-  bool operator ==(const DWARFUnitPair &rhs) const;
+  bool operator==(const DWARFUnitPair &rhs) const;
   void Clear();
 
 private:
