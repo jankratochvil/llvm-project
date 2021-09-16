@@ -10,6 +10,7 @@
 
 #include "DWARFUnit.h"
 #include "DWARFCompileUnit.h"
+#include "DWARFSimpleDIE.h"
 #include "DWARFDebugInfoEntry.h"
 #include "SymbolFileDWARF.h"
 
