@@ -26,6 +26,7 @@
 #include "DWARFDebugRanges.h"
 #include "DWARFDeclContext.h"
 #include "DWARFFormValue.h"
+#include "DWARFSimpleDIE.h"
 #include "DWARFUnit.h"
 #include "SymbolFileDWARF.h"
 #include "SymbolFileDWARFDwo.h"
