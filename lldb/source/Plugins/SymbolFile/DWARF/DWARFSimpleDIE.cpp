@@ -9,7 +9,7 @@
 #include "DWARFSimpleDIE.h"
 #include "DWARFDebugInfoEntry.h"
 
-dw_offset_t DWARFSimpleDIE::GetOffset() const { return !m_die ? DW_INVALID_OFFSET : m_die->GetOffset(); } // FIXME
+dw_offset_t DWARFSimpleDIE::GetOffset() const { return !m_die ? DW_INVALID_OFFSET : m_die->GetOffset(); }
 
 size_t DWARFSimpleDIE::GetAttributes(DWARFAttributes &attributes,
                                      DWARFBaseDIE::Recurse recurse) const {
