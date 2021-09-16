@@ -980,14 +980,9 @@ bool SymbolFileDWARF::ParseSupportFiles(DWARFUnit &dwarf_cu,
 
 FileSpec SymbolFileDWARF::GetFile(DWARFUnit &unit, size_t file_idx) {
   if (auto *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(&unit)) {
-    // Try to prevent GetUnitDIEOnly() which is expensive.
-//FIXME:    if (!unit.GetSymbolFileDWARF().GetIsDwz()
-//FIXME:      && unit.GetUnitDIEOnly().Tag() == DW_TAG_compile_unit)
-    {
-      if (CompileUnit *lldb_cu = GetCompUnitForDWARFCompUnit(*dwarf_cu))
-        return lldb_cu->GetSupportFiles().GetFileSpecAtIndex(file_idx);
-      return FileSpec();
-    }
+    if (CompileUnit *lldb_cu = GetCompUnitForDWARFCompUnit(*dwarf_cu))
+      return lldb_cu->GetSupportFiles().GetFileSpecAtIndex(file_idx);
+    return FileSpec();
   }
 
   auto &tu = llvm::cast<DWARFTypeUnit>(unit);
@@ -1349,19 +1344,6 @@ user_id_t SymbolFileDWARF::GetUID(DIERef ref) {
   return user_id_t(GetDwoNum().getValueOr(0)) << 32 | ref.die_offset() |
          lldb::user_id_t(GetDwoNum().hasValue()) << 62 |
          lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes) << 63;
-#if 0 // FIXME
-  return user_id_t(ref.dwo_num() ? *ref.dwo_num() : (
-//FIXME: ref.main_cu() ? *ref.main_cu() :
-0x1fffffff)) << 32 |
-         ref.die_offset() |
-         user_id_t(
-//FIXME: !ref.main_cu() ?
-0
-//FIXME: : ref.dwz_common() == DIERef::CommonDwz
-) << 61 |
-//FIXME:         user_id_t(bool(ref.main_cu())) << 62 |
-         (lldb::user_id_t(ref.section() == DIERef::Section::DebugTypes)) << 63;
-#endif
 }
 
 llvm::Optional<SymbolFileDWARF::DecodedUID>
@@ -1380,9 +1362,7 @@ SymbolFileDWARF::DecodeUID(lldb::user_id_t uid) {
     SymbolFileDWARF *dwarf = debug_map->GetSymbolFileByOSOIndex(
         debug_map->GetOSOIndexFromUserID(uid));
     return DecodedUID{
-        *dwarf, {llvm::None,
-//FIXME: llvm::None, DIERef::MainDwz,
-DIERef::Section::DebugInfo, dw_offset_t(uid)}};
+        *dwarf, {llvm::None, DIERef::Section::DebugInfo, dw_offset_t(uid)}};
   }
   dw_offset_t die_offset = uid;
   if (die_offset == DW_INVALID_OFFSET)
@@ -1397,23 +1377,6 @@ DIERef::Section::DebugInfo, dw_offset_t(uid)}};
     dwo_num = uid >> 32 & 0x3fffffff;
 
   return DecodedUID{*this, {dwo_num, section, die_offset}};
-
-#if 0 // FIXME
-  bool is_main_cu = (uid >> 62) & 1;
-//FIXME:  bool is_dwz_common = (uid >> 61) & 1;
-
-  llvm::Optional<uint32_t> dwo_num = uid >> 32 & 0x1fffffff;
-  if (*dwo_num == 0x1fffffff || is_main_cu)
-    dwo_num = llvm::None;
-
-  llvm::Optional<uint32_t> main_cu = uid >> 32 & 0x1fffffff;
-  if (*main_cu == 0x1fffffff || !is_main_cu)
-    main_cu = llvm::None;
-
-  return DecodedUID{*this, {dwo_num,
-//FIXME: main_cu, is_dwz_common ? DIERef::CommonDwz : DIERef::MainDwz,
-section, die_offset}};
-#endif
 }
 
 DWARFDIE
