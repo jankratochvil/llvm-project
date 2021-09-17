@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DIEREF_H
 
 #include "lldb/Core/dwarf.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/FormatProviders.h"
 #include <cassert>
@@ -53,66 +54,87 @@ public:
 
   DIERef(llvm::Optional<uint32_t> dwo_num, llvm::Optional<uint32_t> main_cu,
          DwzCommon dwz_common, Section section, dw_offset_t die_offset)
-      : m_data(dwo_num.getValueOr(0) | main_cu.getValueOr(0)),
-        m_data_kind(dwo_num ? DwoKind
-                            : (main_cu ? (dwz_common == MainDwz ? MainDwzKind
-                                                                : DwzCommonKind)
-                                       : NoneKind)),
-        m_section(section), m_die_offset(die_offset) {
+:m_u(dwo_num,main_cu,dwz_common,section),m_die_offset(die_offset) {
     assert(this->dwo_num() == dwo_num && "Dwo number out of range?");
     assert(this->main_cu() == main_cu && "Main Cu number out of range?");
     assert(dwz_common == MainDwz || main_cu);
   }
 
   llvm::Optional<uint32_t> dwo_num() const {
-    if (m_data_kind == DwoKind)
-      return m_data;
+    if (m_u.s.data_kind == DwoKind)
+      return m_u.s.data;
     return llvm::None;
   }
 
   // It indexes DWARFCompileUnit's excl. DWARFTypeUnit's.
   // It is the index used as parameter of SymbolFileDWARF::GetDWARFUnitIndex.
   llvm::Optional<uint32_t> main_cu() const {
-    if (m_data_kind == MainDwzKind || m_data_kind == DwzCommonKind)
-      return m_data;
+    if (m_u.s.data_kind == MainDwzKind || m_u.s.data_kind == DwzCommonKind)
+      return m_u.s.data;
     return llvm::None;
   }
 
   DwzCommon dwz_common() const {
-    assert(m_data_kind == MainDwzKind || m_data_kind == DwzCommonKind);
-    return m_data_kind == MainDwzKind ? MainDwz : CommonDwz;
+    assert(m_u.s.data_kind == MainDwzKind || m_u.s.data_kind == DwzCommonKind);
+    return m_u.s.data_kind == MainDwzKind ? MainDwz : CommonDwz;
   }
 
-  Kind kind_get() const { return Kind(m_data_kind); }
+  Kind kind_get() const { return Kind(m_u.s.data_kind); }
 
-  Section section() const { return static_cast<Section>(m_section); }
+  Section section() const { return static_cast<Section>(m_u.s.section); }
 
   dw_offset_t die_offset() const { return m_die_offset; }
 
   bool operator<(DIERef other) const {
-    if (m_data_kind != other.m_data_kind)
-      return m_data_kind < other.m_data_kind;
-    if (m_data_kind != NoneKind && (m_data != other.m_data))
-      return m_data < other.m_data;
-    if (m_section != other.m_section)
-      return m_section < other.m_section;
+    if (m_u.s.data_kind != other.m_u.s.data_kind)
+      return m_u.s.data_kind < other.m_u.s.data_kind;
+    // Assuming if m_u.s.data_kind == NoneKind then m_u.s.data is zero.
+    if (m_u.s.data != other.m_u.s.data)
+      return m_u.s.data < other.m_u.s.data;
+    if (m_u.s.section != other.m_u.s.section)
+      return m_u.s.section < other.m_u.s.section;
     return m_die_offset < other.m_die_offset;
   }
 
   bool operator==(DIERef other) const {
-    if (m_data_kind != other.m_data_kind)
-      return m_data_kind == other.m_data_kind;
-    if (m_data_kind != NoneKind && (m_data != other.m_data))
-      return m_data == other.m_data;
-    if (m_section != other.m_section)
-      return m_section == other.m_section;
+    if (m_u.s.data_kind != other.m_u.s.data_kind)
+      return m_u.s.data_kind == other.m_u.s.data_kind;
+    // Assuming if m_u.s.data_kind == NoneKind then m_u.s.data is zero.
+    if (m_u.s.data != other.m_u.s.data)
+      return m_u.s.data == other.m_u.s.data;
+    if (m_u.s.section != other.m_u.s.section)
+      return m_u.s.section == other.m_u.s.section;
     return m_die_offset == other.m_die_offset;
   }
 
 private:
-  uint32_t m_data : 29;
-  uint32_t m_data_kind : 2; // Kind type
-  uint32_t m_section : 1;   // Section type
+  friend struct llvm::DenseMapInfo<DIERef>;
+  DIERef(unsigned unique) : m_u(llvm::None, llvm::None, MainDwz, DebugInfo), m_die_offset(0) {
+    m_u.s.data = unique;
+  }
+  uint32_t get_hash_value() const {
+    return llvm::detail::combineHashValue(m_u.hash_bits, m_die_offset);
+  }
+
+  union U {
+    struct S {
+  uint32_t data : 29;
+  uint32_t data_kind : 2; // Kind type
+  uint32_t section : 1;   // Section type
+  S(llvm::Optional<uint32_t> dwo_num, llvm::Optional<uint32_t> main_cu,
+         DwzCommon dwz_common, Section section)
+         : data(dwo_num.getValueOr(0) | main_cu.getValueOr(0)),
+        data_kind(dwo_num ? DwoKind
+                            : (main_cu ? (dwz_common == MainDwz ? MainDwzKind
+                                                                : DwzCommonKind)
+                                       : NoneKind)),
+        section(section)  {}
+    } s;
+    uint32_t hash_bits;
+  U(llvm::Optional<uint32_t> dwo_num, llvm::Optional<uint32_t> main_cu,
+         DwzCommon dwz_common, Section section)
+         :s(dwo_num,main_cu,dwz_common,section) {}
+  } m_u;
   dw_offset_t m_die_offset;
 };
 static_assert(sizeof(DIERef) == 8, "");
@@ -123,6 +145,16 @@ namespace llvm {
 template<> struct format_provider<DIERef> {
   static void format(const DIERef &ref, raw_ostream &OS, StringRef Style);
 };
+
+/// DenseMapInfo implementation.
+/// \{
+template <> struct DenseMapInfo<DIERef> {
+  static inline DIERef getEmptyKey() { return DIERef(1); }
+  static inline DIERef getTombstoneKey() { return DIERef(2); }
+  static unsigned getHashValue(DIERef val) { return val.get_hash_value(); }
+  static bool isEqual(DIERef LHS, DIERef RHS) { return LHS == RHS; }
+};
+/// \}
 } // namespace llvm
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DIEREF_H
