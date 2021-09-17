@@ -79,8 +79,7 @@ protected:
       DeclContextToFileDIERefMap;
   typedef llvm::DenseMap<DIERef, lldb_private::OptionalClangModuleID>
       DIERefToModuleMap;
-  typedef llvm::DenseMap<DIERef, clang::Decl *>
-      DIERefToDeclMap;
+  typedef llvm::DenseMap<DIERef, clang::Decl *> DIERefToDeclMap;
 
   lldb_private::TypeSystemClang &m_ast;
   DIERefToDeclMap m_dieref_to_decl;
