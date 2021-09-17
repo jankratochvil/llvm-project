@@ -54,7 +54,7 @@ public:
 
   DIERef(llvm::Optional<uint32_t> dwo_num, llvm::Optional<uint32_t> main_cu,
          DwzCommon dwz_common, Section section, dw_offset_t die_offset)
-:m_u(dwo_num,main_cu,dwz_common,section),m_die_offset(die_offset) {
+      : m_u(dwo_num, main_cu, dwz_common, section), m_die_offset(die_offset) {
     assert(this->dwo_num() == dwo_num && "Dwo number out of range?");
     assert(this->main_cu() == main_cu && "Main Cu number out of range?");
     assert(dwz_common == MainDwz || main_cu);
@@ -109,7 +109,8 @@ public:
 
 private:
   friend struct llvm::DenseMapInfo<DIERef>;
-  DIERef(unsigned unique) : m_u(llvm::None, llvm::None, MainDwz, DebugInfo), m_die_offset(0) {
+  DIERef(unsigned unique)
+      : m_u(llvm::None, llvm::None, MainDwz, DebugInfo), m_die_offset(0) {
     m_u.s.data = unique;
   }
   uint32_t get_hash_value() const {
@@ -118,22 +119,23 @@ private:
 
   union U {
     struct S {
-  uint32_t data : 29;
-  uint32_t data_kind : 2; // Kind type
-  uint32_t section : 1;   // Section type
-  S(llvm::Optional<uint32_t> dwo_num, llvm::Optional<uint32_t> main_cu,
-         DwzCommon dwz_common, Section section)
-         : data(dwo_num.getValueOr(0) | main_cu.getValueOr(0)),
-        data_kind(dwo_num ? DwoKind
-                            : (main_cu ? (dwz_common == MainDwz ? MainDwzKind
-                                                                : DwzCommonKind)
-                                       : NoneKind)),
-        section(section)  {}
+      uint32_t data : 29;
+      uint32_t data_kind : 2; // Kind type
+      uint32_t section : 1;   // Section type
+      S(llvm::Optional<uint32_t> dwo_num, llvm::Optional<uint32_t> main_cu,
+        DwzCommon dwz_common, Section section)
+          : data(dwo_num.getValueOr(0) | main_cu.getValueOr(0)),
+            data_kind(dwo_num
+                          ? DwoKind
+                          : (main_cu ? (dwz_common == MainDwz ? MainDwzKind
+                                                              : DwzCommonKind)
+                                     : NoneKind)),
+            section(section) {}
     } s;
     uint32_t hash_bits;
-  U(llvm::Optional<uint32_t> dwo_num, llvm::Optional<uint32_t> main_cu,
-         DwzCommon dwz_common, Section section)
-         :s(dwo_num,main_cu,dwz_common,section) {}
+    U(llvm::Optional<uint32_t> dwo_num, llvm::Optional<uint32_t> main_cu,
+      DwzCommon dwz_common, Section section)
+        : s(dwo_num, main_cu, dwz_common, section) {}
   } m_u;
   dw_offset_t m_die_offset;
 };
