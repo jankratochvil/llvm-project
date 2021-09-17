@@ -26,7 +26,7 @@ public:
 
   std::vector<const clang::DeclContext *> GetDeclContextToDIEMapKeys() {
     std::vector<const clang::DeclContext *> keys;
-    for (const auto &it : m_decl_ctx_to_die)
+    for (const auto &it : m_decl_ctx_to_filedieref)
       keys.push_back(it.first);
     return keys;
   }

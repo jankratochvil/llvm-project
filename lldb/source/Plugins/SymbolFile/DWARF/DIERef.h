@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DIEREF_H
 
 #include "lldb/Core/dwarf.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/FormatProviders.h"
 #include <cassert>
@@ -29,35 +30,64 @@ public:
 
   DIERef(llvm::Optional<uint32_t> dwo_num, Section section,
          dw_offset_t die_offset)
-      : m_dwo_num(dwo_num.getValueOr(0)), m_dwo_num_valid(bool(dwo_num)),
-        m_section(section), m_die_offset(die_offset) {
+      : m_u(dwo_num, section), m_die_offset(die_offset) {
     assert(this->dwo_num() == dwo_num && "Dwo number out of range?");
   }
 
   llvm::Optional<uint32_t> dwo_num() const {
-    if (m_dwo_num_valid)
-      return m_dwo_num;
+    if (m_u.s.dwo_num_valid)
+      return m_u.s.dwo_num;
     return llvm::None;
   }
 
-  Section section() const { return static_cast<Section>(m_section); }
+  Section section() const { return static_cast<Section>(m_u.s.section); }
 
   dw_offset_t die_offset() const { return m_die_offset; }
 
   bool operator<(DIERef other) const {
-    if (m_dwo_num_valid != other.m_dwo_num_valid)
-      return m_dwo_num_valid < other.m_dwo_num_valid;
-    if (m_dwo_num_valid && (m_dwo_num != other.m_dwo_num))
-      return m_dwo_num < other.m_dwo_num;
-    if (m_section != other.m_section)
-      return m_section < other.m_section;
+    if (m_u.s.dwo_num_valid != other.m_u.s.dwo_num_valid)
+      return m_u.s.dwo_num_valid < other.m_u.s.dwo_num_valid;
+    // Assuming if not m_u.s.dwo_num_valid then m_u.s.dwo_num is zero.
+    if (m_u.s.dwo_num != other.m_u.s.dwo_num)
+      return m_u.s.dwo_num < other.m_u.s.dwo_num;
+    if (m_u.s.section != other.m_u.s.section)
+      return m_u.s.section < other.m_u.s.section;
     return m_die_offset < other.m_die_offset;
   }
 
+  bool operator==(DIERef other) const {
+    if (m_u.s.dwo_num_valid != other.m_u.s.dwo_num_valid)
+      return m_u.s.dwo_num_valid == other.m_u.s.dwo_num_valid;
+    // Assuming if not m_u.s.dwo_num_valid then m_u.s.dwo_num is zero.
+    if (m_u.s.dwo_num != other.m_u.s.dwo_num)
+      return m_u.s.dwo_num == other.m_u.s.dwo_num;
+    if (m_u.s.section != other.m_u.s.section)
+      return m_u.s.section == other.m_u.s.section;
+    return m_die_offset == other.m_die_offset;
+  }
+
 private:
-  uint32_t m_dwo_num : 30;
-  uint32_t m_dwo_num_valid : 1;
-  uint32_t m_section : 1;
+  friend struct llvm::DenseMapInfo<DIERef>;
+  DIERef(unsigned unique) : m_u(llvm::None, DebugInfo), m_die_offset(0) {
+    m_u.s.dwo_num = unique;
+  }
+  uint32_t get_hash_value() const {
+    return llvm::detail::combineHashValue(m_u.hash_bits, m_die_offset);
+  }
+
+  union U {
+    struct S {
+      uint32_t dwo_num : 30;
+      uint32_t dwo_num_valid : 1;
+      uint32_t section : 1;
+      S(llvm::Optional<uint32_t> dwo_num, Section section)
+          : dwo_num(dwo_num.getValueOr(0)), dwo_num_valid(bool(dwo_num)),
+            section(section) {}
+    } s;
+    uint32_t hash_bits;
+    U(llvm::Optional<uint32_t> dwo_num, Section section)
+        : s(dwo_num, section) {}
+  } m_u;
   dw_offset_t m_die_offset;
 };
 static_assert(sizeof(DIERef) == 8, "");
@@ -68,6 +98,16 @@ namespace llvm {
 template<> struct format_provider<DIERef> {
   static void format(const DIERef &ref, raw_ostream &OS, StringRef Style);
 };
+
+/// DenseMapInfo implementation.
+/// \{
+template <> struct DenseMapInfo<DIERef> {
+  static inline DIERef getEmptyKey() { return DIERef(1); }
+  static inline DIERef getTombstoneKey() { return DIERef(2); }
+  static unsigned getHashValue(DIERef val) { return val.get_hash_value(); }
+  static bool isEqual(DIERef LHS, DIERef RHS) { return LHS == RHS; }
+};
+/// \}
 } // namespace llvm
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DIEREF_H
