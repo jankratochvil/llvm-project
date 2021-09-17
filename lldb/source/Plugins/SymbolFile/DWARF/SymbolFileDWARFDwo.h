@@ -43,11 +43,11 @@ public:
   llvm::Optional<uint32_t> GetDwoNum() override { return GetID() >> 32; }
 
 protected:
-  DIEToTypePtr &GetDIEToType() override;
+  DIERefToTypePtr &GetDIERefToType() override;
 
-  DIEToVariableSP &GetDIEToVariable() override;
+  DIERefToVariableSP &GetDIERefToVariable() override;
 
-  DIEToClangType &GetForwardDeclDieToClangType() override;
+  DIERefToClangType &GetForwardDeclDIERefToClangType() override;
 
   ClangTypeToDIE &GetForwardDeclClangTypeToDie() override;
 

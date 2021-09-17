@@ -76,17 +76,17 @@ DWARFCompileUnit *SymbolFileDWARFDwo::FindSingleCompileUnit() {
   return cu;
 }
 
-SymbolFileDWARF::DIEToTypePtr &SymbolFileDWARFDwo::GetDIEToType() {
-  return GetBaseSymbolFile().GetDIEToType();
+SymbolFileDWARF::DIERefToTypePtr &SymbolFileDWARFDwo::GetDIERefToType() {
+  return GetBaseSymbolFile().GetDIERefToType();
 }
 
-SymbolFileDWARF::DIEToVariableSP &SymbolFileDWARFDwo::GetDIEToVariable() {
-  return GetBaseSymbolFile().GetDIEToVariable();
+SymbolFileDWARF::DIERefToVariableSP &SymbolFileDWARFDwo::GetDIERefToVariable() {
+  return GetBaseSymbolFile().GetDIERefToVariable();
 }
 
-SymbolFileDWARF::DIEToClangType &
-SymbolFileDWARFDwo::GetForwardDeclDieToClangType() {
-  return GetBaseSymbolFile().GetForwardDeclDieToClangType();
+SymbolFileDWARF::DIERefToClangType &
+SymbolFileDWARFDwo::GetForwardDeclDIERefToClangType() {
+  return GetBaseSymbolFile().GetForwardDeclDIERefToClangType();
 }
 
 SymbolFileDWARF::ClangTypeToDIE &
