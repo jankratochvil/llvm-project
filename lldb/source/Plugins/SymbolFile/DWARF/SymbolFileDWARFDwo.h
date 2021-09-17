@@ -45,7 +45,7 @@ public:
 protected:
   DIERefToTypePtr &GetDIERefToType() override;
 
-  DIEToVariableSP &GetDIEToVariable() override;
+  DIERefToVariableSP &GetDIERefToVariable() override;
 
   DIEToClangType &GetForwardDeclDieToClangType() override;
 

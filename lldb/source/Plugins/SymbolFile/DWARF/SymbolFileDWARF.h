@@ -320,8 +320,8 @@ public:
 
 protected:
   typedef llvm::DenseMap<DIERef, lldb_private::Type *> DIERefToTypePtr;
-  typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb::VariableSP>
-      DIEToVariableSP;
+  typedef llvm::DenseMap<DIERef, lldb::VariableSP>
+      DIERefToVariableSP;
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *,
                          lldb::opaque_compiler_type_t>
       DIEToClangType;
@@ -460,7 +460,7 @@ protected:
 
   virtual DIERefToTypePtr &GetDIERefToType() { return m_dieref_to_type; }
 
-  virtual DIEToVariableSP &GetDIEToVariable() { return m_die_to_variable_sp; }
+  virtual DIERefToVariableSP &GetDIERefToVariable() { return m_dieref_to_variable_sp; }
 
   virtual DIEToClangType &GetForwardDeclDieToClangType() {
     return m_forward_decl_die_to_clang_type;
@@ -512,7 +512,7 @@ protected:
   std::unique_ptr<DWARFDebugRanges> m_ranges;
   UniqueDWARFASTTypeMap m_unique_ast_type_map;
   DIERefToTypePtr m_dieref_to_type;
-  DIEToVariableSP m_die_to_variable_sp;
+  DIERefToVariableSP m_dieref_to_variable_sp;
   DIEToClangType m_forward_decl_die_to_clang_type;
   ClangTypeToDIE m_forward_decl_clang_type_to_die;
   llvm::DenseMap<dw_offset_t, lldb_private::FileSpecList>

@@ -80,8 +80,8 @@ SymbolFileDWARF::DIERefToTypePtr &SymbolFileDWARFDwo::GetDIERefToType() {
   return GetBaseSymbolFile().GetDIERefToType();
 }
 
-SymbolFileDWARF::DIEToVariableSP &SymbolFileDWARFDwo::GetDIEToVariable() {
-  return GetBaseSymbolFile().GetDIEToVariable();
+SymbolFileDWARF::DIERefToVariableSP &SymbolFileDWARFDwo::GetDIERefToVariable() {
+  return GetBaseSymbolFile().GetDIERefToVariable();
 }
 
 SymbolFileDWARF::DIEToClangType &
