@@ -58,7 +58,7 @@
 using namespace lldb;
 using namespace lldb_private;
 DWARFASTParserClang::DWARFASTParserClang(TypeSystemClang &ast)
-    : m_ast(ast), m_die_to_decl_ctx(), m_decl_ctx_to_die() {}
+    : m_ast(ast), m_die_to_decl_ctx(), m_decl_ctx_to_filedieref() {}
 
 DWARFASTParserClang::~DWARFASTParserClang() = default;
 
@@ -2099,11 +2099,17 @@ void DWARFASTParserClang::EnsureAllDIEsInDeclContextHaveBeenParsed(
     lldb_private::CompilerDeclContext decl_context) {
   auto opaque_decl_ctx =
       (clang::DeclContext *)decl_context.GetOpaqueDeclContext();
-  for (auto it = m_decl_ctx_to_die.find(opaque_decl_ctx);
-       it != m_decl_ctx_to_die.end() && it->first == opaque_decl_ctx;
-       it = m_decl_ctx_to_die.erase(it))
-    for (DWARFDIE decl : it->second.children())
+  for (auto it = m_decl_ctx_to_filedieref.find(opaque_decl_ctx);
+       it != m_decl_ctx_to_filedieref.end() && it->first == opaque_decl_ctx;
+       it = m_decl_ctx_to_filedieref.erase(it)) {
+    // We need to store also SymbolFileDWARF * as we cannot assume
+    // m_ast.GetSymbolFile() is actually a SymbolFileDWARF, it can be
+    // a SymbolFileDWARFDebugMap for Apple binaries.
+    std::pair<SymbolFileDWARF *, DIERef> declpair = it->second;
+    DWARFDIE die = declpair.first->GetDIE(declpair.second);
+    for (DWARFDIE decl : die.children())
       GetClangDeclForDIE(decl);
+  }
 }
 
 CompilerDecl DWARFASTParserClang::GetDeclForUIDFromDWARF(const DWARFDIE &die) {
@@ -3450,9 +3456,11 @@ DWARFASTParserClang::GetCachedClangDeclContextForDIE(const DWARFDIE &die) {
 void DWARFASTParserClang::LinkDeclContextToDIE(clang::DeclContext *decl_ctx,
                                                const DWARFDIE &die) {
   m_die_to_decl_ctx[die.GetDIE()] = decl_ctx;
+  SymbolFileDWARF *sym_file = &die.GetCU()->GetSymbolFileDWARF();
+  DIERef ref = *die.GetDIERef();
   // There can be many DIEs for a single decl context
-  // m_decl_ctx_to_die[decl_ctx].insert(die.GetDIE());
-  m_decl_ctx_to_die.insert(std::make_pair(decl_ctx, die));
+  // m_decl_ctx_to_filedieref[decl_ctx].insert(...);
+  m_decl_ctx_to_filedieref.insert(std::make_pair(decl_ctx, std::make_pair(sym_file, ref)));
 }
 
 bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
