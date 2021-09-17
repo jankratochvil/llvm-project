@@ -326,13 +326,10 @@ public:
   llvm::Optional<uint32_t> GetDWARFUnitIndex(uint32_t cu_idx);
 
 protected:
-  typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb_private::Type *>
-      DIEToTypePtr;
-  typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb::VariableSP>
-      DIEToVariableSP;
-  typedef llvm::DenseMap<const DWARFDebugInfoEntry *,
-                         lldb::opaque_compiler_type_t>
-      DIEToClangType;
+  typedef llvm::DenseMap<DIERef, lldb_private::Type *> DIERefToTypePtr;
+  typedef llvm::DenseMap<DIERef, lldb::VariableSP> DIERefToVariableSP;
+  typedef llvm::DenseMap<DIERef, lldb::opaque_compiler_type_t>
+      DIERefToClangType;
   typedef llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> ClangTypeToDIE;
 
   SymbolFileDWARF(const SymbolFileDWARF &) = delete;
@@ -466,12 +463,14 @@ protected:
 
   void UpdateExternalModuleListIfNeeded();
 
-  virtual DIEToTypePtr &GetDIEToType() { return m_die_to_type; }
+  virtual DIERefToTypePtr &GetDIERefToType() { return m_dieref_to_type; }
 
-  virtual DIEToVariableSP &GetDIEToVariable() { return m_die_to_variable_sp; }
+  virtual DIERefToVariableSP &GetDIERefToVariable() {
+    return m_dieref_to_variable_sp;
+  }
 
-  virtual DIEToClangType &GetForwardDeclDieToClangType() {
-    return m_forward_decl_die_to_clang_type;
+  virtual DIERefToClangType &GetForwardDeclDIERefToClangType() {
+    return m_forward_decl_dieref_to_clang_type;
   }
 
   virtual ClangTypeToDIE &GetForwardDeclClangTypeToDie() {
@@ -520,9 +519,9 @@ protected:
   NameToOffsetMap m_function_scope_qualified_name_map;
   std::unique_ptr<DWARFDebugRanges> m_ranges;
   UniqueDWARFASTTypeMap m_unique_ast_type_map;
-  DIEToTypePtr m_die_to_type;
-  DIEToVariableSP m_die_to_variable_sp;
-  DIEToClangType m_forward_decl_die_to_clang_type;
+  DIERefToTypePtr m_dieref_to_type;
+  DIERefToVariableSP m_dieref_to_variable_sp;
+  DIERefToClangType m_forward_decl_dieref_to_clang_type;
   ClangTypeToDIE m_forward_decl_clang_type_to_die;
   llvm::DenseMap<dw_offset_t, lldb_private::FileSpecList>
       m_shared_unit_support_files;
