@@ -3271,8 +3271,9 @@ DWARFASTParserClang::GetOwningClangModule(const DWARFDIE &die) {
     const dw_tag_t tag = parent.Tag();
     if (tag == DW_TAG_module) {
       DWARFDIE module_die = parent;
-      auto it = m_die_to_module.find(module_die.GetDIE());
-      if (it != m_die_to_module.end())
+      DIERef module_dieref = *module_die.GetDIERef();
+      auto it = m_dieref_to_module.find(module_dieref);
+      if (it != m_dieref_to_module.end())
         return it->second;
       const char *name = module_die.GetAttributeValueAsString(DW_AT_name, 0);
       if (!name)
@@ -3280,7 +3281,7 @@ DWARFASTParserClang::GetOwningClangModule(const DWARFDIE &die) {
 
       OptionalClangModuleID id =
           m_ast.GetOrCreateClangModule(name, GetOwningClangModule(module_die));
-      m_die_to_module.insert({module_die.GetDIE(), id});
+      m_dieref_to_module.insert({module_dieref, id});
       return id;
     }
   }
