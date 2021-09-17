@@ -32,9 +32,6 @@ public:
 
   DWARFDIE DIE() { return {DWARFUnitPair(this), DIEPtr()}; }
 
-  size_t AppendDIEsWithTag(const dw_tag_t tag, std::vector<DWARFDIE> &dies,
-                           uint32_t depth = UINT32_MAX) const;
-
   static DWARFCompileUnit *GetMainUnit(const lldb_private::SymbolContext &sc,
                                        SymbolFileDWARF **dwarf_return);
   static DWARFCompileUnit *GetMainUnit(lldb_private::CompileUnit &comp_unit,
