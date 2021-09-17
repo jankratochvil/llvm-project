@@ -10,7 +10,6 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DIEREF_H
 
 #include "lldb/Core/dwarf.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/FormatProviders.h"
 #include <cassert>
@@ -67,10 +66,6 @@ public:
   }
 
 private:
-  friend struct llvm::DenseMapInfo<DIERef>;
-  DIERef(unsigned unique) : m_u(llvm::None, DebugInfo), m_die_offset(0) {
-    m_u.s.dwo_num = unique;
-  }
   uint32_t get_hash_value() const {
     return llvm::detail::combineHashValue(m_u.hash_bits, m_die_offset);
   }
@@ -98,16 +93,6 @@ namespace llvm {
 template<> struct format_provider<DIERef> {
   static void format(const DIERef &ref, raw_ostream &OS, StringRef Style);
 };
-
-/// DenseMapInfo implementation.
-/// \{
-template <> struct DenseMapInfo<DIERef> {
-  static inline DIERef getEmptyKey() { return DIERef(1); }
-  static inline DIERef getTombstoneKey() { return DIERef(2); }
-  static unsigned getHashValue(DIERef val) { return val.get_hash_value(); }
-  static bool isEqual(DIERef LHS, DIERef RHS) { return LHS == RHS; }
-};
-/// \}
 } // namespace llvm
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DIEREF_H
