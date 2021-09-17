@@ -84,9 +84,9 @@ SymbolFileDWARF::DIERefToVariableSP &SymbolFileDWARFDwo::GetDIERefToVariable() {
   return GetBaseSymbolFile().GetDIERefToVariable();
 }
 
-SymbolFileDWARF::DIEToClangType &
-SymbolFileDWARFDwo::GetForwardDeclDieToClangType() {
-  return GetBaseSymbolFile().GetForwardDeclDieToClangType();
+SymbolFileDWARF::DIERefToClangType &
+SymbolFileDWARFDwo::GetForwardDeclDIERefToClangType() {
+  return GetBaseSymbolFile().GetForwardDeclDIERefToClangType();
 }
 
 SymbolFileDWARF::ClangTypeToDIE &

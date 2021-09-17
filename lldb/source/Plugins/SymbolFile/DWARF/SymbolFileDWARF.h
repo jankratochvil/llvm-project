@@ -321,9 +321,9 @@ public:
 protected:
   typedef llvm::DenseMap<DIERef, lldb_private::Type *> DIERefToTypePtr;
   typedef llvm::DenseMap<DIERef, lldb::VariableSP> DIERefToVariableSP;
-  typedef llvm::DenseMap<const DWARFDebugInfoEntry *,
+  typedef llvm::DenseMap<DIERef,
                          lldb::opaque_compiler_type_t>
-      DIEToClangType;
+      DIERefToClangType;
   typedef llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> ClangTypeToDIE;
 
   SymbolFileDWARF(const SymbolFileDWARF &) = delete;
@@ -463,8 +463,8 @@ protected:
     return m_dieref_to_variable_sp;
   }
 
-  virtual DIEToClangType &GetForwardDeclDieToClangType() {
-    return m_forward_decl_die_to_clang_type;
+  virtual DIERefToClangType &GetForwardDeclDIERefToClangType() {
+    return m_forward_decl_dieref_to_clang_type;
   }
 
   virtual ClangTypeToDIE &GetForwardDeclClangTypeToDie() {
@@ -514,7 +514,7 @@ protected:
   UniqueDWARFASTTypeMap m_unique_ast_type_map;
   DIERefToTypePtr m_dieref_to_type;
   DIERefToVariableSP m_dieref_to_variable_sp;
-  DIEToClangType m_forward_decl_die_to_clang_type;
+  DIERefToClangType m_forward_decl_dieref_to_clang_type;
   ClangTypeToDIE m_forward_decl_clang_type_to_die;
   llvm::DenseMap<dw_offset_t, lldb_private::FileSpecList>
       m_type_unit_support_files;

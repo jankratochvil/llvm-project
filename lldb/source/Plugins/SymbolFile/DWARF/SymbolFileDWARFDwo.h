@@ -47,7 +47,7 @@ protected:
 
   DIERefToVariableSP &GetDIERefToVariable() override;
 
-  DIEToClangType &GetForwardDeclDieToClangType() override;
+  DIERefToClangType &GetForwardDeclDIERefToClangType() override;
 
   ClangTypeToDIE &GetForwardDeclClangTypeToDie() override;
 
