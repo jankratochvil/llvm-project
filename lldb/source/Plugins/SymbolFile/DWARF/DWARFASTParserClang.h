@@ -73,8 +73,7 @@ protected:
   class DelayedAddObjCClassProperty;
   typedef std::vector<DelayedAddObjCClassProperty> DelayedPropertyList;
 
-  typedef llvm::DenseMap<DIERef, clang::DeclContext *>
-      DIERefToDeclContextMap;
+  typedef llvm::DenseMap<DIERef, clang::DeclContext *> DIERefToDeclContextMap;
   typedef std::multimap<const clang::DeclContext *,
                         std::pair<SymbolFileDWARF *, DIERef>>
       DeclContextToFileDIERefMap;

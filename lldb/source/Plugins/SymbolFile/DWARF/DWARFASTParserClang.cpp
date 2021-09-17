@@ -3351,8 +3351,8 @@ DWARFASTParserClang::GetDeclContextForBlock(const DWARFDIE &die) {
 
 clang::BlockDecl *DWARFASTParserClang::ResolveBlockDIE(const DWARFDIE &die) {
   if (die && die.Tag() == DW_TAG_lexical_block) {
-    clang::BlockDecl *decl =
-        llvm::cast_or_null<clang::BlockDecl>(m_dieref_to_decl_ctx[*die.GetDIERef()]);
+    clang::BlockDecl *decl = llvm::cast_or_null<clang::BlockDecl>(
+        m_dieref_to_decl_ctx[*die.GetDIERef()]);
 
     if (!decl) {
       DWARFDIE decl_context_die;
@@ -3375,8 +3375,8 @@ DWARFASTParserClang::ResolveNamespaceDIE(const DWARFDIE &die) {
   if (die && die.Tag() == DW_TAG_namespace) {
     // See if we already parsed this namespace DIE and associated it with a
     // uniqued namespace declaration
-    clang::NamespaceDecl *namespace_decl =
-        static_cast<clang::NamespaceDecl *>(m_dieref_to_decl_ctx[*die.GetDIERef()]);
+    clang::NamespaceDecl *namespace_decl = static_cast<clang::NamespaceDecl *>(
+        m_dieref_to_decl_ctx[*die.GetDIERef()]);
     if (namespace_decl)
       return namespace_decl;
     else {
@@ -3443,7 +3443,8 @@ clang::DeclContext *DWARFASTParserClang::GetClangDeclContextContainingDIE(
 clang::DeclContext *
 DWARFASTParserClang::GetCachedClangDeclContextForDIE(const DWARFDIE &die) {
   if (die) {
-    DIERefToDeclContextMap::iterator pos = m_dieref_to_decl_ctx.find(*die.GetDIERef());
+    DIERefToDeclContextMap::iterator pos =
+        m_dieref_to_decl_ctx.find(*die.GetDIERef());
     if (pos != m_dieref_to_decl_ctx.end())
       return pos->second;
   }

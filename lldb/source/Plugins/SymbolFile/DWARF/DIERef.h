@@ -10,9 +10,9 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DIEREF_H
 
 #include "lldb/Core/dwarf.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/FormatProviders.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include <cassert>
 #include <vector>
 
@@ -30,7 +30,7 @@ public:
 
   DIERef(llvm::Optional<uint32_t> dwo_num, Section section,
          dw_offset_t die_offset)
-      :m_u(dwo_num,section), m_die_offset(die_offset) {
+      : m_u(dwo_num, section), m_die_offset(die_offset) {
     assert(this->dwo_num() == dwo_num && "Dwo number out of range?");
   }
 
@@ -68,11 +68,11 @@ public:
 
 private:
   friend struct llvm::DenseMapInfo<DIERef>;
-  DIERef(unsigned unique):m_u(llvm::None,DebugInfo),m_die_offset(0) {
-    m_u.s.dwo_num=unique;
+  DIERef(unsigned unique) : m_u(llvm::None, DebugInfo), m_die_offset(0) {
+    m_u.s.dwo_num = unique;
   }
-  uint32_t get_hash_value() const { 
-    return llvm::detail::combineHashValue(m_u.hash_bits,m_die_offset);
+  uint32_t get_hash_value() const {
+    return llvm::detail::combineHashValue(m_u.hash_bits, m_die_offset);
   }
 
   union U {
@@ -80,10 +80,13 @@ private:
       uint32_t dwo_num : 30;
       uint32_t dwo_num_valid : 1;
       uint32_t section : 1;
-      S(llvm::Optional<uint32_t> dwo_num, Section section): dwo_num(dwo_num.getValueOr(0)), dwo_num_valid(bool(dwo_num)),section(section) {}
+      S(llvm::Optional<uint32_t> dwo_num, Section section)
+          : dwo_num(dwo_num.getValueOr(0)), dwo_num_valid(bool(dwo_num)),
+            section(section) {}
     } s;
     uint32_t hash_bits;
-    U(llvm::Optional<uint32_t> dwo_num, Section section):s(dwo_num,section) {}
+    U(llvm::Optional<uint32_t> dwo_num, Section section)
+        : s(dwo_num, section) {}
   } m_u;
   dw_offset_t m_die_offset;
 };
@@ -99,19 +102,10 @@ template<> struct format_provider<DIERef> {
 /// DenseMapInfo implementation.
 /// \{
 template <> struct DenseMapInfo<DIERef> {
-  static inline DIERef getEmptyKey() {
-    return DIERef(1);
-  }
-  static inline DIERef getTombstoneKey() {
-    return DIERef(2);
-  }
-  static unsigned getHashValue(DIERef val) {
-    return val.get_hash_value();
-  }
-  static bool isEqual(DIERef LHS,
-                      DIERef RHS) {
-    return LHS == RHS;
-  }
+  static inline DIERef getEmptyKey() { return DIERef(1); }
+  static inline DIERef getTombstoneKey() { return DIERef(2); }
+  static unsigned getHashValue(DIERef val) { return val.get_hash_value(); }
+  static bool isEqual(DIERef LHS, DIERef RHS) { return LHS == RHS; }
 };
 /// \}
 } // namespace llvm
