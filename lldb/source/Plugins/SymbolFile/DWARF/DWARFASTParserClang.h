@@ -77,14 +77,13 @@ protected:
   typedef std::multimap<const clang::DeclContext *,
                         std::pair<SymbolFileDWARF *, DIERef>>
       DeclContextToFileDIERefMap;
-  typedef llvm::DenseMap<DIERef,
-                         lldb_private::OptionalClangModuleID>
+  typedef llvm::DenseMap<DIERef, lldb_private::OptionalClangModuleID>
       DIERefToModuleMap;
-  typedef llvm::DenseMap<const DWARFDebugInfoEntry *, clang::Decl *>
-      DIEToDeclMap;
+  typedef llvm::DenseMap<DIERef, clang::Decl *>
+      DIERefToDeclMap;
 
   lldb_private::TypeSystemClang &m_ast;
-  DIEToDeclMap m_die_to_decl;
+  DIERefToDeclMap m_dieref_to_decl;
   DIERefToDeclContextMap m_dieref_to_decl_ctx;
   DeclContextToFileDIERefMap m_decl_ctx_to_filedieref;
   DIERefToModuleMap m_dieref_to_module;

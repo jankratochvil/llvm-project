@@ -3136,20 +3136,21 @@ clang::Decl *DWARFASTParserClang::GetClangDeclForDIE(const DWARFDIE &die) {
     return nullptr;
   }
 
-  DIEToDeclMap::iterator cache_pos = m_die_to_decl.find(die.GetDIE());
-  if (cache_pos != m_die_to_decl.end())
+  DIERef dieref = *die.GetDIERef();
+  DIERefToDeclMap::iterator cache_pos = m_dieref_to_decl.find(dieref);
+  if (cache_pos != m_dieref_to_decl.end())
     return cache_pos->second;
 
   if (DWARFDIE spec_die = die.GetReferencedDIE(DW_AT_specification)) {
     clang::Decl *decl = GetClangDeclForDIE(spec_die);
-    m_die_to_decl[die.GetDIE()] = decl;
+    m_dieref_to_decl[dieref] = decl;
     return decl;
   }
 
   if (DWARFDIE abstract_origin_die =
           die.GetReferencedDIE(DW_AT_abstract_origin)) {
     clang::Decl *decl = GetClangDeclForDIE(abstract_origin_die);
-    m_die_to_decl[die.GetDIE()] = decl;
+    m_dieref_to_decl[dieref] = decl;
     return decl;
   }
 
@@ -3213,7 +3214,7 @@ clang::Decl *DWARFASTParserClang::GetClangDeclForDIE(const DWARFDIE &die) {
     break;
   }
 
-  m_die_to_decl[die.GetDIE()] = decl;
+  m_dieref_to_decl[dieref] = decl;
 
   return decl;
 }
