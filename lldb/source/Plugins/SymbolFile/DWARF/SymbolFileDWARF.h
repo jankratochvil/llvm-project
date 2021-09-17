@@ -321,8 +321,7 @@ public:
 protected:
   typedef llvm::DenseMap<DIERef, lldb_private::Type *> DIERefToTypePtr;
   typedef llvm::DenseMap<DIERef, lldb::VariableSP> DIERefToVariableSP;
-  typedef llvm::DenseMap<DIERef,
-                         lldb::opaque_compiler_type_t>
+  typedef llvm::DenseMap<DIERef, lldb::opaque_compiler_type_t>
       DIERefToClangType;
   typedef llvm::DenseMap<lldb::opaque_compiler_type_t, DIERef> ClangTypeToDIE;
 

@@ -825,7 +825,8 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
   CompilerType enumerator_clang_type;
   CompilerType clang_type;
   clang_type.SetCompilerType(
-      &m_ast, dwarf->GetForwardDeclDIERefToClangType().lookup(*die.GetDIERef()));
+      &m_ast,
+      dwarf->GetForwardDeclDIERefToClangType().lookup(*die.GetDIERef()));
   if (!clang_type) {
     if (attrs.type.IsValid()) {
       Type *enumerator_type =
@@ -1589,7 +1590,8 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   (void)tag_decl_kind;
   bool clang_type_was_created = false;
   clang_type.SetCompilerType(
-      &m_ast, dwarf->GetForwardDeclDIERefToClangType().lookup(*die.GetDIERef()));
+      &m_ast,
+      dwarf->GetForwardDeclDIERefToClangType().lookup(*die.GetDIERef()));
   if (!clang_type) {
     clang::DeclContext *decl_ctx =
         GetClangDeclContextContainingDIE(die, nullptr);
