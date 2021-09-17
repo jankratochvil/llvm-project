@@ -76,7 +76,8 @@ protected:
   typedef llvm::SmallPtrSet<const DWARFDebugInfoEntry *, 4> DIEPointerSet;
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, clang::DeclContext *>
       DIEToDeclContextMap;
-  typedef std::multimap<const clang::DeclContext *, const std::pair<SymbolFileDWARF *, DIERef>>
+  typedef std::multimap<const clang::DeclContext *,
+                        const std::pair<SymbolFileDWARF *, DIERef>>
       DeclContextToFileDIERefMap;
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *,
                          lldb_private::OptionalClangModuleID>

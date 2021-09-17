@@ -3460,7 +3460,8 @@ void DWARFASTParserClang::LinkDeclContextToDIE(clang::DeclContext *decl_ctx,
   DIERef ref = *die.GetDIERef();
   // There can be many DIEs for a single decl context
   // m_decl_ctx_to_filedieref[decl_ctx].insert(...);
-  m_decl_ctx_to_filedieref.insert(std::make_pair(decl_ctx, std::make_pair(sym_file, ref)));
+  m_decl_ctx_to_filedieref.insert(
+      std::make_pair(decl_ctx, std::make_pair(sym_file, ref)));
 }
 
 bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
