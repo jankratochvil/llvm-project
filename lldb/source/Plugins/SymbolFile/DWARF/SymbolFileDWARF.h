@@ -320,8 +320,7 @@ public:
 
 protected:
   typedef llvm::DenseMap<DIERef, lldb_private::Type *> DIERefToTypePtr;
-  typedef llvm::DenseMap<DIERef, lldb::VariableSP>
-      DIERefToVariableSP;
+  typedef llvm::DenseMap<DIERef, lldb::VariableSP> DIERefToVariableSP;
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *,
                          lldb::opaque_compiler_type_t>
       DIEToClangType;
@@ -460,7 +459,9 @@ protected:
 
   virtual DIERefToTypePtr &GetDIERefToType() { return m_dieref_to_type; }
 
-  virtual DIERefToVariableSP &GetDIERefToVariable() { return m_dieref_to_variable_sp; }
+  virtual DIERefToVariableSP &GetDIERefToVariable() {
+    return m_dieref_to_variable_sp;
+  }
 
   virtual DIEToClangType &GetForwardDeclDieToClangType() {
     return m_forward_decl_die_to_clang_type;
