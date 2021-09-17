@@ -58,7 +58,7 @@
 using namespace lldb;
 using namespace lldb_private;
 DWARFASTParserClang::DWARFASTParserClang(TypeSystemClang &ast)
-    : m_ast(ast), m_die_to_decl_ctx(), m_decl_ctx_to_filedieref() {}
+    : m_ast(ast), m_dieref_to_decl_ctx(), m_decl_ctx_to_filedieref() {}
 
 DWARFASTParserClang::~DWARFASTParserClang() = default;
 
@@ -1040,7 +1040,7 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
           if (attrs.specification.IsValid()) {
             // We have a specification which we are going to base our
             // function prototype off of, so we need this type to be
-            // completed so that the m_die_to_decl_ctx for the method in
+            // completed so that the m_dieref_to_decl_ctx for the method in
             // the specification has a valid clang decl context.
             class_type->GetForwardCompilerType();
             // If we have a specification, then the function type should
@@ -1061,7 +1061,7 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
           } else if (attrs.abstract_origin.IsValid()) {
             // We have a specification which we are going to base our
             // function prototype off of, so we need this type to be
-            // completed so that the m_die_to_decl_ctx for the method in
+            // completed so that the m_dieref_to_decl_ctx for the method in
             // the abstract origin has a valid clang decl context.
             class_type->GetForwardCompilerType();
 
@@ -3352,7 +3352,7 @@ DWARFASTParserClang::GetDeclContextForBlock(const DWARFDIE &die) {
 clang::BlockDecl *DWARFASTParserClang::ResolveBlockDIE(const DWARFDIE &die) {
   if (die && die.Tag() == DW_TAG_lexical_block) {
     clang::BlockDecl *decl =
-        llvm::cast_or_null<clang::BlockDecl>(m_die_to_decl_ctx[die.GetDIE()]);
+        llvm::cast_or_null<clang::BlockDecl>(m_dieref_to_decl_ctx[*die.GetDIERef()]);
 
     if (!decl) {
       DWARFDIE decl_context_die;
@@ -3376,7 +3376,7 @@ DWARFASTParserClang::ResolveNamespaceDIE(const DWARFDIE &die) {
     // See if we already parsed this namespace DIE and associated it with a
     // uniqued namespace declaration
     clang::NamespaceDecl *namespace_decl =
-        static_cast<clang::NamespaceDecl *>(m_die_to_decl_ctx[die.GetDIE()]);
+        static_cast<clang::NamespaceDecl *>(m_dieref_to_decl_ctx[*die.GetDIERef()]);
     if (namespace_decl)
       return namespace_decl;
     else {
@@ -3443,8 +3443,8 @@ clang::DeclContext *DWARFASTParserClang::GetClangDeclContextContainingDIE(
 clang::DeclContext *
 DWARFASTParserClang::GetCachedClangDeclContextForDIE(const DWARFDIE &die) {
   if (die) {
-    DIEToDeclContextMap::iterator pos = m_die_to_decl_ctx.find(die.GetDIE());
-    if (pos != m_die_to_decl_ctx.end())
+    DIERefToDeclContextMap::iterator pos = m_dieref_to_decl_ctx.find(*die.GetDIERef());
+    if (pos != m_dieref_to_decl_ctx.end())
       return pos->second;
   }
   return nullptr;
@@ -3452,9 +3452,9 @@ DWARFASTParserClang::GetCachedClangDeclContextForDIE(const DWARFDIE &die) {
 
 void DWARFASTParserClang::LinkDeclContextToDIE(clang::DeclContext *decl_ctx,
                                                const DWARFDIE &die) {
-  m_die_to_decl_ctx[die.GetDIE()] = decl_ctx;
-  SymbolFileDWARF *sym_file = &die.GetCU()->GetSymbolFileDWARF();
   DIERef ref = *die.GetDIERef();
+  m_dieref_to_decl_ctx[ref] = decl_ctx;
+  SymbolFileDWARF *sym_file = &die.GetCU()->GetSymbolFileDWARF();
   // There can be many DIEs for a single decl context
   // m_decl_ctx_to_filedieref[decl_ctx].insert(...);
   m_decl_ctx_to_filedieref.insert(
@@ -3588,7 +3588,7 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
       dst_die = dst_name_to_die.GetValueAtIndexUnchecked(idx);
 
       clang::DeclContext *src_decl_ctx =
-          src_dwarf_ast_parser->m_die_to_decl_ctx[src_die.GetDIE()];
+          src_dwarf_ast_parser->m_dieref_to_decl_ctx[*src_die.GetDIERef()];
       if (src_decl_ctx) {
         LLDB_LOGF(log, "uniquing decl context %p from 0x%8.8x for 0x%8.8x",
                   static_cast<void *>(src_decl_ctx), src_die.GetOffset(),
@@ -3632,7 +3632,7 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
 
         if (src_die && (src_die.Tag() == dst_die.Tag())) {
           clang::DeclContext *src_decl_ctx =
-              src_dwarf_ast_parser->m_die_to_decl_ctx[src_die.GetDIE()];
+              src_dwarf_ast_parser->m_dieref_to_decl_ctx[*src_die.GetDIERef()];
           if (src_decl_ctx) {
             LLDB_LOGF(log, "uniquing decl context %p from 0x%8.8x for 0x%8.8x",
                       static_cast<void *>(src_decl_ctx), src_die.GetOffset(),
@@ -3687,7 +3687,7 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
       if (dst_die) {
         // Both classes have the artificial types, link them
         clang::DeclContext *src_decl_ctx =
-            src_dwarf_ast_parser->m_die_to_decl_ctx[src_die.GetDIE()];
+            src_dwarf_ast_parser->m_dieref_to_decl_ctx[*src_die.GetDIERef()];
         if (src_decl_ctx) {
           LLDB_LOGF(log, "uniquing decl context %p from 0x%8.8x for 0x%8.8x",
                     static_cast<void *>(src_decl_ctx), src_die.GetOffset(),
