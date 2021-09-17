@@ -319,8 +319,7 @@ public:
   static lldb::LanguageType GetLanguageFamily(DWARFUnit &unit);
 
 protected:
-  typedef llvm::DenseMap<DIERef, lldb_private::Type *>
-      DIERefToTypePtr;
+  typedef llvm::DenseMap<DIERef, lldb_private::Type *> DIERefToTypePtr;
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb::VariableSP>
       DIEToVariableSP;
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *,

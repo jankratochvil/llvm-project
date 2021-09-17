@@ -3614,7 +3614,8 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
                   ") from 0x%8.8x for 0x%8.8x",
                   static_cast<void *>(src_child_type), src_child_type->GetID(),
                   src_die.GetOffset(), dst_die.GetOffset());
-        dst_die.GetDWARF()->GetDIERefToType()[*dst_die.GetDIERef()] = src_child_type;
+        dst_die.GetDWARF()->GetDIERefToType()[*dst_die.GetDIERef()] =
+            src_child_type;
       } else {
         LLDB_LOGF(log,
                   "warning: tried to unique lldb_private::Type from "
@@ -3713,7 +3714,8 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
               "uniquing type %p (uid=0x%" PRIx64 ") from 0x%8.8x for 0x%8.8x",
               static_cast<void *>(src_child_type), src_child_type->GetID(),
               src_die.GetOffset(), dst_die.GetOffset());
-          dst_die.GetDWARF()->GetDIERefToType()[*dst_die.GetDIERef()] = src_child_type;
+          dst_die.GetDWARF()->GetDIERefToType()[*dst_die.GetDIERef()] =
+              src_child_type;
         } else {
           LLDB_LOGF(log,
                     "warning: tried to unique lldb_private::Type from "
