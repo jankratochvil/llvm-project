@@ -76,8 +76,8 @@ DWARFCompileUnit *SymbolFileDWARFDwo::FindSingleCompileUnit() {
   return cu;
 }
 
-SymbolFileDWARF::DIEToTypePtr &SymbolFileDWARFDwo::GetDIEToType() {
-  return GetBaseSymbolFile().GetDIEToType();
+SymbolFileDWARF::DIERefToTypePtr &SymbolFileDWARFDwo::GetDIERefToType() {
+  return GetBaseSymbolFile().GetDIERefToType();
 }
 
 SymbolFileDWARF::DIEToVariableSP &SymbolFileDWARFDwo::GetDIEToVariable() {
