@@ -80,9 +80,9 @@ private:
       uint32_t dwo_num : 30;
       uint32_t dwo_num_valid : 1;
       uint32_t section : 1;
-      S(llvm::Optional<uint32_t> dwo_num, Section section)
-          : dwo_num(dwo_num.getValueOr(0)), dwo_num_valid(bool(dwo_num)),
-            section(section) {}
+      S(llvm::Optional<uint32_t> dwo_num_, Section section_)
+          : dwo_num(dwo_num_.getValueOr(0)), dwo_num_valid(bool(dwo_num_)),
+            section(section_) {}
     } s;
     uint32_t hash_bits;
     U(llvm::Optional<uint32_t> dwo_num, Section section)
