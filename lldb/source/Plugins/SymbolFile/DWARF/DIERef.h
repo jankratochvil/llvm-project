@@ -123,14 +123,14 @@ private:
       uint32_t data_kind : 2; // Kind type
       uint32_t section : 1;   // Section type
       S(llvm::Optional<uint32_t> dwo_num, llvm::Optional<uint32_t> main_cu,
-        DwzCommon dwz_common, Section section)
+        DwzCommon dwz_common, Section section_)
           : data(dwo_num.getValueOr(0) | main_cu.getValueOr(0)),
             data_kind(dwo_num
                           ? DwoKind
                           : (main_cu ? (dwz_common == MainDwz ? MainDwzKind
                                                               : DwzCommonKind)
                                      : NoneKind)),
-            section(section) {}
+            section(section_) {}
     } s;
     uint32_t hash_bits;
     U(llvm::Optional<uint32_t> dwo_num, llvm::Optional<uint32_t> main_cu,
