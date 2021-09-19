@@ -169,6 +169,7 @@ DWARFUnit *DWARFDebugInfo::GetMainUnit(const DIERef &die_ref) {
     main_unit = GetUnit(die_ref);
   else
     main_unit = GetUnitAtIndex(*m_dwarf.GetDWARFUnitIndex(*die_ref.main_cu()));
+  lldbassert(!main_unit->GetSymbolFileDWARF().GetIsDwz());
   return main_unit;
 }
 
