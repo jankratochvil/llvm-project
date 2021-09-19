@@ -3502,7 +3502,7 @@ void DWARFASTParserClang::LinkDeclContextToDIE(clang::DeclContext *decl_ctx,
                                                const DWARFDIE &die) {
   DIERef ref = *die.GetDIERef();
   m_dieref_to_decl_ctx[ref] = decl_ctx;
-  SymbolFileDWARF *sym_file = &die.GetCU()->GetSymbolFileDWARF();
+  SymbolFileDWARF *sym_file = &die.GetMainCU()->GetSymbolFileDWARF();
   // There can be many DIEs for a single decl context
   // m_decl_ctx_to_filedieref[decl_ctx].insert(...);
   m_decl_ctx_to_filedieref.insert(
