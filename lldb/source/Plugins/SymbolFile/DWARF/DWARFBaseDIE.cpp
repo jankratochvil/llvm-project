@@ -127,7 +127,8 @@ size_t DWARFBaseDIE::GetAttributes(DWARFAttributes &attributes,
 }
 
 bool operator==(const DWARFBaseDIE &lhs, const DWARFBaseDIE &rhs) {
-  return lhs.GetDIE() == rhs.GetDIE() && lhs.GetCU() == rhs.GetCU() && lhs.GetMainCU() == rhs.GetMainCU();
+  return lhs.GetDIE() == rhs.GetDIE() && lhs.GetCU() == rhs.GetCU() &&
+         lhs.GetMainCU() == rhs.GetMainCU();
 }
 
 bool operator!=(const DWARFBaseDIE &lhs, const DWARFBaseDIE &rhs) {
