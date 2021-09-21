@@ -167,7 +167,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
     // by this symbol file, search all of them. Instead of calling
     // sym_file->FindTypes(), which would return this again, go straight
     // to the imported modules.
-    auto &sym_file = die.GetCU()->GetSymbolFileDWARF();
+    auto &sym_file = die.GetMainCU()->GetSymbolFileDWARF();
 
     // Well-formed clang modules never form cycles; guard against corrupted
     // ones by inserting the current file.
