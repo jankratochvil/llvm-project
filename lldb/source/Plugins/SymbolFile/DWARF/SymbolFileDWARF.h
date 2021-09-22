@@ -318,6 +318,8 @@ public:
   /// Same as GetLanguage() but reports all C++ versions as C++ (no version).
   static lldb::LanguageType GetLanguageFamily(DWARFUnit &unit);
 
+  llvm::Optional<uint32_t> GetDWARFUnitIndex(uint32_t cu_idx);
+
 protected:
   typedef llvm::DenseMap<DIERef, lldb_private::Type *> DIERefToTypePtr;
   typedef llvm::DenseMap<DIERef, lldb::VariableSP> DIERefToVariableSP;
@@ -471,7 +473,6 @@ protected:
   }
 
   void BuildCuTranslationTable();
-  llvm::Optional<uint32_t> GetDWARFUnitIndex(uint32_t cu_idx);
 
   struct DecodedUID {
     SymbolFileDWARF &dwarf;
