@@ -9,6 +9,7 @@
 #include "NameToDIE.h"
 #include "DWARFUnit.h"
 #include "DWARFDebugInfo.h"
+#include "SymbolFileDWARFDwz.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/ConstString.h"
@@ -51,6 +52,7 @@ void NameToDIE::FindAllEntriesForUnit(
   lldbassert(!s_unit.GetSymbolFileDWARF().GetDwoNum());
   const DWARFUnit &ns_unit = s_unit.GetNonSkeletonUnit();
   SymbolFileDWARF *ns_symfile = &ns_unit.GetSymbolFileDWARF();
+  lldbassert(!ns_symfile->GetIsDwz());
   const uint32_t size = m_map.GetSize();
   for (uint32_t i = 0; i < size; ++i) {
     const DIERef &die_ref = m_map.GetValueAtIndexUnchecked(i);
