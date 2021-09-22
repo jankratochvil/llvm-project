@@ -8,8 +8,8 @@
 
 #include "NameToDIE.h"
 #include "DWARFDebugInfo.h"
-#include "SymbolFileDWARFDwz.h"
 #include "DWARFUnit.h"
+#include "SymbolFileDWARFDwz.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/ConstString.h"
