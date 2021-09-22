@@ -8,6 +8,9 @@
 
 #include "NameToDIE.h"
 #include "DWARFUnit.h"
+#include "DWARFDebugInfo.h"
+#include "SymbolFileDWARFDwz.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RegularExpression.h"
@@ -48,16 +51,24 @@ void NameToDIE::FindAllEntriesForUnit(
     DWARFUnit &s_unit, llvm::function_ref<bool(DIERef ref)> callback) const {
   lldbassert(!s_unit.GetSymbolFileDWARF().GetDwoNum());
   const DWARFUnit &ns_unit = s_unit.GetNonSkeletonUnit();
+  SymbolFileDWARF *ns_symfile = &ns_unit.GetSymbolFileDWARF();
+  lldbassert(!ns_symfile->GetIsDwz());
   const uint32_t size = m_map.GetSize();
   for (uint32_t i = 0; i < size; ++i) {
     const DIERef &die_ref = m_map.GetValueAtIndexUnchecked(i);
-    if (ns_unit.GetSymbolFileDWARF().GetDwoNum() == die_ref.dwo_num() &&
-        ns_unit.GetDebugSection() == die_ref.section() &&
-        ns_unit.GetOffset() <= die_ref.die_offset() &&
-        die_ref.die_offset() < ns_unit.GetNextUnitOffset()) {
-      if (!callback(die_ref))
-        return;
-    }
+    if (ns_unit.GetDebugSection() != die_ref.section())
+      continue;
+    if (die_ref.main_cu()) {
+      DWARFDebugInfo &ns_info = ns_symfile->DebugInfo();
+      DWARFUnit *die_main_unit = ns_info.GetUnitAtIndex(*ns_symfile->GetDWARFUnitIndex(*die_ref.main_cu()));
+      if (&ns_unit != die_main_unit)
+        continue;
+    } else if (!(ns_symfile->GetDwoNum() == die_ref.dwo_num() &&
+      ns_unit.GetOffset() <= die_ref.die_offset() &&
+      die_ref.die_offset() < ns_unit.GetNextUnitOffset()))
+        continue;
+    if (!callback(die_ref))
+      return;
   }
 }
 
