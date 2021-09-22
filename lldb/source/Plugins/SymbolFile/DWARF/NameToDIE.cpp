@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "NameToDIE.h"
-#include "DWARFUnit.h"
 #include "DWARFDebugInfo.h"
+#include "DWARFUnit.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/ConstString.h"
@@ -58,13 +58,14 @@ void NameToDIE::FindAllEntriesForUnit(
       continue;
     if (die_ref.main_cu()) {
       DWARFDebugInfo &ns_info = ns_symfile->DebugInfo();
-      DWARFUnit *die_main_unit = ns_info.GetUnitAtIndex(*ns_symfile->GetDWARFUnitIndex(*die_ref.main_cu()));
+      DWARFUnit *die_main_unit = ns_info.GetUnitAtIndex(
+          *ns_symfile->GetDWARFUnitIndex(*die_ref.main_cu()));
       if (&ns_unit != die_main_unit)
         continue;
     } else if (!(ns_symfile->GetDwoNum() == die_ref.dwo_num() &&
-      ns_unit.GetOffset() <= die_ref.die_offset() &&
-      die_ref.die_offset() < ns_unit.GetNextUnitOffset()))
-        continue;
+                 ns_unit.GetOffset() <= die_ref.die_offset() &&
+                 die_ref.die_offset() < ns_unit.GetNextUnitOffset()))
+      continue;
     if (!callback(die_ref))
       return;
   }
